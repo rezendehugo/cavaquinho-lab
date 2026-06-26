@@ -23,6 +23,7 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Ebmaj7→D7→Gm');
     fireEvent.click(screen.getByLabelText('Mover acorde 2 para cima'));
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('D7→Ebmaj7→Gm');
+    expect(screen.getByLabelText('Acordes da sequência')).toHaveTextContent('D7');
     expect(screen.getByLabelText('Mover acorde 1 para cima')).toBeDisabled();
   });
 
@@ -47,9 +48,10 @@ describe('Cavaquinho Lab', () => {
 
   test('inclui rótulos acessíveis em português', () => {
     renderAt();
+    expect(screen.getByLabelText('Acordes da sequência')).toBeInTheDocument();
     expect(screen.getByLabelText('Mover acorde 1 para baixo')).toBeInTheDocument();
     expect(screen.getByLabelText('Raiz do acorde 1')).toBeInTheDocument();
     expect(screen.getByLabelText('Qualidade do acorde 1')).toBeInTheDocument();
-    expect(screen.getByLabelText('Baixo do acorde 1')).toBeInTheDocument();
+    expect(screen.queryByText('Baixo')).not.toBeInTheDocument();
   });
 });

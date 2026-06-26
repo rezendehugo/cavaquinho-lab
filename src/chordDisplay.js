@@ -30,10 +30,7 @@ export const qualityLabels = {
 
 export const formatSuffix = (suffix) => suffixLabels[suffix] ?? suffix;
 
-export const formatChordName = (key, suffix, bass = '') => {
-  const name = key + formatSuffix(suffix);
-  return bass ? name + '/' + bass : name;
-};
+export const formatChordName = (key, suffix) => key + formatSuffix(suffix);
 
 export const noteNames = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 

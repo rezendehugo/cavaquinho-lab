@@ -3,9 +3,9 @@ import { analyzeSequence, buildExercises, getColorForChord } from './harmony';
 describe('harmonia', () => {
   test('analisa Ebmaj7 D7 Gm em contexto de G menor', () => {
     const sequence = [
-      { id: 'a', key: 'Eb', suffix: 'maj7', bass: '' },
-      { id: 'b', key: 'D', suffix: '7', bass: '' },
-      { id: 'c', key: 'G', suffix: 'minor', bass: '' }
+      { id: 'a', key: 'Eb', suffix: 'maj7' },
+      { id: 'b', key: 'D', suffix: '7' },
+      { id: 'c', key: 'G', suffix: 'minor' }
     ];
     const analysis = analyzeSequence(sequence, []);
     expect(analysis.keyCenter.label).toBe('G menor');

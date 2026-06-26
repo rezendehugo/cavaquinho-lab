@@ -39,7 +39,7 @@ export const analyzeSequence = (sequence, optimizedSteps = []) => {
     const commonTones = currentNotes.filter((note, noteIndex) => currentNotes.indexOf(note) === noteIndex && nextNotes.includes(note));
     return {
       ...step,
-      name: formatChordName(step.key, step.suffix, step.bass),
+      name: formatChordName(step.key, step.suffix),
       numeral: contextInfo?.numeral || 'análise aberta',
       functionName: contextInfo?.functionName || (step.suffix === '7' ? 'dominante possível' : 'cor harmônica'),
       commonTones,
@@ -53,10 +53,10 @@ export const analyzeSequence = (sequence, optimizedSteps = []) => {
     chords,
     summary: keyCenter
       ? 'Centro tonal provável: ' + keyCenter.label + '.'
-      : 'Centro tonal ainda nao definido para esta sequencia.',
+      : 'Centro tonal ainda nao definido para esta sequência.',
     tension: chords.some(chord => chord.functionName.includes('dominante'))
       ? 'O acorde dominante cria tensão e pede resolução no acorde de repouso.'
-      : 'A sequencia privilegia cor e movimento, sem uma dominante clara.'
+      : 'A sequência privilegia cor e movimento, sem uma dominante clara.'
   };
 };
 
@@ -84,9 +84,9 @@ export const buildExercises = (sequence, analysis, optimizedSteps = []) => {
   const firstWithCommon = analysis.chords.find(chord => chord.commonTones.length > 0);
   const firstShape = optimizedSteps[0];
   return [
-    { title: 'Dominante', prompt: dominant ? 'Qual acorde cria a tensão dominante nesta sequencia?' : 'Existe uma dominante clara nesta sequencia?', answer: dominant ? dominant.name : 'Não há dominante clara.' },
-    { title: 'Resolucao', prompt: 'Qual acorde soa como ponto de chegada?', answer: resolution?.name || 'A chegada ainda esta aberta.' },
-    { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se ha notas comuns entre acordes vizinhos.', answer: firstWithCommon ? firstWithCommon.commonTones.join(', ') : 'Nenhuma nota comum forte foi detectada nas formas atuais.' },
+    { title: 'Dominante', prompt: dominant ? 'Qual acorde cria a tensão dominante nesta sequência?' : 'Existe uma dominante clara nesta sequência?', answer: dominant ? dominant.name : 'Não há dominante clara.' },
+    { title: 'Resolução', prompt: 'Qual acorde soa como ponto de chegada?', answer: resolution?.name || 'A chegada ainda está aberta.' },
+    { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se há notas comuns entre acordes vizinhos.', answer: firstWithCommon ? firstWithCommon.commonTones.join(', ') : 'Nenhuma nota comum forte foi detectada nas formas atuais.' },
     { title: 'Forma suave', prompt: 'Compare duas formas e escolha o caminho com menor movimento.', answer: 'Use o menor movimento total como ponto de partida, depois ajuste pelo conforto.' },
     { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? getPlayedNotes(firstShape.position).join(', ') : 'Sem forma selecionada.' },
     { title: 'Transposição', prompt: 'Transponha a sequência para outro tom e compare a região do braço.', answer: 'Mantenha a mesma função harmônica e procure formas próximas.' },

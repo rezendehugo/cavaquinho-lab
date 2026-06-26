@@ -4,7 +4,7 @@ import cavaquinhoChords from '@tombatossals/chords-db/lib/cavaquinho.json';
 import { formatChordName, getPlayedNotesText, qualityLabels } from './chordDisplay';
 import { analyzeSequence, buildExercises, getColorForChord } from './harmony';
 import { findChord, optimizeSequence } from './progressionOptimizer';
-import { bassOptions, chromaticKeys, createSequenceStep, defaultSequence, normalizeSequence, reorderSequence, suffixCycle } from './sequences';
+import { chromaticKeys, createSequenceStep, defaultSequence, normalizeSequence, reorderSequence, suffixCycle } from './sequences';
 
 const ChordBlock = ChordBlockExport.default || ChordBlockExport;
 
@@ -109,7 +109,7 @@ function ShapesPage() {
 
 function SequenceBuilder({ sequence, setSequence, optimized }) {
   const updateStep = (index, patch) => {
-    setSequence(current => current.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch, positionIndex: patch.positionIndex === undefined ? null : patch.positionIndex } : step));
+    setSequence(current => current.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch, positionIndex: null } : step));
   };
 
   const cycleShape = (index, direction) => {
@@ -129,44 +129,57 @@ function SequenceBuilder({ sequence, setSequence, optimized }) {
   const removeStep = (index) => setSequence(current => current.length === 1 ? current : current.filter((_step, stepIndex) => stepIndex !== index));
 
   return (
-    <section className="panel">
-      <div className="section-title">
+    <section className="panel sequence-builder-panel">
+      <div className="section-title compact-title">
         <div>
           <h2>Construtor de Sequência</h2>
-          <p>Monte a ordem dos acordes e veja a leitura musical da sequência.</p>
+          <p>Monte a ordem dos acordes e ajuste cada forma sem transformar o estudo em formulário.</p>
         </div>
-        <button type="button" className="secondary" onClick={() => setSequence(defaultSequence)}>Limpar</button>
+        <button type="button" className="ghost-action" onClick={() => setSequence(defaultSequence)}>Limpar</button>
       </div>
       <div className="pill-row" aria-label="Sequência atual">
         {sequence.map((step, index) => (
-          <span key={step.id} className="chord-pill">{formatChordName(step.key, step.suffix, step.bass)}{index < sequence.length - 1 ? <b>→</b> : null}</span>
+          <span key={step.id} className="chord-pill">{formatChordName(step.key, step.suffix)}{index < sequence.length - 1 ? <b>→</b> : null}</span>
         ))}
       </div>
-      <div className="sequence-list">
+      <div className="sequence-card-list" aria-label="Acordes da sequência">
         {sequence.map((step, index) => {
           const suffixes = getAvailableSuffixes(step.key);
+          const optimizedStep = optimized.steps[index];
+          const isManual = Number.isInteger(step.positionIndex);
           return (
-            <article key={step.id} className="sequence-row">
-              <div className="row-index">{index + 1}</div>
-              <div className="reorder-buttons">
-                <button type="button" aria-label={'Mover acorde ' + (index + 1) + ' para cima'} disabled={index === 0} onClick={() => moveStep(index, index - 1)}>↑</button>
-                <button type="button" aria-label={'Mover acorde ' + (index + 1) + ' para baixo'} disabled={index === sequence.length - 1} onClick={() => moveStep(index, index + 1)}>↓</button>
+            <article key={step.id} className="sequence-card">
+              <header className="sequence-card-header">
+                <button type="button" className="drag-handle" aria-label={'Acorde ' + (index + 1) + ' na sequência'}>⋮⋮</button>
+                <div>
+                  <strong>{formatChordName(step.key, step.suffix)}</strong>
+                  <span>{isManual ? 'Manual' : 'Automático'}{optimizedStep ? ' · Forma ' + (optimizedStep.positionIndex + 1) + '/' + optimizedStep.chord.positions.length : ''}</span>
+                </div>
+                <div className="card-icon-actions">
+                  <button type="button" aria-label={'Mover acorde ' + (index + 1) + ' para cima'} disabled={index === 0} onClick={() => moveStep(index, index - 1)}>↑</button>
+                  <button type="button" aria-label={'Mover acorde ' + (index + 1) + ' para baixo'} disabled={index === sequence.length - 1} onClick={() => moveStep(index, index + 1)}>↓</button>
+                  <button type="button" aria-label={'Remover acorde ' + (index + 1)} disabled={sequence.length === 1} onClick={() => removeStep(index)}>×</button>
+                </div>
+              </header>
+              <div className="sequence-card-controls">
+                <label><span>Raiz</span><select aria-label={'Raiz do acorde ' + (index + 1)} value={step.key} onChange={(event) => updateStep(index, { key: event.target.value, suffix: getAvailableSuffixes(event.target.value)[0] || 'major' })}>{chromaticKeys.map(key => <option key={key} value={key}>{key}</option>)}</select></label>
+                <label><span>Qualidade</span><select aria-label={'Qualidade do acorde ' + (index + 1)} value={step.suffix} onChange={(event) => updateStep(index, { suffix: event.target.value })}>{suffixes.map(suffix => <option key={suffix} value={suffix}>{qualityLabels[suffix] || suffix}</option>)}</select></label>
               </div>
-              <label><span>Raiz</span><select aria-label={'Raiz do acorde ' + (index + 1)} value={step.key} onChange={(event) => updateStep(index, { key: event.target.value, suffix: getAvailableSuffixes(event.target.value)[0] || 'major' })}>{chromaticKeys.map(key => <option key={key} value={key}>{key}</option>)}</select></label>
-              <label><span>Qualidade</span><select aria-label={'Qualidade do acorde ' + (index + 1)} value={step.suffix} onChange={(event) => updateStep(index, { suffix: event.target.value })}>{suffixes.map(suffix => <option key={suffix} value={suffix}>{qualityLabels[suffix] || suffix}</option>)}</select></label>
-              <label><span>Baixo</span><select aria-label={'Baixo do acorde ' + (index + 1)} value={step.bass} onChange={(event) => updateStep(index, { bass: event.target.value, positionIndex: step.positionIndex })}>{bassOptions.map(bass => <option key={bass || 'none'} value={bass}>{bass || 'Sem baixo'}</option>)}</select></label>
-              <strong>{formatChordName(step.key, step.suffix, step.bass)}</strong>
-              <button type="button" className="secondary" onClick={() => removeStep(index)} disabled={sequence.length === 1}>Remover</button>
+              {optimizedStep ? (
+                <div className="sequence-card-meta">
+                  <span>Notas: {getPlayedNotesText(optimizedStep.position)}</span>
+                  <span>{index === optimized.steps.length - 1 ? 'Último acorde' : 'Movimento: ' + optimized.transitions[index].toFixed(1)}</span>
+                </div>
+              ) : null}
             </article>
           );
         })}
+        <button type="button" className="add-sequence-card" onClick={addStep}>+<span>Adicionar acorde</span></button>
       </div>
-      <button type="button" onClick={addStep}>Adicionar acorde</button>
       <ShapeOptimizer sequence={sequence} optimized={optimized} cycleShape={cycleShape} releaseShape={releaseShape} />
     </section>
   );
 }
-
 function ShapeOptimizer({ sequence, optimized, cycleShape, releaseShape }) {
   if (optimized.missing.length > 0) {
     return <p className="missing">Dados ausentes para {optimized.missing.map(step => formatChordName(step.key, step.suffix)).join(', ')}.</p>;
@@ -183,10 +196,10 @@ function ShapeOptimizer({ sequence, optimized, cycleShape, releaseShape }) {
           return (
             <article key={sequence[index].id} className="shape-card">
               <header>
-                <strong>{formatChordName(step.key, step.suffix, step.bass)}</strong>
+                <strong>{formatChordName(step.key, step.suffix)}</strong>
                 <span>{isManual ? 'Manual' : 'Automático'} · Posição {step.positionIndex + 1} de {step.chord.positions.length}</span>
               </header>
-              <ChordBlock instrument={instrument} position={step.position} name={formatChordName(step.key, step.suffix, step.bass)} />
+              <ChordBlock instrument={instrument} position={step.position} name={formatChordName(step.key, step.suffix)} />
               <p>Notas: {getPlayedNotesText(step.position)}</p>
               <p>{index === optimized.steps.length - 1 ? 'Último acorde' : 'Movimento para o próximo: ' + optimized.transitions[index].toFixed(1)}</p>
               <div className="shape-actions">
@@ -253,7 +266,7 @@ function ColorHarmonyPanel({ sequence, analysis }) {
       <div className="color-timeline" aria-label="Linha de cores da sequência">
         {sequence.map((step, index) => {
           const color = getColorForChord(step, analysis.chords[index], mode, analysis.keyCenter);
-          return <span key={step.id} style={{ '--swatch': color }}>{formatChordName(step.key, step.suffix, step.bass)}</span>;
+          return <span key={step.id} style={{ '--swatch': color }}>{formatChordName(step.key, step.suffix)}</span>;
         })}
       </div>
       <div className="study-grid">
@@ -261,7 +274,7 @@ function ColorHarmonyPanel({ sequence, analysis }) {
           const color = getColorForChord(step, analysis.chords[index], mode, analysis.keyCenter);
           return (
             <article key={step.id} className="color-card" style={{ '--swatch': color }}>
-              <h3>{formatChordName(step.key, step.suffix, step.bass)}</h3>
+              <h3>{formatChordName(step.key, step.suffix)}</h3>
               <p>Raiz: {step.key}</p>
               <p>Qualidade: {qualityLabels[step.suffix] || step.suffix}</p>
               <p>Função: {analysis.chords[index]?.functionName || 'em estudo'}</p>
