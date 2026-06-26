@@ -53,10 +53,10 @@ export const analyzeSequence = (sequence, optimizedSteps = []) => {
     chords,
     summary: keyCenter
       ? 'Centro tonal provável: ' + keyCenter.label + '.'
-      : 'Centro tonal ainda nao definido para esta sequência.',
+      : 'Centro tonal ainda não definido para esta sequência.',
     tension: chords.some(chord => chord.functionName.includes('dominante'))
       ? 'O acorde dominante cria tensão e pede resolução no acorde de repouso.'
-      : 'A sequência privilegia cor e movimento, sem uma dominante clara.'
+      : 'A sequência privilegia cor e deslocamento de região, sem uma dominante clara.'
   };
 };
 
@@ -87,7 +87,6 @@ export const buildExercises = (sequence, analysis, optimizedSteps = []) => {
     { title: 'Dominante', prompt: dominant ? 'Qual acorde cria a tensão dominante nesta sequência?' : 'Existe uma dominante clara nesta sequência?', answer: dominant ? dominant.name : 'Não há dominante clara.' },
     { title: 'Resolução', prompt: 'Qual acorde soa como ponto de chegada?', answer: resolution?.name || 'A chegada ainda está aberta.' },
     { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se há notas comuns entre acordes vizinhos.', answer: firstWithCommon ? firstWithCommon.commonTones.join(', ') : 'Nenhuma nota comum forte foi detectada nas formas atuais.' },
-    { title: 'Forma suave', prompt: 'Compare duas formas e escolha o caminho com menor movimento.', answer: 'Use o menor movimento total como ponto de partida, depois ajuste pelo conforto.' },
     { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? getPlayedNotes(firstShape.position).join(', ') : 'Sem forma selecionada.' },
     { title: 'Transposição', prompt: 'Transponha a sequência para outro tom e compare a região do braço.', answer: 'Mantenha a mesma função harmônica e procure formas próximas.' },
     { title: 'Qualidade e cor', prompt: 'Associe cada qualidade de acorde a uma sensação de cor.', answer: sequence.map(step => formatChordName(step.key, step.suffix) + ': ' + (qualityLabels[step.suffix] || step.suffix)).join(' | ') },
