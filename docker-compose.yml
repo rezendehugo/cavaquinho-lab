@@ -1,0 +1,26 @@
+services:
+  dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_SHOW_EMPTY_PAGES=true
+  ci:
+    profiles: ["ci"]
+    build:
+      context: .
+      target: build
+    command: sh -c "npm test && npm run build"
+  preview:
+    profiles: ["preview"]
+    build:
+      context: .
+      target: preview
+    ports:
+      - "4173:4173"
