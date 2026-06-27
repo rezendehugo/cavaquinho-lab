@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { formatChordName, getPlayedNotesText, qualityLabels } from '../chordDisplay';
-import ChordDiagram from '../components/ChordDiagram';
+import { formatChordName, qualityLabels } from '../chordDisplay';
+import ChordShapeCard from '../components/ChordShapeCard';
 import { getAvailableSuffixes, cavaquinhoChords } from '../domain/chords';
 import { findChord } from '../progressionOptimizer';
 import { chromaticKeys } from '../sequences';
@@ -29,11 +29,13 @@ function ShapesPage() {
       </div>
       <div className="shape-grid wide">
         {(chord?.positions || []).map((position, index) => (
-          <article key={index} className="shape-card">
-            <header><strong>{formatChordName(key, chord.suffix)}</strong><span>Forma {index + 1} de {chord.positions.length}</span></header>
-            <ChordDiagram position={position} name={formatChordName(key, chord.suffix)} mode="notes" />
-            <footer>Notas: {getPlayedNotesText(position)}</footer>
-          </article>
+          <ChordShapeCard
+            key={index}
+            chordName={formatChordName(key, chord.suffix)}
+            position={position}
+            shapeIndex={index}
+            shapeTotal={chord.positions.length}
+          />
         ))}
       </div>
     </section>

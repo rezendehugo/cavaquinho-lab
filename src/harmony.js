@@ -3,11 +3,11 @@ import { chromaticKeys } from './sequences';
 
 const minorContext = {
   G: {
-    Eb: { numeral: 'bVImaj7', functionName: 'cor predominante colorida', color: '#70a288' },
+    Eb: { numeral: 'bVImaj7', functionName: 'preparação colorida', color: '#70a288' },
     D: { numeral: 'V7', functionName: 'dominante', color: '#d95d39' },
     G: { numeral: 'i', functionName: 'repouso menor', color: '#456990' },
     A: { numeral: 'iiø', functionName: 'preparação meio diminuta', color: '#b279a2' },
-    Bb: { numeral: 'bIIImaj7', functionName: 'cor relativa maior', color: '#e9c46a' },
+    Bb: { numeral: 'bIIImaj7', functionName: 'relativa maior', color: '#e9c46a' },
     E: { numeral: 'VI', functionName: 'cor cromática', color: '#9d4edd' }
   }
 };
@@ -15,7 +15,7 @@ const minorContext = {
 const degreeColors = ['#456990', '#70a288', '#e9c46a', '#f4a261', '#d95d39', '#b279a2', '#577590'];
 const chromaticColors = ['#3a86ff', '#5e60ce', '#8338ec', '#b5179e', '#ff006e', '#fb5607', '#ffbe0b', '#80b918', '#2d6a4f', '#00b4d8', '#4361ee', '#7209b7'];
 const qualityColors = { major: '#70a288', minor: '#456990', maj7: '#86bbd8', m7: '#577590', '7': '#d95d39', m7b5: '#b279a2', dim: '#6d597a', dim7: '#5e548e' };
-const functionColors = { dominante: '#d95d39', repouso: '#456990', predominante: '#70a288', cromatica: '#9d4edd' };
+const functionColors = { dominante: '#d95d39', repouso: '#456990', preparacao: '#70a288', cromatica: '#9d4edd' };
 
 const pitchIndex = (key) => chromaticKeys.indexOf(key);
 
@@ -68,7 +68,7 @@ export const getColorForChord = (step, analysisChord, mode, keyCenter) => {
     const name = analysisChord?.functionName || '';
     if (name.includes('dominante')) return functionColors.dominante;
     if (name.includes('repouso')) return functionColors.repouso;
-    if (name.includes('predominante')) return functionColors.predominante;
+    if (name.includes('preparação')) return functionColors.preparacao;
     return functionColors.cromatica;
   }
   if (mode === 'personalizadas') return '#7c3aed';
@@ -89,7 +89,7 @@ export const buildExercises = (sequence, analysis, optimizedSteps = []) => {
     { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se há notas comuns entre acordes vizinhos.', answer: firstWithCommon ? firstWithCommon.commonTones.join(', ') : 'Nenhuma nota comum forte foi detectada nas formas atuais.' },
     { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? getPlayedNotes(firstShape.position).join(', ') : 'Sem forma selecionada.' },
     { title: 'Transposição', prompt: 'Transponha a sequência para outro tom e compare a região do braço.', answer: 'Mantenha a mesma função harmônica e procure formas próximas.' },
-    { title: 'Qualidade e cor', prompt: 'Associe cada qualidade de acorde a uma sensação de cor.', answer: sequence.map(step => formatChordName(step.key, step.suffix) + ': ' + (qualityLabels[step.suffix] || step.suffix)).join(' | ') },
+    { title: 'Qualidade e cor', prompt: 'Associe cada qualidade de acorde a uma sensação de cor.', answer: sequence.map(step => formatChordName(step.key, step.suffix) + ': ' + (qualityLabels[step.suffix] || step.suffix)).join(' | ') || 'Adicione acordes para comparar qualidades.' },
     { title: 'Grau e cor', prompt: 'Use as cores por grau para perceber repouso, preparação e tensão.', answer: analysis.summary }
   ];
 };

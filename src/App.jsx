@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import SequenceLab from './components/SequenceLab';
-import { getRoutes } from './config';
-import HomePage from './pages/HomePage';
-import { FretboardPage, PracticePage } from './pages/PlaceholderPages';
+import { fallbackRoute, getRoutes, routeRedirects } from './config';
+import FretboardPage from './pages/FretboardPage';
 import ShapesPage from './pages/ShapesPage';
 
-const getInitialRoute = () => window.location.hash.replace('#', '') || '/cavaquinho/sequences';
+const getRouteFromHash = () => window.location.hash.replace('#', '') || fallbackRoute;
+
+const normalizeRoute = (route, routes) => {
+  if (routeRedirects[route]) return routeRedirects[route];
+  return routes.some(item => item.path === route) ? route : fallbackRoute;
+};
 
 function NavTabs({ route, routes }) {
   return (
@@ -19,21 +23,22 @@ function NavTabs({ route, routes }) {
 
 function App() {
   const routes = useMemo(() => getRoutes(), []);
-  const [route, setRoute] = useState(getInitialRoute);
+  const [route, setRoute] = useState(() => normalizeRoute(getRouteFromHash(), routes));
 
   useEffect(() => {
-    const handleHash = () => setRoute(getInitialRoute());
-    window.addEventListener('hashchange', handleHash);
-    if (!window.location.hash) window.location.hash = '#/cavaquinho/sequences';
-    return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
+    const syncRoute = () => {
+      const nextRoute = normalizeRoute(getRouteFromHash(), routes);
+      setRoute(nextRoute);
+      if (window.location.hash !== '#' + nextRoute) window.location.hash = '#' + nextRoute;
+    };
+    window.addEventListener('hashchange', syncRoute);
+    syncRoute();
+    return () => window.removeEventListener('hashchange', syncRoute);
+  }, [routes]);
 
-  const visibleRoute = routes.some(item => item.path === route) ? route : '/cavaquinho';
-  const page = visibleRoute === '/cavaquinho/shapes' ? <ShapesPage />
-    : visibleRoute === '/cavaquinho/sequences' ? <SequenceLab />
-      : visibleRoute === '/cavaquinho/fretboard' ? <FretboardPage />
-        : visibleRoute === '/cavaquinho/practice' ? <PracticePage />
-          : <HomePage />;
+  const page = route === '/cavaquinho/shapes' ? <ShapesPage />
+    : route === '/cavaquinho/fretboard' ? <FretboardPage />
+      : <SequenceLab />;
 
   return (
     <main className="app-shell">
@@ -41,7 +46,7 @@ function App() {
         <p className="eyebrow">Cavaquinho Lab</p>
         <h1>Estudo prático de acordes, formas e sequências.</h1>
         <p>Um laboratório para estudar cavaquinho com diagramas reais, análise harmônica, cores de apoio e exercícios guiados.</p>
-        <NavTabs route={visibleRoute} routes={routes} />
+        <NavTabs route={route} routes={routes} />
       </header>
       {page}
     </main>

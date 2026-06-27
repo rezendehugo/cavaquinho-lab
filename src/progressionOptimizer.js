@@ -70,6 +70,7 @@ const getAllowedPositions = (step) => {
 };
 
 export const optimizeSequence = (sequence, chordDb, options = {}) => {
+  if (!sequence.length) return { totalScore: 0, steps: [], transitions: [], missing: [] };
   const shapeWeight = options.shapeWeight === undefined ? DEFAULT_SHAPE_WEIGHT : options.shapeWeight;
   const chordSteps = sequence.map(item => ({ ...item, chord: findChord(chordDb, item.key, item.suffix) }));
   if (chordSteps.some(step => !step.chord || !step.chord.positions.length)) {
