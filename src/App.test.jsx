@@ -138,8 +138,7 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByRole('heading', { name: 'Braço e notas no cavaquinho' })).toBeInTheDocument();
     expect(screen.getByText('Localize as notas diretamente no braço do cavaquinho.')).toBeInTheDocument();
     expect(screen.getByText('Localize as notas diretamente no braço do cavaquinho.')).not.toHaveTextContent('D G B D');
-    expect(screen.getByLabelText('Afinação do cavaquinho')).toHaveTextContent('Afinação: D G B D');
-    expect(document.querySelector('.tuning-row')).toBe(null);
+    expect(screen.getByLabelText('Afinação do cavaquinho: D G B D')).toHaveTextContent('DGBD');
     expect(screen.queryByText('soltas')).not.toBeInTheDocument();
     expect(document.querySelector('.fretboard-open-notes')).toBe(null);
     expect(document.querySelector('.open-row')).toBe(null);

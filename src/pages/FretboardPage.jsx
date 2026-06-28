@@ -19,29 +19,27 @@ function FretboardPage() {
           <p className="eyebrow">Mapa do instrumento</p>
           <h2 id="fretboard-title">Braço e notas no cavaquinho</h2>
           <p>Localize as notas diretamente no braço do cavaquinho.</p>
-          <p className="fretboard-meta" aria-label="Afinação do cavaquinho">Afinação: {cavaquinhoTuning.join(' ')}</p>
         </div>
       </header>
 
-      <div className="fretboard-area">
-        <div className="fretboard-scroller">
-          <div className="fretboard-stage" aria-label="Mapa de notas do braço do cavaquinho em D G B D">
-            <div className="fretboard-neck">
-              <div className="fretboard-strings" aria-hidden="true">
-                {cavaquinhoTuning.map((note, index) => <span key={note + index} />)}
+      <div className="fretboard-stage" aria-label="Mapa de notas do braço do cavaquinho em D G B D">
+        <div className="tuning-row" aria-label="Afinação do cavaquinho: D G B D">
+          {cavaquinhoTuning.map((note, index) => <span key={note + index}>{note}</span>)}
+        </div>
+        <div className="fretboard-neck">
+          <div className="fretboard-strings" aria-hidden="true">
+            {cavaquinhoTuning.map((note, index) => <span key={note + index} />)}
+          </div>
+          <div className="fretboard-frets" aria-hidden="true">
+            {rows.map(row => <span key={row.fret} />)}
+          </div>
+          <div className="fretboard-note-grid">
+            {rows.map(row => (
+              <div key={row.fret} className="note-row">
+                <span className="fret-number">{row.fret}</span>
+                {row.notes.map(item => <NoteMarker key={item.stringIndex + '-' + item.fret} {...item} />)}
               </div>
-              <div className="fretboard-frets" aria-hidden="true">
-                {rows.map(row => <span key={row.fret} />)}
-              </div>
-              <div className="fretboard-note-grid">
-                {rows.map(row => (
-                  <div key={row.fret} className="note-row">
-                    <span className="fret-number">{row.fret}</span>
-                    {row.notes.map(item => <NoteMarker key={item.stringIndex + '-' + item.fret} {...item} />)}
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
