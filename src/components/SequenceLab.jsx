@@ -5,7 +5,6 @@ import { analyzeSequence, buildExercises, getColorForChord } from '../harmony';
 import { optimizeSequence } from '../progressionOptimizer';
 import { chromaticKeys, createSequence, createSequenceStep, defaultSequences, reorderSequence, suffixCycle } from '../sequences';
 import { activeSequenceStorageKey, loadActiveSequenceId, loadSequences, sequencesStorageKey } from '../storage';
-import PomodoroTimer from '../features/pomodoro/PomodoroTimer';
 import { AddChordSlot, AddSequenceButton } from './SequenceActions';
 import SequenceChordStep from './SequenceChordStep';
 import { Trash2 } from 'lucide-react';
@@ -58,7 +57,6 @@ function SequenceHeader({ sequence, setTitle, colorMode, setColorMode }) {
         <div className="sequence-path" aria-label="Sequência atual">{getSequenceText(sequence.steps)}</div>
       </div>
       <div className="lab-controls">
-        <PomodoroTimer />
         <label><span>Cor</span><select aria-label="Modo de cor" value={colorMode} onChange={(event) => setColorMode(event.target.value)}>{colorModes.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
       </div>
     </header>
