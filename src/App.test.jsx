@@ -32,6 +32,8 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByText('Teoria')).toBeInTheDocument();
     expect(screen.getByText('Exercícios')).toBeInTheDocument();
     expect(screen.getByText('Harmonia em Cores')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sessão de prática')).toHaveTextContent('Foco');
+    expect(screen.getByRole('button', { name: 'Iniciar' })).toBeInTheDocument();
     expect(screen.queryByText(/Painel de/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Movimento/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Tocar acorde')).not.toBeInTheDocument();
