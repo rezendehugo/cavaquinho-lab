@@ -175,7 +175,8 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .fretboard-page { overflow: hidden; }
 .fretboard-hero { display: flex; justify-content: space-between; align-items: start; gap: var(--space-4); margin-bottom: var(--space-4); }
 .fretboard-hero p:not(.eyebrow) { margin: 0; max-width: 620px; color: var(--color-muted); }
-.tuning-row { display: grid; grid-template-columns: 54px repeat(4, 1fr); align-items: center; margin: 0 var(--space-4) var(--space-2); }
+.tuning-row { display: grid; grid-template-columns: 54px repeat(4, 1fr); align-items: center; margin: 0 0 var(--space-2); padding: 0 var(--space-4); }
+.tuning-row::before { content: ''; }
 .tuning-row span { width: 34px; height: 34px; display: grid; place-items: center; justify-self: center; border-radius: 999px; background: var(--color-surface); color: var(--color-accent-hover); border: 1px solid var(--color-border); font-weight: 900; }
 .fretboard-stage { width: min(520px, 100%); margin: 0 auto; overflow: hidden; }
 .fretboard-neck { position: relative; padding: 14px var(--space-4) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-soft); overflow: hidden; }
@@ -217,7 +218,7 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
   .sequence-shape-card .chord-diagram svg { width: min(210px, 100%); }
   .section-title { display: block; }
   .fretboard-stage { width: 100%; max-width: 320px; }
-  .tuning-row { grid-template-columns: 34px repeat(4, minmax(0, 1fr)); margin-inline: 0; }
+  .tuning-row { grid-template-columns: 34px repeat(4, minmax(0, 1fr)); padding-inline: 6px; }
   .fretboard-neck { padding-inline: 6px; }
   .fretboard-neck::before { left: 40px; right: 6px; }
   .fretboard-strings { left: 40px; right: 6px; }
