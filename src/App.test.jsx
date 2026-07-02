@@ -10,6 +10,16 @@ const renderAt = (hash = '#/cavaquinho/sequences') => {
   return render(<App />);
 };
 
+const createDataTransfer = () => {
+  const data = new Map();
+  return {
+    dropEffect: '',
+    effectAllowed: '',
+    getData: vi.fn(type => data.get(type) || ''),
+    setData: vi.fn((type, value) => data.set(type, value))
+  };
+};
+
 describe('Cavaquinho Lab', () => {
   test('mostra apenas Formas, Sequências e Braço na navegação', () => {
     renderAt();
@@ -76,14 +86,54 @@ describe('Cavaquinho Lab', () => {
     expect(nextRoot).toHaveClass('arrow-control-button');
     expect(nextSuffix).toHaveClass('arrow-control-button');
     expect(nextShape).toHaveClass('arrow-control-button');
+    expect(nextRoot.closest('.chord-identity-part')).toHaveClass('chord-identity-root');
+    expect(nextSuffix.closest('.chord-identity-part')).toHaveClass('chord-identity-suffix');
     fireEvent.click(nextRoot);
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Db');
     fireEvent.click(nextSuffix);
     expect(screen.getByLabelText('Sequência atual')).not.toHaveTextContent('Db →');
     fireEvent.click(nextShape);
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).not.toBe(null);
+    const resetShape = screen.getByLabelText('Usar forma automática do acorde 1');
+    expect(resetShape.closest('.card-actions')).not.toBe(null);
+    expect(resetShape.closest('.sequence-shape-card')).toBe(null);
+    fireEvent.click(resetShape);
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(null);
+    fireEvent.click(nextShape);
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).not.toBe(null);
     fireEvent.click(screen.getByLabelText('Próxima nota do acorde 1'));
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(null);
+  });
+
+  test('mostra sufixos compactos nos controles do card de sequência', () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
+    const firstCard = screen.getAllByRole('article')[0];
+    const chordIdentity = firstCard.querySelector('.chord-identity-control');
+    const suffixPart = within(firstCard).getByLabelText('Sufixo do acorde 1');
+    const nextSuffix = screen.getByLabelText('Próximo sufixo do acorde 1');
+
+    expect(firstCard.querySelector('.sequence-card-main')).not.toBe(null);
+    expect(chordIdentity.closest('.sequence-card-main')).not.toBe(null);
+    expect(chordIdentity).toHaveTextContent('C');
+    expect(suffixPart).toHaveTextContent('');
+    expect(suffixPart).toHaveAttribute('title', 'Qualidade: Maior');
+    expect(suffixPart.querySelector('.chord-identity-text')).toHaveClass('chord-identity-text--placeholder');
+    expect(suffixPart.querySelector('.chord-identity-text')).toHaveAttribute('data-placeholder', 'maj');
+    fireEvent.click(nextSuffix);
+    fireEvent.click(nextSuffix);
+    fireEvent.click(nextSuffix);
+
+    expect(chordIdentity).toHaveTextContent('C7');
+    expect(suffixPart).toHaveTextContent('7');
+    expect(suffixPart).toHaveAttribute('title', 'Qualidade: Sétima dominante');
+    expect(suffixPart.querySelector('.chord-identity-text')).not.toHaveClass('chord-identity-text--placeholder');
+    expect(within(firstCard).queryByText('Sétima dominante')).not.toBeInTheDocument();
+    expect(firstCard.querySelector('.sequence-shape-card .chord-shape-name-row strong')).toBe(null);
+    expect(firstCard.querySelector('.sequence-shape-card .shape-code')).toBe(null);
+    expect(firstCard.querySelector('.sequence-shape-card .chord-shape-card-header .shape-index-badge')).toBe(null);
+    expect(firstCard.querySelector('.sequence-shape-card .chord-shape-footer .shape-index-badge')).not.toBe(null);
+    expect(firstCard.querySelector('.sequence-shape-card').closest('.sequence-card-main')).not.toBe(null);
   });
 
   test('usa card compartilhado compacto na página Formas', () => {
@@ -103,10 +153,18 @@ describe('Cavaquinho Lab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
     expect(screen.getAllByRole('article')).toHaveLength(2);
     fireEvent.click(screen.getByLabelText('Próxima nota do acorde 2'));
-    const moveUp = screen.getByLabelText('Mover acorde 2 para cima');
-    expect(moveUp).toHaveClass('arrow-control-button');
-    fireEvent.click(moveUp);
+
+    expect(screen.queryByLabelText('Mover acorde 1 para baixo')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Mover acorde 2 para cima')).not.toBeInTheDocument();
+    const cards = within(screen.getByLabelText('Acordes da sequência')).getAllByRole('article');
+    const dataTransfer = createDataTransfer();
+    fireEvent.dragStart(cards[1], { dataTransfer });
+    fireEvent.dragOver(cards[0], { dataTransfer });
+    fireEvent.drop(cards[0], { dataTransfer });
+    fireEvent.dragEnd(cards[1], { dataTransfer });
+
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Db → C');
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps.map(step => step.key)).toEqual(['Db', 'C']);
     fireEvent.click(screen.getByLabelText('Remover acorde 2'));
     expect(screen.getAllByRole('article')).toHaveLength(1);
   });

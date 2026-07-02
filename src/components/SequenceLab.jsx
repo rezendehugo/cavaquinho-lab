@@ -133,6 +133,11 @@ function SequenceLab() {
   }));
 
   const moveStep = (fromIndex, toIndex) => updateActiveSequence(sequence => ({ ...sequence, steps: reorderSequence(sequence.steps, fromIndex, toIndex) }));
+  const moveStepById = (stepId, toIndex) => {
+    const fromIndex = activeSequence.steps.findIndex(step => step.id === stepId);
+    if (fromIndex < 0 || fromIndex === toIndex) return;
+    moveStep(fromIndex, toIndex);
+  };
   const addStep = () => updateActiveSequence(sequence => ({ ...sequence, steps: sequence.steps.concat(createSequenceStep(sequence.steps.length + 1)) }));
   const removeStep = (index) => updateActiveSequence(sequence => ({ ...sequence, steps: sequence.steps.filter((_step, stepIndex) => stepIndex !== index) }));
 
@@ -190,11 +195,10 @@ function SequenceLab() {
                   key={activeSequence.steps[index].id}
                   step={activeSequence.steps[index]}
                   index={index}
-                  total={activeSequence.steps.length}
                   optimizedStep={step}
                   analysisChord={analysis.chords[index]}
                   color={getColorForChord(activeSequence.steps[index], analysis.chords[index], colorMode, analysis.keyCenter)}
-                  moveStep={moveStep}
+                  moveStepById={moveStepById}
                   removeStep={removeStep}
                   cycleRoot={cycleRoot}
                   cycleSuffix={cycleSuffix}
