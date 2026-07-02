@@ -1,78 +1,113 @@
-import { RotateCcw, Trash2 } from 'lucide-react';
-import { formatChordName, qualityLabels } from '../chordDisplay';
+import { useState } from 'react';
+import { RotateCcw, X } from 'lucide-react';
+import { formatChordName } from '../chordDisplay';
+import ChordIdentityControl from './ChordIdentityControl';
 import ChordShapeCard from './ChordShapeCard';
-import { ArrowControlButton, IconControlButton } from './IconControls';
+import { IconControlButton } from './IconControls';
 
-function ChordStepper({ label, value, previousLabel, nextLabel, onPrevious, onNext }) {
-  return (
-    <div className="chord-stepper" aria-label={label}>
-      <ArrowControlButton direction="left" className="chord-stepper-arrow" ariaLabel={previousLabel} onClick={onPrevious} />
-      <strong>{value}</strong>
-      <ArrowControlButton direction="right" className="chord-stepper-arrow" ariaLabel={nextLabel} onClick={onNext} />
-    </div>
-  );
-}
+const dragDataType = 'text/x-cavaquinho-sequence-step';
+const interactiveSelector = 'button, input, select, textarea, a, [role="button"], .chord-identity-control';
 
-function SequenceChordStep({ step, index, total, optimizedStep, analysisChord, color, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, releaseShape }) {
+const isInteractiveDragSource = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
+
+function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, moveStepById, removeStep, cycleRoot, cycleSuffix, cycleShape, releaseShape }) {
+  const [dragState, setDragState] = useState('idle');
   const isManual = Number.isInteger(step.positionIndex);
   const chordName = formatChordName(step.key, step.suffix);
+  const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
+
+  const handleDragStart = (event) => {
+    if (isInteractiveDragSource(event.target)) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData(dragDataType, step.id);
+    event.dataTransfer.setData('text/plain', step.id);
+    setDragState('dragging');
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    if (dragState !== 'dragging') setDragState('over');
+  };
+
+  const handleDragLeave = (event) => {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    setDragState('idle');
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    const draggedStepId = event.dataTransfer.getData(dragDataType) || event.dataTransfer.getData('text/plain');
+    setDragState('idle');
+    if (!draggedStepId || draggedStepId === step.id) return;
+    moveStepById(draggedStepId, index);
+  };
+
+  const handleDragEnd = () => setDragState('idle');
 
   return (
-    <article className="lab-card" style={{ '--swatch': color }}>
+    <article
+      className={cardClasses}
+      style={{ '--swatch': color }}
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
+    >
       <header className="lab-card-header">
         <div>
           <span className="scale-degree">{analysisChord?.numeral || 'acorde ' + (index + 1)}</span>
         </div>
         <div className="card-actions">
-          <ArrowControlButton direction="up" className="move-step-button" ariaLabel={'Mover acorde ' + (index + 1) + ' para cima'} disabled={index === 0} onClick={() => moveStep(index, index - 1)} size={15} />
-          <ArrowControlButton direction="down" className="move-step-button" ariaLabel={'Mover acorde ' + (index + 1) + ' para baixo'} disabled={index === total - 1} onClick={() => moveStep(index, index + 1)} size={15} />
+          {isManual ? (
+            <IconControlButton className="reset-shape-button" ariaLabel={'Usar forma automática do acorde ' + (index + 1)} title="Automático" onClick={() => releaseShape(index)}>
+              <RotateCcw aria-hidden="true" size={15} strokeWidth={2.2} />
+            </IconControlButton>
+          ) : null}
           <IconControlButton className="remove-step-button" ariaLabel={'Remover acorde ' + (index + 1)} onClick={() => removeStep(index)}>
-            <Trash2 aria-hidden="true" size={15} strokeWidth={2.1} />
+            <X aria-hidden="true" size={15} strokeWidth={2.1} />
           </IconControlButton>
         </div>
       </header>
 
-      <div className="chord-editors">
-        <ChordStepper
-          label={'Nota do acorde ' + (index + 1)}
-          value={step.key}
-          previousLabel={'Nota anterior do acorde ' + (index + 1)}
-          nextLabel={'Próxima nota do acorde ' + (index + 1)}
-          onPrevious={() => cycleRoot(index, -1)}
-          onNext={() => cycleRoot(index, 1)}
+      <div className="sequence-card-main">
+        <ChordIdentityControl
+          root={step.key}
+          suffix={step.suffix}
+          index={index}
+          onPreviousRoot={() => cycleRoot(index, -1)}
+          onNextRoot={() => cycleRoot(index, 1)}
+          onPreviousSuffix={() => cycleSuffix(index, -1)}
+          onNextSuffix={() => cycleSuffix(index, 1)}
         />
-        <ChordStepper
-          label={'Sufixo do acorde ' + (index + 1)}
-          value={qualityLabels[step.suffix] || step.suffix}
-          previousLabel={'Sufixo anterior do acorde ' + (index + 1)}
-          nextLabel={'Próximo sufixo do acorde ' + (index + 1)}
-          onPrevious={() => cycleSuffix(index, -1)}
-          onNext={() => cycleSuffix(index, 1)}
-        />
-      </div>
 
-      {optimizedStep ? (
-        <ChordShapeCard
-          as="div"
-          className="sequence-shape-card"
-          variant="focus"
-          chordName={chordName}
-          position={optimizedStep.position}
-          shapeIndex={optimizedStep.positionIndex}
-          shapeTotal={optimizedStep.chord.positions.length}
-          actions={isManual ? (
-            <button type="button" className="inline-auto icon-button" onClick={() => releaseShape(index)} aria-label={'Usar forma automática do acorde ' + (index + 1)} title="Automático">
-              <RotateCcw aria-hidden="true" size={15} strokeWidth={2.2} />
-            </button>
-          ) : null}
-          navigation={{
-            previousLabel: 'Forma anterior do acorde ' + (index + 1),
-            nextLabel: 'Próxima forma do acorde ' + (index + 1),
-            onPrevious: () => cycleShape(index, -1),
-            onNext: () => cycleShape(index, 1)
-          }}
-        />
-      ) : null}
+        {optimizedStep ? (
+          <ChordShapeCard
+            as="div"
+            className="sequence-shape-card"
+            variant="focus"
+            chordName={chordName}
+            showName={false}
+            showShapeCode={false}
+            shapeIndexPlacement="bottom"
+            position={optimizedStep.position}
+            shapeIndex={optimizedStep.positionIndex}
+            shapeTotal={optimizedStep.chord.positions.length}
+            navigation={{
+              previousLabel: 'Forma anterior do acorde ' + (index + 1),
+              nextLabel: 'Próxima forma do acorde ' + (index + 1),
+              onPrevious: () => cycleShape(index, -1),
+              onNext: () => cycleShape(index, 1)
+            }}
+          />
+        ) : null}
+      </div>
     </article>
   );
 }
