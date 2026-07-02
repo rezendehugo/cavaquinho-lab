@@ -1,4 +1,4 @@
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -13,7 +13,7 @@ COPY . .
 RUN npm test
 RUN npm run build
 
-FROM node:22-alpine AS preview
+FROM node:26-alpine AS preview
 WORKDIR /app
 COPY --from=build /app ./
 EXPOSE 4173
