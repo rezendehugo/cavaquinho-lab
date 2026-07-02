@@ -3,7 +3,7 @@ import ChordDiagram from './ChordDiagram';
 import { ArrowControlButton } from './IconControls';
 
 export function ShapeIndexBadge({ index, total }) {
-  return <span className="shape-index-badge">{formatShapeIndex(index, total)}</span>;
+  return <span className="shape-index-badge" aria-label={'Forma ' + (index + 1) + ' de ' + total}>{formatShapeIndex(index, total)}</span>;
 }
 
 export function ShapeNavigationControls({ previousLabel, nextLabel, onPrevious, onNext, previousDisabled = false, nextDisabled = false }) {
@@ -25,25 +25,37 @@ function ChordShapeCard({
   navigation = null,
   as: Component = 'article',
   className = '',
-  variant = 'default'
+  variant = 'default',
+  showName = true,
+  showShapeCode = true,
+  shapeIndexPlacement = 'top'
 }) {
   if (!position) return null;
 
   const classes = ['chord-shape-card', variant === 'focus' ? 'chord-shape-card--focus' : '', className].filter(Boolean).join(' ');
+  const showTopIndex = shapeIndexPlacement === 'top';
+  const showBottomIndex = shapeIndexPlacement === 'bottom';
+  const hasHeader = showName || showTopIndex || showShapeCode || actions;
 
   return (
     <Component className={classes}>
-      <header className="chord-shape-card-header">
-        <div className="chord-shape-title">
-          <div className="chord-shape-name-row">
-            <strong>{chordName}</strong>
-            <ShapeIndexBadge index={shapeIndex} total={shapeTotal} />
-          </div>
-          <span className="shape-code">{formatShapeCode(position)}</span>
-        </div>
-        {actions ? <div className="chord-shape-actions">{actions}</div> : null}
-      </header>
-      <div className="chord-shape-divider" />
+      {hasHeader ? (
+        <>
+          <header className="chord-shape-card-header">
+            <div className="chord-shape-title">
+              {(showName || showTopIndex) ? (
+                <div className="chord-shape-name-row">
+                  {showName ? <strong>{chordName}</strong> : null}
+                  {showTopIndex ? <ShapeIndexBadge index={shapeIndex} total={shapeTotal} /> : null}
+                </div>
+              ) : null}
+              {showShapeCode ? <span className="shape-code">{formatShapeCode(position)}</span> : null}
+            </div>
+            {actions ? <div className="chord-shape-actions">{actions}</div> : null}
+          </header>
+          <div className="chord-shape-divider" />
+        </>
+      ) : null}
       <div className="chord-shape-diagram-area">
         {navigation ? (
           <ShapeNavigationControls
@@ -57,6 +69,11 @@ function ChordShapeCard({
         ) : null}
         <ChordDiagram position={position} name={chordName} mode={mode} />
       </div>
+      {showBottomIndex ? (
+        <div className="chord-shape-footer">
+          <ShapeIndexBadge index={shapeIndex} total={shapeTotal} />
+        </div>
+      ) : null}
     </Component>
   );
 }
