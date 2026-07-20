@@ -38,7 +38,7 @@ jobs:
       - name: Preparar fallback de rotas
         run: cp dist/index.html dist/404.html
       - name: Preparar Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Enviar artefato
         uses: actions/upload-pages-artifact@v3
         with:
