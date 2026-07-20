@@ -4,18 +4,56 @@ import { fallbackRoute, getRoutes, routeRedirects } from './config';
 import FretboardPage from './pages/FretboardPage';
 import ShapesPage from './pages/ShapesPage';
 
-const getRouteFromHash = () => window.location.hash.replace('#', '') || fallbackRoute;
+const normalizeBasePath = (basePath) => {
+  if (!basePath || basePath === '/') return '';
+  return basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+};
+
+const basePath = normalizeBasePath(import.meta.env.BASE_URL);
+
+const ensureLeadingSlash = (route) => route.startsWith('/') ? route : '/' + route;
+
+const stripBasePath = (pathname) => {
+  if (!basePath || !pathname.startsWith(basePath)) return pathname;
+  return pathname.slice(basePath.length) || '/';
+};
+
+const getLegacyHashRoute = () => {
+  const hashRoute = window.location.hash.replace('#', '');
+  return hashRoute ? ensureLeadingSlash(hashRoute) : '';
+};
+
+const getRouteFromLocation = () => getLegacyHashRoute() || stripBasePath(window.location.pathname) || fallbackRoute;
+
+const getPublicPath = (route) => basePath + route;
 
 const normalizeRoute = (route, routes) => {
-  if (routeRedirects[route]) return routeRedirects[route];
-  return routes.some(item => item.path === route) ? route : fallbackRoute;
+  const normalizedRoute = ensureLeadingSlash(route || fallbackRoute);
+  if (routeRedirects[normalizedRoute]) return routeRedirects[normalizedRoute];
+  return routes.some(item => item.path === normalizedRoute) ? normalizedRoute : fallbackRoute;
+};
+
+const replaceBrowserRoute = (route) => {
+  const nextPath = getPublicPath(route);
+  if (window.location.pathname === nextPath && !window.location.hash) return;
+  window.history.replaceState(null, '', nextPath);
+};
+
+const pushBrowserRoute = (route) => {
+  const nextPath = getPublicPath(route);
+  if (window.location.pathname === nextPath && !window.location.hash) return;
+  window.history.pushState(null, '', nextPath);
+  window.dispatchEvent(new Event('popstate'));
 };
 
 function NavTabs({ route, routes }) {
   return (
     <nav className="tabs" aria-label="Navegação principal">
       {routes.map(item => (
-        <a key={item.path} href={'#' + item.path} className={route === item.path ? 'active' : ''}>{item.label}</a>
+        <a key={item.path} href={getPublicPath(item.path)} className={route === item.path ? 'active' : ''} onClick={(event) => {
+          event.preventDefault();
+          pushBrowserRoute(item.path);
+        }}>{item.label}</a>
       ))}
     </nav>
   );
@@ -23,21 +61,21 @@ function NavTabs({ route, routes }) {
 
 function App() {
   const routes = useMemo(() => getRoutes(), []);
-  const [route, setRoute] = useState(() => normalizeRoute(getRouteFromHash(), routes));
+  const [route, setRoute] = useState(() => normalizeRoute(getRouteFromLocation(), routes));
 
   useEffect(() => {
     const syncRoute = () => {
-      const nextRoute = normalizeRoute(getRouteFromHash(), routes);
+      const nextRoute = normalizeRoute(getRouteFromLocation(), routes);
       setRoute(nextRoute);
-      if (window.location.hash !== '#' + nextRoute) window.location.hash = '#' + nextRoute;
+      replaceBrowserRoute(nextRoute);
     };
-    window.addEventListener('hashchange', syncRoute);
+    window.addEventListener('popstate', syncRoute);
     syncRoute();
-    return () => window.removeEventListener('hashchange', syncRoute);
+    return () => window.removeEventListener('popstate', syncRoute);
   }, [routes]);
 
-  const page = route === '/cavaquinho/shapes' ? <ShapesPage />
-    : route === '/cavaquinho/fretboard' ? <FretboardPage />
+  const page = route === '/shapes' ? <ShapesPage />
+    : route === '/fretboard' ? <FretboardPage />
       : <SequenceLab />;
 
   return (
