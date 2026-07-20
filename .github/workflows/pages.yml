@@ -27,10 +27,16 @@ jobs:
           cache: npm
       - name: Instalar dependências
         run: npm ci
+      - name: Verificar lint
+        run: npm run lint
+      - name: Verificar tipos
+        run: npm run typecheck
       - name: Rodar testes
         run: npm test
       - name: Gerar site
         run: npm run build
+      - name: Preparar fallback de rotas
+        run: cp dist/index.html dist/404.html
       - name: Preparar Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato

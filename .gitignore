@@ -1,7 +1,23 @@
-node_modules
-dist
-coverage
-.DS_Store
+node_modules/
+dist/
+coverage/
+.cache/
+
+# Test and browser artifacts
+playwright-report/
+test-results/
+*.log
+
+# Local environment files; the public template is intentionally tracked.
 .env
 .env.*
 !.env.example
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local agent/project context
+CONTEXT.md
