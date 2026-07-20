@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import SequenceLab from './components/SequenceLab';
 import { fallbackRoute, getRoutes, routeRedirects } from './config';
+import PomodoroTimer from './features/pomodoro/PomodoroTimer';
 import FretboardPage from './pages/FretboardPage';
 import ShapesPage from './pages/ShapesPage';
 
@@ -81,9 +82,14 @@ function App() {
   return (
     <main className="app-shell">
       <header className="hero">
-        <p className="eyebrow">Cavaquinho Lab</p>
-        <h1>Estudo prático de acordes, formas e sequências.</h1>
-        <p>Um laboratório para estudar cavaquinho com diagramas reais, análise harmônica, cores de apoio e exercícios guiados.</p>
+        <div className="hero-topline">
+          <div>
+            <p className="eyebrow">Cavaquinho Lab</p>
+            <h1>Estudo prático de acordes, formas e sequências.</h1>
+            <p>Um laboratório para estudar cavaquinho com diagramas reais, análise harmônica, cores de apoio e exercícios guiados.</p>
+          </div>
+          <PomodoroTimer />
+        </div>
         <NavTabs route={route} routes={routes} />
       </header>
       {page}

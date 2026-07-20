@@ -62,9 +62,34 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByText('Teoria')).toBeInTheDocument();
     expect(screen.getByText('Exercícios')).toBeInTheDocument();
     expect(screen.getByText('Harmonia em Cores')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sessão de prática' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ciclos de prática')).not.toBeInTheDocument();
     expect(screen.queryByText(/Painel de/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Movimento/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Tocar acorde')).not.toBeInTheDocument();
+  });
+
+  test('mostra o pomodoro global em todas as páginas e abre por popover', () => {
+    let view = renderAt('#/cavaquinho/shapes');
+    expect(screen.getByRole('button', { name: 'Sessão de prática' })).toBeInTheDocument();
+    view.unmount();
+
+    view = renderAt('#/cavaquinho/fretboard');
+    expect(screen.getByRole('button', { name: 'Sessão de prática' })).toBeInTheDocument();
+    view.unmount();
+
+    renderAt();
+    const labControls = document.querySelector('.lab-controls');
+    expect(within(labControls).queryByRole('button', { name: 'Sessão de prática' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sessão de prática' }));
+    expect(screen.getByLabelText('Ciclos de prática')).toHaveTextContent('Ciclos de prática');
+    expect(screen.getByRole('button', { name: 'Iniciar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reiniciar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próxima etapa' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByLabelText('Ciclos de prática')).not.toBeInTheDocument();
   });
 
   test('inicia com sequência vazia e cria o primeiro acorde', () => {
