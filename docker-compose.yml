@@ -9,8 +9,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    environment:
-      - VITE_SHOW_EMPTY_PAGES=true
   ci:
     profiles: ["ci"]
     build:

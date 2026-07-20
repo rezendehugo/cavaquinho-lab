@@ -1,12 +1,16 @@
 export const getRoutes = () => [
-  { path: '/cavaquinho/shapes', label: 'Formas', complete: true },
-  { path: '/cavaquinho/sequences', label: 'Sequências', complete: true },
-  { path: '/cavaquinho/fretboard', label: 'Braço', complete: true }
+  { path: '/shapes', label: 'Formas', complete: true },
+  { path: '/sequences', label: 'Sequências', complete: true },
+  { path: '/fretboard', label: 'Braço', complete: true }
 ];
 
-export const fallbackRoute = '/cavaquinho/sequences';
+export const fallbackRoute = '/sequences';
 
 export const routeRedirects = {
   '/cavaquinho': fallbackRoute,
-  '/cavaquinho/practice': fallbackRoute
+  '/cavaquinho/practice': fallbackRoute,
+  '/cavaquinho/sequences': '/sequences',
+  '/cavaquinho/shapes': '/shapes',
+  '/cavaquinho/fretboard': '/fretboard',
+  '/practice': fallbackRoute
 };

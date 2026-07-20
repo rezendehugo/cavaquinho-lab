@@ -3,3 +3,10 @@ dist
 .git
 coverage
 .DS_Store
+.env
+.env.*
+!.env.example
+playwright-report
+test-results
+*.log
+CONTEXT.md

@@ -1,14 +1,23 @@
 import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import fs from 'node:fs';
 import path from 'node:path';
+import rawCavaquinhoChords from '@tombatossals/chords-db/lib/cavaquinho.json';
 import App from './App.jsx';
 import { getRoutes } from './config';
+import { cavaquinhoChords } from './domain/chords';
 
-const renderAt = (hash = '#/cavaquinho/sequences') => {
+const renderAt = (route = '/sequences') => {
   window.localStorage.clear();
-  window.location.hash = hash;
+  window.history.pushState(null, '', route);
   return render(<App />);
 };
+
+const getAbsoluteFrets = (position) => {
+  const baseFret = position.baseFret || 1;
+  return position.frets.map(fret => fret <= 0 ? fret : baseFret + fret - 1);
+};
+
+const getFirstPlayedFret = (position) => Math.min(...getAbsoluteFrets(position).filter(fret => fret >= 0));
 
 const createDataTransfer = () => {
   const data = new Map();
@@ -32,9 +41,20 @@ describe('Cavaquinho Lab', () => {
   });
 
   test('redireciona rotas antigas para Sequências', async () => {
-    renderAt('#/cavaquinho/practice');
-    await waitFor(() => expect(window.location.hash).toBe('#/cavaquinho/sequences'));
+    renderAt('/cavaquinho/practice');
+    await waitFor(() => expect(window.location.pathname).toBe('/sequences'));
     expect(screen.getByRole('link', { name: 'Sequências' })).toHaveClass('active');
+  });
+
+  test('normaliza hashes antigos para rotas reais', async () => {
+    window.localStorage.clear();
+    window.history.pushState(null, '', '/');
+    window.location.hash = '#/cavaquinho/shapes';
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe('/shapes'));
+    expect(window.location.hash).toBe('');
+    expect(screen.getByRole('link', { name: 'Formas' })).toHaveClass('active');
   });
 
   test('abre o Lab sem áudio, movimento ou títulos separados por painel', () => {
@@ -119,13 +139,7 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Sequência atual')).not.toHaveTextContent('Db →');
     fireEvent.click(nextShape);
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).not.toBe(null);
-    const resetShape = screen.getByLabelText('Usar forma automática do acorde 1');
-    expect(resetShape.closest('.card-actions')).not.toBe(null);
-    expect(resetShape.closest('.sequence-shape-card')).toBe(null);
-    fireEvent.click(resetShape);
-    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(null);
-    fireEvent.click(nextShape);
-    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).not.toBe(null);
+    expect(screen.queryByLabelText('Usar forma automática do acorde 1')).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('Próxima nota do acorde 1'));
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(null);
   });
@@ -135,24 +149,20 @@ describe('Cavaquinho Lab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
     const firstCard = screen.getAllByRole('article')[0];
     const chordIdentity = firstCard.querySelector('.chord-identity-control');
-    const suffixPart = within(firstCard).getByLabelText('Sufixo do acorde 1');
+    const suffixInput = within(firstCard).getByLabelText('Sufixo do acorde 1');
     const nextSuffix = screen.getByLabelText('Próximo sufixo do acorde 1');
 
     expect(firstCard.querySelector('.sequence-card-main')).not.toBe(null);
     expect(chordIdentity.closest('.sequence-card-main')).not.toBe(null);
-    expect(chordIdentity).toHaveTextContent('C');
-    expect(suffixPart).toHaveTextContent('');
-    expect(suffixPart).toHaveAttribute('title', 'Qualidade: Maior');
-    expect(suffixPart.querySelector('.chord-identity-text')).toHaveClass('chord-identity-text--placeholder');
-    expect(suffixPart.querySelector('.chord-identity-text')).toHaveAttribute('data-placeholder', 'maj');
+    expect(within(firstCard).getByLabelText('Nota do acorde 1')).toHaveValue('C');
+    expect(suffixInput).toHaveValue('');
+    expect(suffixInput).toHaveAttribute('placeholder', 'maj');
     fireEvent.click(nextSuffix);
     fireEvent.click(nextSuffix);
     fireEvent.click(nextSuffix);
 
-    expect(chordIdentity).toHaveTextContent('C7');
-    expect(suffixPart).toHaveTextContent('7');
-    expect(suffixPart).toHaveAttribute('title', 'Qualidade: Sétima dominante');
-    expect(suffixPart.querySelector('.chord-identity-text')).not.toHaveClass('chord-identity-text--placeholder');
+    expect(chordIdentity).toHaveAttribute('aria-label', 'Acorde C7: Sétima dominante');
+    expect(suffixInput).toHaveValue('7');
     expect(within(firstCard).queryByText('Sétima dominante')).not.toBeInTheDocument();
     expect(firstCard.querySelector('.sequence-shape-card .chord-shape-name-row strong')).toBe(null);
     expect(firstCard.querySelector('.sequence-shape-card .shape-code')).toBe(null);
@@ -161,8 +171,68 @@ describe('Cavaquinho Lab', () => {
     expect(firstCard.querySelector('.sequence-shape-card').closest('.sequence-card-main')).not.toBe(null);
   });
 
+  test('permite digitar acordes, aliases portugueses e usar o teclado', () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
+    const rootInput = screen.getByLabelText('Nota do acorde 1');
+    const suffixInput = screen.getByLabelText('Sufixo do acorde 1');
+
+    fireEvent.change(rootInput, { target: { value: 'C#m' } });
+    fireEvent.keyDown(rootInput, { key: 'Enter' });
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Dbm');
+
+    fireEvent.change(suffixInput, { target: { value: 'sétima maior' } });
+    fireEvent.blur(suffixInput);
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Dbmaj7');
+
+    fireEvent.keyDown(rootInput, { key: 'ArrowDown' });
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Dmaj7');
+    fireEvent.keyDown(suffixInput, { key: 'ArrowUp' });
+    expect(screen.getByLabelText('Sequência atual')).not.toHaveTextContent('Dmaj7');
+  });
+
+  test('mantém o acorde anterior quando a entrada é inválida e permite cancelar', () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
+    const rootInput = screen.getByLabelText('Nota do acorde 1');
+
+    fireEvent.change(rootInput, { target: { value: 'H13' } });
+    fireEvent.keyDown(rootInput, { key: 'Enter' });
+    expect(rootInput).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Acorde não disponível.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('C');
+
+    fireEvent.keyDown(rootInput, { key: 'Escape' });
+    expect(rootInput).toHaveValue('C');
+    expect(rootInput).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  test('mantém escolhas de forma independentes entre cards', () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
+
+    fireEvent.click(screen.getByLabelText('Próxima forma do acorde 1'));
+    fireEvent.click(screen.getByLabelText('Próxima forma do acorde 2'));
+    fireEvent.click(screen.getByLabelText('Próxima forma do acorde 2'));
+
+    const getSavedSteps = () => JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps;
+    const savedPositionIndexes = getSavedSteps().map(step => step.positionIndex);
+    expect(savedPositionIndexes.every(Number.isInteger)).toBe(true);
+    expect(savedPositionIndexes[0]).not.toBe(savedPositionIndexes[1]);
+
+    const secondCard = within(screen.getByLabelText('Acordes da sequência')).getAllByRole('article')[1];
+    const secondShapeBeforeRootChange = secondCard.querySelector('.shape-index-badge').textContent;
+
+    fireEvent.click(screen.getByLabelText('Próxima nota do acorde 1'));
+
+    expect(getSavedSteps()[0].positionIndex).toBe(null);
+    expect(getSavedSteps()[1].positionIndex).toBe(savedPositionIndexes[1]);
+    expect(secondCard.querySelector('.shape-index-badge')).toHaveTextContent(secondShapeBeforeRootChange);
+  });
+
   test('usa card compartilhado compacto na página Formas', () => {
-    renderAt('#/cavaquinho/shapes');
+    renderAt('/shapes');
     expect(screen.getByRole('link', { name: 'Formas' })).toHaveClass('active');
     expect(document.querySelectorAll('.chord-shape-card').length).toBeGreaterThan(0);
     expect(screen.getByText('1/7')).toBeInTheDocument();
@@ -216,7 +286,7 @@ describe('Cavaquinho Lab', () => {
   });
 
   test('renderiza a página Braço com afinação e primeiras casas', () => {
-    renderAt('#/cavaquinho/fretboard');
+    renderAt('/fretboard');
     expect(screen.getByRole('link', { name: 'Braço' })).toHaveClass('active');
     expect(screen.getByRole('heading', { name: 'Braço e notas no cavaquinho' })).toBeInTheDocument();
     expect(screen.getByText('Localize as notas diretamente no braço do cavaquinho.')).toBeInTheDocument();
@@ -226,6 +296,25 @@ describe('Cavaquinho Lab', () => {
     expect(document.querySelector('.fretboard-open-notes')).toBe(null);
     expect(document.querySelector('.open-row')).toBe(null);
     expect(screen.getByLabelText('Mapa de notas do braço do cavaquinho em D G B D')).toHaveTextContent('1EbD#AbG#CEbD#');
+  });
+
+  test('exporta formas de acorde já ordenadas por primeira casa sem mutar a base original', () => {
+    const rawPositions = rawCavaquinhoChords.chords.C.find(chord => chord.suffix === 'major').positions;
+    const sortedPositions = cavaquinhoChords.chords.C.find(chord => chord.suffix === 'major').positions;
+
+    expect(rawPositions.map(getFirstPlayedFret)).toEqual([0, 5, 5, 8, 10, 2, 8]);
+    expect(sortedPositions.map(getFirstPlayedFret)).toEqual([0, 2, 5, 5, 8, 8, 10]);
+    expect(rawPositions[1].frets).toEqual([1, 1, 1, 1]);
+    expect(sortedPositions[1].frets).toEqual(rawPositions[5].frets);
+  });
+
+  test('não usa helper de ordenação em tempo de renderização', () => {
+    const sourceFiles = [
+      'src/components/SequenceLab.jsx',
+      'src/pages/ShapesPage.jsx'
+    ].map(file => fs.readFileSync(path.join(process.cwd(), file), 'utf8')).join('\\n');
+    expect(sourceFiles).not.toContain('getSortedChordPositions');
+    expect(fs.existsSync(path.join(process.cwd(), 'src/chordShapes.js'))).toBe(false);
   });
 
   test('não importa o wrapper com som no código da aplicação', () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RotateCcw, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { formatChordName } from '../chordDisplay';
 import ChordIdentityControl from './ChordIdentityControl';
 import ChordShapeCard from './ChordShapeCard';
@@ -10,9 +10,8 @@ const interactiveSelector = 'button, input, select, textarea, a, [role="button"]
 
 const isInteractiveDragSource = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
 
-function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, moveStepById, removeStep, cycleRoot, cycleSuffix, cycleShape, releaseShape }) {
+function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, moveStepById, removeStep, cycleRoot, cycleSuffix, cycleShape, availableSuffixes, setChordIdentity, setChordSuffix }) {
   const [dragState, setDragState] = useState('idle');
-  const isManual = Number.isInteger(step.positionIndex);
   const chordName = formatChordName(step.key, step.suffix);
   const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
 
@@ -65,11 +64,6 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
           <span className="scale-degree">{analysisChord?.numeral || 'acorde ' + (index + 1)}</span>
         </div>
         <div className="card-actions">
-          {isManual ? (
-            <IconControlButton className="reset-shape-button" ariaLabel={'Usar forma automática do acorde ' + (index + 1)} title="Automático" onClick={() => releaseShape(index)}>
-              <RotateCcw aria-hidden="true" size={15} strokeWidth={2.2} />
-            </IconControlButton>
-          ) : null}
           <IconControlButton className="remove-step-button" ariaLabel={'Remover acorde ' + (index + 1)} onClick={() => removeStep(index)}>
             <X aria-hidden="true" size={15} strokeWidth={2.1} />
           </IconControlButton>
@@ -81,10 +75,13 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
           root={step.key}
           suffix={step.suffix}
           index={index}
+          availableSuffixes={availableSuffixes}
           onPreviousRoot={() => cycleRoot(index, -1)}
           onNextRoot={() => cycleRoot(index, 1)}
           onPreviousSuffix={() => cycleSuffix(index, -1)}
           onNextSuffix={() => cycleSuffix(index, 1)}
+          onCommitChord={(key, suffix) => setChordIdentity(index, key, suffix)}
+          onCommitSuffix={(suffix) => setChordSuffix(index, suffix)}
         />
 
         {optimizedStep ? (

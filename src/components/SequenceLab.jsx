@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatChordName } from '../chordDisplay';
 import { cavaquinhoChords, getAvailableSuffixes } from '../domain/chords';
 import { analyzeSequence, buildExercises, getColorForChord } from '../harmony';
-import { optimizeSequence } from '../progressionOptimizer';
+import { findChord, optimizeSequence } from '../progressionOptimizer';
 import { chromaticKeys, createSequence, createSequenceStep, defaultSequences, reorderSequence, suffixCycle } from '../sequences';
 import { activeSequenceStorageKey, loadActiveSequenceId, loadSequences, sequencesStorageKey } from '../storage';
 import { AddChordSlot, AddSequenceButton } from './SequenceActions';
@@ -28,6 +28,15 @@ const getNextSuffix = (key, currentSuffix, direction) => {
   if (!available.length) return currentSuffix;
   const currentIndex = available.includes(currentSuffix) ? available.indexOf(currentSuffix) : 0;
   return available[wrapIndex(currentIndex + direction, available.length)];
+};
+
+const getValidPositionIndex = (step, chord) => Number.isInteger(step.positionIndex) && step.positionIndex >= 0 && step.positionIndex < chord.positions.length ? step.positionIndex : 0;
+
+const resolveSequenceShape = (step) => {
+  const chord = findChord(cavaquinhoChords, step.key, step.suffix);
+  if (!chord?.positions.length) return null;
+  const positionIndex = getValidPositionIndex(step, chord);
+  return { ...step, chord, positionIndex, position: chord.positions[positionIndex] };
 };
 
 function SequenceManager({ sequences, activeSequenceId, setActiveSequenceId, createNewSequence, deleteSequence }) {
@@ -110,6 +119,8 @@ function SequenceLab() {
 
   const activeSequence = sequences.find(sequence => sequence.id === activeSequenceId) || sequences[0] || defaultSequences[0];
   const optimized = useMemo(() => optimizeSequence(activeSequence.steps, cavaquinhoChords), [activeSequence.steps]);
+  const sequenceShapes = useMemo(() => activeSequence.steps.map(resolveSequenceShape), [activeSequence.steps]);
+  const missingShapes = activeSequence.steps.filter((_step, index) => !sequenceShapes[index]);
   const analysis = useMemo(() => analyzeSequence(activeSequence.steps, optimized.steps), [activeSequence.steps, optimized.steps]);
   const exercises = useMemo(() => buildExercises(activeSequence.steps, analysis, optimized.steps), [activeSequence.steps, analysis, optimized.steps]);
 
@@ -153,8 +164,11 @@ function SequenceLab() {
     updateStep(index, { suffix: getNextSuffix(current.key, current.suffix, direction) });
   };
 
+  const setChordIdentity = (index, key, suffix) => updateStep(index, { key, suffix });
+  const setChordSuffix = (index, suffix) => updateStep(index, { suffix });
+
   const cycleShape = (index, direction) => {
-    const step = optimized.steps[index];
+    const step = sequenceShapes[index];
     if (!step) return;
     updateActiveSequence(sequence => ({
       ...sequence,
@@ -163,11 +177,6 @@ function SequenceLab() {
         : item)
     }));
   };
-
-  const releaseShape = (index) => updateActiveSequence(sequence => ({
-    ...sequence,
-    steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, positionIndex: null } : item)
-  }));
 
   const createNewSequence = () => {
     const sequence = createSequence(Date.now());
@@ -187,10 +196,10 @@ function SequenceLab() {
       <section className="sequence-lab">
         <SequenceManager sequences={sequences} activeSequenceId={activeSequence.id} setActiveSequenceId={setActiveSequenceId} createNewSequence={createNewSequence} deleteSequence={deleteSequence} />
         <SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} />
-        {optimized.missing.length > 0 ? <p className="missing">Dados ausentes para {optimized.missing.map(step => formatChordName(step.key, step.suffix)).join(', ')}.</p> : (
+        {missingShapes.length > 0 ? <p className="missing">Dados ausentes para {missingShapes.map(step => formatChordName(step.key, step.suffix)).join(', ')}.</p> : (
           activeSequence.steps.length === 0 ? <EmptySequence addStep={addStep} /> : (
             <div className="lab-card-row" aria-label="Acordes da sequência">
-              {optimized.steps.map((step, index) => (
+              {sequenceShapes.map((step, index) => (
                 <SequenceChordStep
                   key={activeSequence.steps[index].id}
                   step={activeSequence.steps[index]}
@@ -203,7 +212,9 @@ function SequenceLab() {
                   cycleRoot={cycleRoot}
                   cycleSuffix={cycleSuffix}
                   cycleShape={cycleShape}
-                  releaseShape={releaseShape}
+                  availableSuffixes={getAvailableSuffixes}
+                  setChordIdentity={setChordIdentity}
+                  setChordSuffix={setChordSuffix}
                 />
               ))}
               <AddChordSlot onClick={addStep} />
