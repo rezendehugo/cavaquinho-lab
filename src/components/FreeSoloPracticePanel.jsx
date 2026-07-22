@@ -129,14 +129,6 @@ export default function FreeSoloPracticePanel() {
       : 'Clique nas notas do braço para criar seu solo.';
 
   return <div className="scale-practice-panel free-solo-panel path-view">
-    <div className="solo-fretboard-pane">
-      <div className="scale-visual-legend" aria-label="Legenda do solo"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>
-      <FretboardGrid ariaLabel="Criação e prática de solo livre" getPositionState={getPositionState} selecting={!practicing} onChoose={choosePosition} />
-    </div>
-    <section className="solo-timeline-panel" aria-labelledby="solo-timeline-title">
-      <div className="solo-timeline-heading"><strong id="solo-timeline-title">Linha do solo</strong><span>{positions.length} {positions.length === 1 ? 'nota' : 'notas'}</span></div>
-      <div className="solo-sequence" aria-label="Notas do solo">{positions.length ? positions.map((position, index) => <button type="button" key={index + '-' + positionKey(position)} className={index === currentIndex && practicing ? 'current' : ''} onClick={() => { stopPractice(); setPositions(current => current.filter((_item, itemIndex) => itemIndex !== index)); }} aria-label={'Remover passo ' + (index + 1) + ', ' + position.note + position.octave}>{index + 1}. {position.note}{position.octave}</button>) : <span>Nenhuma nota escolhida.</span>}</div>
-    </section>
     <div className="solo-practice-workspace">
       <aside className="solo-control-rail">
         <div className="scale-explorer">
@@ -149,6 +141,14 @@ export default function FreeSoloPracticePanel() {
           <p className="path-progress">{positions.length ? currentIndex + 1 : 0} de {positions.length} · {instruction}</p><p className="visually-hidden" aria-live="polite">{instruction}</p>{storageError ? <p className="validation-error" role="status">{storageError}</p> : null}
         </div>
       </aside>
+    </div>
+    <section className="solo-timeline-panel" aria-labelledby="solo-timeline-title">
+      <div className="solo-timeline-heading"><strong id="solo-timeline-title">Linha do solo</strong><span>{positions.length} {positions.length === 1 ? 'nota' : 'notas'}</span></div>
+      <div className="solo-sequence" aria-label="Notas do solo">{positions.length ? positions.map((position, index) => <button type="button" key={index + '-' + positionKey(position)} className={index === currentIndex && practicing ? 'current' : ''} onClick={() => { stopPractice(); setPositions(current => current.filter((_item, itemIndex) => itemIndex !== index)); }} aria-label={'Remover passo ' + (index + 1) + ', ' + position.note + position.octave}>{index + 1}. {position.note}{position.octave}</button>) : <span>Nenhuma nota escolhida.</span>}</div>
+    </section>
+    <div className="solo-fretboard-pane">
+      <div className="scale-visual-legend" aria-label="Legenda do solo"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>
+      <FretboardGrid ariaLabel="Criação e prática de solo livre" getPositionState={getPositionState} selecting={!practicing} onChoose={choosePosition} />
     </div>
     {focusedOpen ? <FretboardPracticeOverlay title={name.trim() || 'Meu solo'} eyebrow="Solo livre" progress={(currentIndex + 1) + ' de ' + positions.length} instruction={instruction} playing={practicing} metronome={metronome} onTogglePlay={togglePractice} onExit={exitPractice} legend={<div className="scale-visual-legend" aria-label="Legenda do solo focado"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>}><FretboardGrid ariaLabel="Prática focada do solo livre" getPositionState={getPositionState} /></FretboardPracticeOverlay> : null}
   </div>;
