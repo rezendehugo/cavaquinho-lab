@@ -1,6 +1,7 @@
-import { Pause, Play, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Play, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import FretboardGrid from './FretboardGrid';
+import FretboardPracticeOverlay from './FretboardPracticeOverlay';
 import { buildPathTraversal, fretRegions, generateAnchoredScalePath, getScalePositionsInRegion, validateCustomScalePath } from '../domain/scalePaths';
 import { getScaleNotes, noteMatchesPitchClass, scaleDefinitions, scaleDegreeNames } from '../domain/scales';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
@@ -28,11 +29,16 @@ function ScalePracticePanel() {
   const [draftHistory, setDraftHistory] = useState([]);
   const [storageError, setStorageError] = useState('');
   const [practicing, setPracticing] = useState(false);
+  const [focusedOpen, setFocusedOpen] = useState(false);
+  const [routeIndex, setRouteIndex] = useState(0);
+  const [playbackStartIndex, setPlaybackStartIndex] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
   const [anchorPath, setAnchorPath] = useState(null);
   const [anchorStart, setAnchorStart] = useState(null);
   const [anchorEnd, setAnchorEnd] = useState(null);
   const [anchorSelection, setAnchorSelection] = useState('start');
   const [anchorError, setAnchorError] = useState('Escolha a nota inicial.');
+  const practiceButtonRef = useRef(null);
 
   const scaleNotes = useMemo(() => getScaleNotes(scaleRoot, scaleId), [scaleRoot, scaleId]);
   const compatibleSavedPaths = savedPaths.filter(path => path.root === scaleRoot && path.scaleId === scaleId);
@@ -46,16 +52,22 @@ function ScalePracticePanel() {
     ? regionalPositions.filter(position => position.midi === draftPositions[editIndex].midi)
     : [], [editing, editIndex, draftPositions, regionalPositions]);
   const countIn = metronome.beatsPerMeasure;
-  const routePulse = Math.max(0, metronome.pulseIndex - countIn);
-  const routeIndex = traversal.length && routePulse > 0 ? (routePulse - 1) % traversal.length : 0;
   const currentPosition = traversal[routeIndex];
   const nextPosition = traversal.length ? traversal[(routeIndex + 1) % traversal.length] : null;
-  const playedKeys = new Set(practicing && routePulse > 0 ? traversal.slice(0, routeIndex).map(positionKey) : []);
+  const playedKeys = new Set(hasStarted ? traversal.slice(0, routeIndex).map(positionKey) : []);
   const hasValidPath = selectedPath.positions.length >= 2 && Boolean(selectedPath.start && selectedPath.end) && validateCustomScalePath(selectedPath).ok;
 
   const stopPractice = () => {
     if (practicing || metronome.isRunning) metronome.stop();
     setPracticing(false);
+  };
+
+  const exitPractice = () => {
+    stopPractice();
+    setFocusedOpen(false);
+    setRouteIndex(0);
+    setHasStarted(false);
+    requestAnimationFrame(() => practiceButtonRef.current?.focus());
   };
 
   const resetForSelection = (nextAnchorSelection = 'start') => {
@@ -131,11 +143,29 @@ function ScalePracticePanel() {
     selectRegion('compact');
   };
 
+  const startPractice = async () => {
+    setRouteIndex(0);
+    setPlaybackStartIndex(0);
+    setHasStarted(false);
+    setFocusedOpen(true);
+    const started = await metronome.start().catch(() => false);
+    if (started) setPracticing(true);
+    else setFocusedOpen(false);
+  };
+
   const togglePractice = async () => {
     if (practicing) return stopPractice();
-    const started = await metronome.start();
+    setPlaybackStartIndex(routeIndex);
+    const started = await metronome.start().catch(() => false);
     if (started) setPracticing(true);
   };
+
+  useEffect(() => {
+    const practicePulse = metronome.pulseIndex - countIn;
+    if (!practicing || practicePulse < 1 || !traversal.length) return;
+    setHasStarted(true);
+    setRouteIndex((playbackStartIndex + practicePulse - 1) % traversal.length);
+  }, [countIn, metronome.pulseIndex, playbackStartIndex, practicing, traversal.length]);
 
   const chooseAnchor = (position) => {
     stopPractice();
@@ -212,18 +242,18 @@ function ScalePracticePanel() {
       end: Boolean(effectiveEnd && key === positionKey(effectiveEnd)),
       selectable: Boolean(anchorSelection && inScale),
       candidate: editing && candidateKeys.has(key),
-      current: practicing && routePulse > 0 && key === positionKey(currentPosition),
-      next: practicing && routePulse > 0 && key === positionKey(nextPosition),
+      current: focusedOpen && hasStarted && key === positionKey(currentPosition),
+      next: focusedOpen && hasStarted && key === positionKey(nextPosition),
       played: playedKeys.has(key)
     };
   };
 
   const degreeName = currentPosition ? scaleDegreeNames[currentPosition.degree] || 'grau da escala' : '';
-  const instruction = practicing && metronome.pulseIndex <= countIn
+  const instruction = practicing && !hasStarted
     ? 'Contagem: ' + metronome.pulseIndex + ' de ' + countIn
     : currentPosition ? currentPosition.note + currentPosition.octave + ' · corda ' + (currentPosition.stringIndex + 1) + ' · casa ' + currentPosition.fret + ' · ' + degreeName : 'Caminho indisponível.';
-  const announcement = practicing && routePulse > 0 && currentPosition
-    ? 'Batida ' + routePulse + ': ' + spokenNotes[currentPosition.note] + currentPosition.octave + ', corda ' + (currentPosition.stringIndex + 1) + ', casa ' + currentPosition.fret + ', ' + degreeName + '.'
+  const announcement = hasStarted && currentPosition
+    ? spokenNotes[currentPosition.note] + currentPosition.octave + ', corda ' + (currentPosition.stringIndex + 1) + ', casa ' + currentPosition.fret + ', ' + degreeName + '.'
     : instruction;
 
   return <div className="scale-practice-panel scale-mode path-view">
@@ -234,13 +264,14 @@ function ScalePracticePanel() {
           <div className="path-controls"><label><span>Região</span><select aria-label="Região do caminho" value={region} onChange={event => selectRegion(event.target.value)}>{Object.entries(fretRegions).map(([id, item]) => <option key={id} value={id}>{item.label}</option>)}</select></label><label><span>Caminho</span><select aria-label="Caminho selecionado" value={selectedPath.id} onChange={event => { resetForSelection(null); setSelectedPathId(event.target.value); }}><option value="">Novo caminho</option>{anchorPath || pendingAnchorPath ? <option value="anchored-current">Caminho atual</option> : null}{compatibleSavedPaths.map(path => <option key={path.id} value={path.id}>{path.name}</option>)}</select></label><label><span>Percurso</span><select aria-label="Percurso da prática" value={direction} onChange={event => { stopPractice(); setDirection(event.target.value); }}>{Object.entries(directionLabels).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label></div>
           {!editing ? <div className="path-actions"><button type="button" onClick={() => resetForSelection('start')}>{hasValidPath ? 'Alterar início e fim' : 'Escolher início e fim'}</button><button type="button" onClick={saveCurrentPath} disabled={!hasValidPath}>Salvar caminho</button><button type="button" onClick={startEditing} disabled={!hasValidPath}>Editar caminho</button>{selectedPath.custom ? <><input aria-label="Nome do caminho selecionado" value={draftName} onChange={event => setDraftName(event.target.value)} /><button type="button" onClick={renameSelected}>Salvar nome</button><button type="button" aria-label="Excluir caminho" onClick={deleteSelected}><Trash2 size={16} aria-hidden="true" /></button></> : null}</div>
             : <div className="path-editor"><p>{Number.isInteger(editIndex) ? 'Escolha outra posição para ' + draftPositions[editIndex].note + draftPositions[editIndex].octave + '.' : 'Escolha uma nota intermediária para editar.'}</p><div className="edit-step-list">{draftPositions.slice(1, -1).map((position, index) => <button type="button" key={positionKey(position)} aria-pressed={editIndex === index + 1} onClick={() => setEditIndex(index + 1)}>{position.note}{position.octave} · casa {position.fret}</button>)}</div><label><span>Nome</span><input aria-label="Nome do caminho" value={draftName} onChange={event => setDraftName(event.target.value)} /></label><div><button type="button" onClick={() => { const previous = draftHistory.at(-1); if (previous) { setDraftPositions(previous); setDraftHistory(history => history.slice(0, -1)); } }} disabled={!draftHistory.length}>Desfazer</button><button type="button" onClick={() => { setDraftPositions([]); setEditIndex(null); }}>Limpar</button><button type="button" onClick={() => { setEditing(false); setDraftPositions([]); setEditIndex(null); }}>Cancelar</button><button type="button" onClick={saveDraft} disabled={!validateCustomScalePath({ root: scaleRoot, scaleId, start: draftPositions[0], end: draftPositions.at(-1), positions: draftPositions }).ok}>Salvar caminho</button></div></div>}
-          <div className="scale-practice"><div><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de escala" variant="practice" /><small>{directionLabels[direction]} · contagem de {countIn} tempos</small></div><button type="button" className="scale-practice-button" onClick={togglePractice} disabled={editing || !hasValidPath}>{practicing ? <Pause aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}{practicing ? 'Parar prática' : 'Praticar escala'}</button></div>
+          <div className="scale-practice"><div><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de escala" variant="practice" /><small>{directionLabels[direction]} · contagem de {countIn} tempos</small></div><button ref={practiceButtonRef} type="button" className="scale-practice-button" onClick={startPractice} disabled={editing || !hasValidPath}><Play aria-hidden="true" size={16} />Praticar escala</button></div>
           <p className="anchor-status" role="status">{anchorError || 'Início: ' + (effectiveStart?.note || '—') + ' · fim: ' + (effectiveEnd?.note || '—')}</p>{anchorError.includes('Não há caminho') ? <button type="button" onClick={useFullFretboard}>Usar braço inteiro</button> : null}
           <p className="path-progress">{practicing ? routeIndex + 1 : 1} de {practicing ? traversal.length : selectedPath.positions.length} · {instruction}</p><p className="scale-practice-status" aria-live="polite">{announcement}</p>{storageError ? <p className="validation-error" role="status">{storageError}</p> : null}
         </div>
     </div>
     <div className="scale-visual-legend" aria-label="Legenda do caminho"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-root">Tônica</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>
     <FretboardGrid ariaLabel={'Prática da escala de ' + scaleRoot + ' ' + scaleDefinitions[scaleId].label.toLowerCase()} getPositionState={getPositionState} editing={editing} selecting={Boolean(anchorSelection)} onChoose={editing ? chooseDraftPosition : chooseAnchor} />
+    {focusedOpen ? <FretboardPracticeOverlay title={scaleRoot + ' ' + scaleDefinitions[scaleId].label.toLowerCase()} eyebrow="Prática de escala" progress={(routeIndex + 1) + ' de ' + traversal.length} instruction={announcement} playing={practicing} metronome={metronome} onTogglePlay={togglePractice} onExit={exitPractice} legend={<div className="scale-visual-legend" aria-label="Legenda da escala focada"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-root">Tônica</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>}><FretboardGrid ariaLabel={'Prática focada da escala de ' + scaleRoot} getPositionState={getPositionState} /></FretboardPracticeOverlay> : null}
   </div>;
 }
 

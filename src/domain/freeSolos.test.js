@@ -9,9 +9,11 @@ describe('solos livres', () => {
     expect(validateFreeSolo({ name: 'Frase', positions })).toEqual({ ok: true, message: '' });
   });
 
-  test('limita a frase a 64 passos', () => {
-    const full = Array.from({ length: 64 }, () => position);
-    expect(appendSoloPosition(full, position)).toHaveLength(64);
+  test('aceita mil passos e impede a inserção seguinte', () => {
+    const full = Array.from({ length: 1000 }, () => position);
+    expect(validateFreeSolo({ name: 'Longo', positions: full })).toEqual({ ok: true, message: '' });
+    expect(appendSoloPosition(full, position)).toHaveLength(1000);
+    expect(validateFreeSolo({ name: 'Longo demais', positions: full.concat(position) }).ok).toBe(false);
   });
 
   test('ignora solos armazenados inválidos sem perder os válidos', () => {
