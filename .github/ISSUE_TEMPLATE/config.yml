@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Política de segurança
+    url: https://github.com/rezendehugo/cavaquinho-lab/security/policy
+    about: Relate vulnerabilidades de forma privada conforme SECURITY.md.
+

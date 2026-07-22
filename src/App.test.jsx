@@ -375,6 +375,20 @@ describe('Cavaquinho Lab', () => {
     expect(secondCard.querySelector('.shape-index-badge')).toHaveTextContent(secondShapeBeforeRootChange);
   });
 
+  test('escolhe uma forma pela galeria e permite voltar ao automático', () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Escolher forma' }));
+    const dialog = screen.getByRole('dialog', { name: /Formas de C/ });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fixar forma 3 de 7' }));
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(2);
+    expect(screen.getByText('Forma 3 fixada')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Escolher forma' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: /Formas de C/ })).getByRole('button', { name: /Automática/ }));
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(null);
+    expect(screen.getByText('Forma automática')).toBeInTheDocument();
+  });
+
   test('usa card compartilhado compacto na página Formas', () => {
     renderAt('/shapes');
     expect(screen.getByRole('link', { name: 'Formas' })).toHaveClass('active');
@@ -482,6 +496,23 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Caminho selecionado')).toHaveTextContent('D grave 2');
     fireEvent.click(screen.getByRole('button', { name: 'Excluir caminho' }));
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabScalePaths')).paths).toHaveLength(0);
+  });
+
+  test('cria, salva e reabre um solo livre sem tonalidade', () => {
+    renderAt('/practice');
+    fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar C5, corda 3, casa 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
+    expect(screen.getByLabelText('Notas do solo')).toHaveTextContent('1. D4');
+    expect(screen.getByLabelText('Notas do solo')).toHaveTextContent('2. C5');
+    expect(screen.getByLabelText('Notas do solo')).toHaveTextContent('3. D4');
+    fireEvent.change(screen.getByLabelText('Nome do solo'), { target: { value: 'Frase cromática' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar solo' }));
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabFreeSolos')).solos[0].name).toBe('Frase cromática');
+    expect(screen.getByLabelText('Solo selecionado')).toHaveTextContent('Frase cromática');
+    expect(screen.getByRole('button', { name: 'Praticar solo' })).toBeEnabled();
+    expect(screen.queryByLabelText('Tônica da escala')).not.toBeInTheDocument();
   });
 
   test('pratica qualquer sequência salva sem selecionar uma escala', () => {

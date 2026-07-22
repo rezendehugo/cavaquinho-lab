@@ -1,10 +1,12 @@
 import { defaultSequences, normalizeSequences } from './sequences';
 import { normalizeStoredScalePaths, scalePathStorageVersion } from './domain/scalePaths';
+import { freeSoloStorageVersion, normalizeStoredSolos } from './domain/freeSolos';
 
 export const sequencesStorageKey = 'cavaquinhoLabSequences';
 export const activeSequenceStorageKey = 'cavaquinhoLabActiveSequenceId';
 export const legacySequenceStorageKey = 'cavaquinhoLabSequence';
 export const scalePathsStorageKey = 'cavaquinhoLabScalePaths';
+export const freeSolosStorageKey = 'cavaquinhoLabFreeSolos';
 
 export const storageErrorMessage = 'Não foi possível salvar suas alterações neste navegador.';
 
@@ -54,4 +56,18 @@ export const loadScalePaths = () => {
 export const saveScalePaths = (paths) => writeStorage(scalePathsStorageKey, JSON.stringify({
   version: scalePathStorageVersion,
   paths: normalizeStoredScalePaths({ version: scalePathStorageVersion, paths }).paths
+}));
+
+export const loadFreeSolos = () => {
+  try {
+    const saved = readStorage(freeSolosStorageKey).value;
+    return saved ? normalizeStoredSolos(JSON.parse(saved)).solos : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveFreeSolos = (solos) => writeStorage(freeSolosStorageKey, JSON.stringify({
+  version: freeSoloStorageVersion,
+  solos: normalizeStoredSolos({ version: freeSoloStorageVersion, solos }).solos
 }));

@@ -293,6 +293,16 @@ function SequenceLab() {
     }));
   };
 
+  const setShape = (index, positionIndex) => updateActiveSequence(sequence => ({
+    ...sequence,
+    steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, positionIndex } : item)
+  }));
+
+  const useAutomaticShapes = () => updateActiveSequence(sequence => ({
+    ...sequence,
+    steps: sequence.steps.map(step => ({ ...step, positionIndex: null }))
+  }));
+
   const createNewSequence = () => {
     stopPractice();
     const sequence = createSequence(Date.now());
@@ -351,6 +361,7 @@ function SequenceLab() {
           <span><i className="voicing-status-dot voicing-status-dot--incomplete" />Omite notas</span>
           <span><i className="voicing-status-dot voicing-status-dot--additional" />Notas adicionais</span>
         </div>
+        {activeSequence.steps.length ? <button type="button" className="automatic-shapes-button" onClick={useAutomaticShapes}>Usar formas automáticas</button> : null}
         <p className="storage-status" aria-live="polite">{storageError}</p>
         <SequencePracticeBar sequence={activeSequence} metronome={metronome} canStart={activeSequence.steps.length > 0 && missingShapes.length === 0} status={practiceStatus} onBpmChange={changeSequenceBpm} onStart={startPractice} onOpenDurations={() => setDurationsOpen(true)} startButtonRef={practiceStartRef} />
         {missingShapes.length > 0 ? <p className="missing">Dados ausentes para {missingShapes.map(step => formatChordName(step.key, step.suffix)).join(', ')}.</p> : (
@@ -372,6 +383,7 @@ function SequenceLab() {
                   cycleRoot={cycleRoot}
                   cycleSuffix={cycleSuffix}
                   cycleShape={cycleShape}
+                  setShape={setShape}
                   availableSuffixes={getAvailableSuffixes}
                   setChordIdentity={setChordIdentity}
                   setChordSuffix={setChordSuffix}

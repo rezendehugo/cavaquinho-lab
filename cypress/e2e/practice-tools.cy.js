@@ -125,6 +125,25 @@ describe('ferramentas da sessão de prática', () => {
     cy.get('[aria-label="Prática imersiva de sequência"]').should('not.exist');
   });
 
+  it('fixa uma forma pela galeria e volta para escolha automática', () => {
+    cy.get('[aria-label="Adicionar acorde"]').click();
+    cy.contains('button', 'Escolher forma').click();
+    cy.get('[aria-label="Fixar forma 3 de 7"]').click();
+    cy.contains('Forma 3 fixada').should('be.visible');
+    cy.window().then(window => expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).to.equal(2));
+    cy.contains('button', 'Escolher forma').click();
+    cy.get('.shape-auto-option').click();
+    cy.contains('Forma automática').should('be.visible');
+    cy.viewport(390, 844);
+    cy.contains('button', 'Escolher forma').click();
+    cy.get('.shape-picker-dialog').then(($dialog) => {
+      const box = $dialog[0].getBoundingClientRect();
+      expect(box.left).to.be.at.least(0);
+      expect(box.right).to.be.at.most(390);
+      expect(box.bottom).to.be.at.most(844);
+    });
+  });
+
   it('cria um quadradinho transposto e respeita o início da repetição', () => {
     cy.visit('/sequences', { onBeforeLoad: installFakeAudioContext });
     cy.get('button').contains('Exercícios prontos').click();

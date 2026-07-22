@@ -5,14 +5,16 @@ import { getVoicingCompleteness } from '../domain/chordTheory';
 import ChordIdentityControl from './ChordIdentityControl';
 import ChordShapeCard from './ChordShapeCard';
 import { IconControlButton } from './IconControls';
+import SequenceShapePicker from './SequenceShapePicker';
 
 const dragDataType = 'text/x-cavaquinho-sequence-step';
 const interactiveSelector = 'button, input, select, textarea, a, [role="button"], .chord-identity-control';
 
 const isInteractiveDragSource = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
 
-function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, availableSuffixes, setChordIdentity, setChordSuffix }) {
+function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, setShape, availableSuffixes, setChordIdentity, setChordSuffix }) {
   const [dragState, setDragState] = useState('idle');
+  const [shapePickerOpen, setShapePickerOpen] = useState(false);
   const chordName = formatSequenceChord(step);
   const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
 
@@ -95,7 +97,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
         />
 
         {optimizedStep ? (
-          <ChordShapeCard
+          <><ChordShapeCard
             as="div"
             className="sequence-shape-card"
             variant="focus"
@@ -113,7 +115,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
               onPrevious: () => cycleShape(index, -1),
               onNext: () => cycleShape(index, 1)
             }}
-          />
+          /><div className="shape-selection-summary"><button type="button" onClick={() => setShapePickerOpen(true)}>Escolher forma</button><span>{Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} selectedIndex={step.positionIndex} onSelect={positionIndex => setShape(index, positionIndex)} onClose={() => setShapePickerOpen(false)} /></>
         ) : null}
       </div>
     </article>
