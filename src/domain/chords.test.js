@@ -16,6 +16,13 @@ describe('biblioteca expandida de acordes', () => {
     });
   });
 
+  test('amplia a cobertura rasa de sus2 e m7 com formas equivalentes', () => {
+    Object.values(cavaquinhoChords.chords).forEach(chords => {
+      expect(chords.find(chord => chord.suffix === 'sus2').positions.length).toBeGreaterThanOrEqual(6);
+      expect(chords.find(chord => chord.suffix === 'm7').positions.length).toBeGreaterThanOrEqual(9);
+    });
+  });
+
   test('recebe os rótulos em português da dependência', () => {
     expect(cavaquinhoChords.suffixMetadata['7sus4']).toMatchObject({
       label: 'Sétima suspensa com quarta',
