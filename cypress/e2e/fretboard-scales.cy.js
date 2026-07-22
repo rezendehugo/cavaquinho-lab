@@ -91,6 +91,18 @@ describe('Braço de referência e prática regional', () => {
       cy.contains('button', 'Praticar sequência').should('be.enabled');
     });
 
+    it('cria e pratica um solo livre com notas repetidas', () => {
+      cy.contains('[role="tab"]', 'Solo livre').click();
+      cy.get('[aria-label^="Adicionar D4, corda 1, casa 0"]').click().click();
+      cy.get('[aria-label^="Adicionar C5, corda 3, casa 1"]').click();
+      cy.get('[aria-label="Notas do solo"]').should('contain.text', '1. D4').and('contain.text', '2. D4').and('contain.text', '3. C5');
+      cy.get('[aria-label="Nome do solo"]').clear().type('Solo cromático');
+      cy.contains('button', 'Salvar solo').click();
+      cy.window().then(window => expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabFreeSolos')).solos[0].positions).to.have.length(3));
+      cy.contains('button', 'Praticar solo').should('be.enabled');
+      cy.get('[aria-label="Tônica da escala"]').should('not.exist');
+    });
+
     for (const [width, height, orientation] of [[390, 844, 'vertical'], [720, 900, 'vertical'], [1280, 800, 'horizontal']]) {
       it('mantém prática ' + orientation + ' e quatro abas em ' + width + 'px', () => {
         cy.viewport(width, height);

@@ -1,5 +1,5 @@
 import { generateScalePath } from './domain/scalePaths';
-import { loadScalePaths, readStorage, saveScalePaths, scalePathsStorageKey, storageErrorMessage, writeStorage } from './storage';
+import { freeSolosStorageKey, loadFreeSolos, loadScalePaths, readStorage, saveFreeSolos, saveScalePaths, scalePathsStorageKey, storageErrorMessage, writeStorage } from './storage';
 
 describe('armazenamento seguro', () => {
   test('retorna resultado explícito quando a leitura ou escrita falha', () => {
@@ -21,5 +21,13 @@ describe('armazenamento seguro', () => {
     window.localStorage.setItem(scalePathsStorageKey, JSON.stringify({ version: 2, paths: [path, { id: 'broken' }] }));
     expect(loadScalePaths()).toHaveLength(1);
     expect(loadScalePaths()[0].name).toBe('Meu D');
+  });
+
+  test('salva solos livres e ignora posições corrompidas', () => {
+    const solo = { id: 'solo-1', name: 'Livre', positions: [{ stringIndex: 0, fret: 0, midi: 62, pitchClass: 2, note: 'D', octave: 4 }] };
+    expect(saveFreeSolos([solo])).toEqual({ ok: true });
+    expect(JSON.parse(window.localStorage.getItem(freeSolosStorageKey))).toMatchObject({ version: 1 });
+    window.localStorage.setItem(freeSolosStorageKey, JSON.stringify({ version: 1, solos: [solo, { id: 'bad', name: 'Ruim', positions: [{ fret: 99 }] }] }));
+    expect(loadFreeSolos()).toEqual([solo]);
   });
 });
