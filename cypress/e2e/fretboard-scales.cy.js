@@ -130,7 +130,7 @@ describe('Braço de referência e prática regional', () => {
       cy.get('[aria-label="Tônica da escala"]').should('not.exist');
     });
 
-    it('prioriza o braço e mantém timeline e controles compactos em todos os breakpoints', () => {
+    it('mantém controles, timeline e braço compactos em todos os breakpoints', () => {
       cy.contains('[role="tab"]', 'Solo livre').click();
       Cypress._.times(30, () => cy.get('[aria-label^="Adicionar D4, corda 1, casa 0"]').click());
       cy.get('.solo-timeline-panel').then(($timeline) => {
@@ -150,8 +150,8 @@ describe('Braço de referência e prática regional', () => {
             const rail = $rail[0].getBoundingClientRect();
             const pane = $pane[0].getBoundingClientRect();
             const timeline = $timeline[0].getBoundingClientRect();
-            expect(pane.bottom).to.be.at.most(timeline.top + 1);
-            expect(timeline.bottom).to.be.at.most(rail.top + 1);
+            expect(rail.bottom).to.be.at.most(timeline.top + 1);
+            expect(timeline.bottom).to.be.at.most(pane.top + 1);
             if (desktop) {
               expect(pane.width).to.be.greaterThan(750);
               expect(pane.width).to.equal(timeline.width);
@@ -162,6 +162,15 @@ describe('Braço de referência e prática regional', () => {
             });
           });
         });
+        if (desktop) {
+          cy.get('[aria-label^="Adicionar D4, corda 1, casa 0"]').then(($open) => {
+            cy.get('[aria-label^="Adicionar Eb4, corda 1, casa 1"]').then(($firstFret) => {
+              const openCenter = $open[0].getBoundingClientRect().x + $open[0].getBoundingClientRect().width / 2;
+              const firstFretCenter = $firstFret[0].getBoundingClientRect().x + $firstFret[0].getBoundingClientRect().width / 2;
+              expect(firstFretCenter - openCenter).to.be.lessThan(80);
+            });
+          });
+        }
         cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
       }
     });
@@ -181,6 +190,19 @@ describe('Braço de referência e prática regional', () => {
       cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
       cy.contains('button', 'Sair').click();
       cy.contains('button', 'Praticar solo').should('have.focus');
+    });
+
+    it('amplia o braço confortavelmente no modo focado desktop', () => {
+      cy.viewport(1440, 900);
+      cy.contains('[role="tab"]', 'Solo livre').click();
+      cy.get('[aria-label^="Adicionar D4, corda 1, casa 0"]').click();
+      cy.contains('button', 'Praticar solo').click();
+      cy.get('[role="dialog"][aria-label="Prática focada: Meu solo"] .fretboard-stage').then(($stage) => {
+        const stage = $stage[0].getBoundingClientRect();
+        expect(stage.width).to.be.greaterThan(1300);
+        expect(stage.height).to.be.greaterThan(350);
+      });
+      cy.get('[role="dialog"][aria-label="Prática focada: Meu solo"] .sequence-practice-transport').should('be.visible');
     });
 
     for (const [width, height, orientation] of [[390, 844, 'vertical'], [720, 900, 'vertical'], [1280, 800, 'horizontal']]) {

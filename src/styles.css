@@ -240,7 +240,7 @@ body.sequence-practice-active, body.focused-practice-active { overflow: hidden; 
 .sequence-practice-transport button { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 50%; }
 .sequence-practice-transport .sequence-transport-primary { width: 60px; height: 60px; color: #fff; background: var(--color-accent); border-color: var(--color-accent); }
 .focused-fretboard-stage { min-height: 0; display: grid; align-content: start; gap: var(--space-2); padding-block: var(--space-2); overflow: auto; }
-.focused-fretboard-stage > .fretboard-stage { width: min(1120px, 100%); margin: 0 auto; }
+.focused-fretboard-stage > .fretboard-stage { width: min(1400px, 100%); max-width: none; margin: 0 auto; }
 .focused-fretboard-stage .scale-visual-legend { margin: 0 auto; }
 .focused-fretboard-stage .sequence-practice-live { width: min(1120px, 100%); margin: 0 auto; padding: var(--space-2) var(--space-3); border-left: 4px solid var(--color-accent); background: var(--color-surface); font-size: clamp(.9rem, 1.6vw, 1.15rem); text-align: left; }
 .scale-degree { display: block; color: var(--color-subtle); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -555,14 +555,15 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .region-low { border-color: rgba(47, 111, 190, 0.45) !important; }
 .region-middle { border-color: rgba(54, 163, 125, 0.5) !important; }
 .region-high { border-color: rgba(240, 180, 41, 0.55) !important; }
-.practice-fretboard-layout { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: stretch; }
-.fretboard-open-strings { display: grid; grid-template-columns: 1fr; grid-template-rows: 24px repeat(4, 52px); align-items: center; padding: var(--space-3) 4px; border: 1px solid var(--color-border); border-right: 0; border-radius: var(--radius-md) 0 0 var(--radius-md); background: var(--color-surface-soft); }
+.practice-fretboard-layout { --practice-string-row: 52px; display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: stretch; }
+.focused-fretboard-stage .practice-fretboard-layout { --practice-string-row: clamp(54px, 8vh, 76px); }
+.fretboard-open-strings { display: grid; grid-template-columns: 1fr; grid-template-rows: 24px repeat(4, var(--practice-string-row)); align-items: center; padding: var(--space-3) 4px; border: 1px solid var(--color-border); border-right: 0; border-radius: var(--radius-md) 0 0 var(--radius-md); background: var(--color-surface-soft); }
 .open-fret-label { grid-row: 1; justify-self: center; color: var(--color-subtle); font-size: .68rem; font-weight: 900; }
 .fretboard-open-strings .fretboard-note, .open-string-muted { position: relative; z-index: 2; grid-row: calc(var(--string) + 1); justify-self: center; }
 .fretboard-open-strings .fretboard-note { width: 34px; height: 34px; padding: 0; }
 .open-string-muted { color: var(--color-muted); font-size: 1.35rem; font-weight: 900; }
-.fretboard-matrix { position: relative; display: grid; grid-template-columns: 36px repeat(12, minmax(42px, 1fr)); grid-template-rows: 24px repeat(4, 52px); align-items: center; min-width: 700px; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: linear-gradient(90deg, rgba(47,111,190,.07) 0 33%, rgba(54,163,125,.07) 33% 66%, rgba(240,180,41,.08) 66% 100%); overflow: hidden; }
-.fretboard-lines { grid-column: 2 / -1; grid-row: 2 / -1; align-self: stretch; justify-self: stretch; background-image: repeating-linear-gradient(90deg, var(--color-border-strong) 0 1px, transparent 1px calc(100% / 12)), repeating-linear-gradient(0deg, var(--color-border-strong) 0 1px, transparent 1px 52px); border: 3px solid var(--color-border-strong); border-radius: 3px; }
+.fretboard-matrix { position: relative; display: grid; grid-template-columns: 0 repeat(12, minmax(42px, 1fr)); grid-template-rows: 24px repeat(4, var(--practice-string-row)); align-items: center; min-width: 664px; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: linear-gradient(90deg, rgba(47,111,190,.07) 0 33%, rgba(54,163,125,.07) 33% 66%, rgba(240,180,41,.08) 66% 100%); overflow: hidden; }
+.fretboard-lines { grid-column: 2 / -1; grid-row: 2 / -1; align-self: stretch; justify-self: stretch; background-image: repeating-linear-gradient(90deg, var(--color-border-strong) 0 1px, transparent 1px calc(100% / 12)), repeating-linear-gradient(0deg, var(--color-border-strong) 0 1px, transparent 1px var(--practice-string-row)); border: 3px solid var(--color-border-strong); border-radius: 3px; }
 .matrix-fret-label { grid-column: calc(var(--fret) + 1); grid-row: 1; justify-self: center; color: var(--color-subtle); font-size: .68rem; font-weight: 900; }
 .fretboard-matrix .fretboard-note { position: relative; z-index: 2; grid-column: calc(var(--fret) + 1); grid-row: calc(var(--string) + 1); width: 34px; height: 34px; padding: 0; }
 .fretboard-note b { position: absolute; right: -5px; bottom: -5px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; color: var(--color-text); background: #fff; border: 1px solid currentColor; font-size: .56rem; }
