@@ -10,7 +10,8 @@ const suffixAliases = new Map([
   ['minor7', 'm7'], ['menor7', 'm7'], ['m7b5', 'm7b5'], ['m7(5b)', 'm7b5'],
   ['ø7', 'm7b5'], ['meiodiminuto', 'm7b5'], ['dim', 'dim'], ['diminuto', 'dim'],
   ['dim7', 'dim7'], ['diminuto7', 'dim7'], ['4', 'sus4'], ['sus', 'sus4'], ['sus4', 'sus4'],
-  ['suspenso', 'sus4'], ['suspenso4', 'sus4'], ['sus2', 'sus2'], ['suspenso2', 'sus2']
+  ['suspenso', 'sus4'], ['suspenso4', 'sus4'], ['sus2', 'sus2'], ['suspenso2', 'sus2'],
+  ['7sus4', '7sus4'], ['7sus', '7sus4'], ['7suspenso', '7sus4']
 ]);
 
 const pitchClasses = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };

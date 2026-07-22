@@ -13,6 +13,7 @@ export const chordQualities = {
   dim7: { intervals: [0, 3, 6, 9], family: 'tétrade diminuta simétrica', required: [0, 3, 6, 9], symmetry: 3 },
   sus2: { intervals: [0, 2, 7], family: 'tríade suspensa com segunda', required: [0, 2] },
   sus4: { intervals: [0, 5, 7], family: 'tríade suspensa com quarta', required: [0, 5], aliases: ['4', 'sus'] },
+  '7sus4': { intervals: [0, 5, 7, 10], family: 'tétrade dominante suspensa com quarta', required: [0, 5, 10], aliases: ['7sus'] },
   add9: { intervals: [0, 2, 4, 7], family: 'tríade maior com nona adicionada', required: [0, 2, 4] },
   '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [0, 2, 4, 10] }
 };
