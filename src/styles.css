@@ -342,13 +342,20 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .missing { color: var(--color-danger); font-weight: 800; }
 
 .fretboard-page { overflow: hidden; }
-.fretboard-hero { display: flex; justify-content: space-between; align-items: start; gap: var(--space-4); margin-bottom: var(--space-4); }
+.fretboard-reference-workspace { display: grid; grid-template-columns: minmax(230px, 300px) minmax(440px, 620px); justify-content: center; align-items: start; gap: clamp(var(--space-5), 4vw, 64px); padding: clamp(var(--space-3), 2vw, var(--space-6)); }
+.fretboard-reference-sidebar { position: sticky; top: var(--space-4); display: grid; align-content: start; gap: var(--space-5); padding-top: var(--space-4); }
+.fretboard-hero { display: flex; justify-content: space-between; align-items: start; gap: var(--space-4); margin: 0; }
 .fretboard-hero p:not(.eyebrow) { margin: 0; max-width: 620px; color: var(--color-muted); }
 .tuning-row { display: grid; grid-template-columns: 54px repeat(4, 1fr); align-items: center; margin: 0 0 var(--space-2); padding: 0 var(--space-4); }
 .tuning-row::before { content: ''; }
 .tuning-row .fretboard-note { font-weight: 900; }
-.fretboard-stage { width: min(520px, 100%); margin: 0 auto; overflow: hidden; }
-.fretboard-tools { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); width: min(520px, 100%); margin: 0 auto var(--space-3); }
+.fretboard-stage { width: 100%; margin: 0; overflow: hidden; }
+.fretboard-tools { display: grid; gap: var(--space-2); width: 100%; margin: 0; }
+.fretboard-tools label, .fretboard-tools select { width: 100%; }
+.fretboard-selection-summary { display: grid; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-soft); }
+.fretboard-selection-summary > span { color: var(--color-subtle); font-size: 0.68rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.fretboard-selection-summary strong { color: var(--color-accent-hover); font-size: 1.1rem; }
+.fretboard-selection-summary p { margin: 0; color: var(--color-muted); font-size: 0.82rem; }
 .fretboard-control-panel { width: min(520px, 100%); margin: 0 auto var(--space-3); }
 .fretboard-mode { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 3px; margin-bottom: var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-soft); }
 .fretboard-mode button { min-height: 40px; border: 0; background: transparent; color: var(--color-muted); }
@@ -363,7 +370,7 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .scale-practice small, .scale-practice-status { color: var(--color-muted); font-size: 0.72rem; }
 .scale-practice-button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); color: #fff; background: var(--color-accent); border-color: var(--color-accent); }
 .scale-practice-status { min-height: 1.2em; margin: 0; }
-.fretboard-legend { display: grid; margin: 0; color: var(--color-muted); text-align: right; font-size: 0.76rem; }
+.fretboard-legend { display: grid; margin: 0; padding-left: var(--space-3); border-left: 3px solid var(--color-accent); color: var(--color-muted); text-align: left; font-size: 0.76rem; }
 .fretboard-legend small { color: var(--color-subtle); }
 .fretboard-neck { position: relative; padding: 14px var(--space-4) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-soft); overflow: hidden; }
 .fretboard-neck::before { content: ''; position: absolute; left: 70px; right: var(--space-4); top: 12px; height: 5px; border-radius: 999px; background: var(--color-border-strong); }
@@ -372,7 +379,7 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .fretboard-frets { position: absolute; inset: 48px var(--space-4) var(--space-4) 72px; display: grid; grid-template-rows: repeat(12, 1fr); pointer-events: none; }
 .fretboard-frets span { border-top: 1px solid var(--color-border-strong); }
 .fretboard-note-grid { position: relative; z-index: 2; display: grid; gap: 6px; }
-.note-row { display: grid; grid-template-columns: 54px repeat(4, 1fr); align-items: center; min-height: 38px; }
+.note-row { display: grid; grid-template-columns: 54px repeat(4, 1fr); align-items: center; min-height: 44px; }
 .fret-number { color: var(--color-subtle); font-size: 0.68rem; font-weight: 900; text-align: right; text-transform: uppercase; padding-right: var(--space-3); }
 .fretboard-note { width: 34px; height: 34px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); display: grid; place-items: center; justify-self: center; color: var(--color-accent-hover); transition: transform 140ms ease, background 140ms ease, border-color 140ms ease; }
 .fretboard-note.highlighted { transform: scale(1.08); background: var(--color-accent); border-color: var(--color-accent-hover); color: #fff; box-shadow: 0 0 0 3px var(--color-accent-soft); }
@@ -389,6 +396,7 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 @media (max-width: 980px) {
   .study-sections { grid-template-columns: 1fr; }
   .study-sections > section:first-child { grid-column: auto; }
+  .fretboard-reference-workspace { grid-template-columns: minmax(210px, 260px) minmax(400px, 520px); gap: var(--space-5); padding-inline: 0; }
 }
 @media (max-width: 720px) {
   .app-shell { width: 100%; max-width: 100vw; padding: var(--space-4); overflow-x: hidden; }
@@ -439,6 +447,10 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
   .compact-controls label { flex: 1; }
   .compact-controls select { width: 100%; }
   .shape-results-heading { display: grid; gap: var(--space-1); }
+  .fretboard-reference-workspace { display: grid; grid-template-columns: 1fr; gap: var(--space-4); padding: 0; }
+  .fretboard-reference-sidebar { position: static; gap: var(--space-3); padding: 0; }
+  .fretboard-selection-summary { display: none; }
+  .fretboard-legend { justify-self: end; padding-left: 0; border-left: 0; text-align: right; }
   .fretboard-tools { align-items: end; }
   .scale-controls { grid-template-columns: 1fr; }
   .scale-practice { align-items: stretch; flex-direction: column; }
