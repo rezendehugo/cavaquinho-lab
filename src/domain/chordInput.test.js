@@ -18,10 +18,17 @@ describe('entrada de acordes', () => {
     expect(parseQualityInput('nona adicionada')).toBe('add9');
     expect(parseQualityInput('7 suspenso')).toBe('7sus4');
     expect(parseRootInput('G7sus', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '7sus4' });
+    expect(parseRootInput('G+', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'aug' });
+    expect(parseRootInput('Gaug', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'aug' });
+    expect(parseRootInput('Gaum', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'aug' });
+    expect(parseRootInput('G7(4)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '7sus4' });
+    expect(parseRootInput('G6/9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '69' });
+    expect(parseRootInput('G7M(9)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'maj9' });
+    expect(parseRootInput('Gm(add9)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'madd9' });
   });
 
   test('rejeita entradas desconhecidas', () => {
     expect(parseRootInput('H7', 'major')).toBe(null);
-    expect(parseQualityInput('aumentado')).toBe(null);
+    expect(parseQualityInput('desconhecido')).toBe(null);
   });
 });

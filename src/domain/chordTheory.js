@@ -15,7 +15,12 @@ export const chordQualities = {
   sus4: { intervals: [0, 5, 7], family: 'tríade suspensa com quarta', required: [0, 5], aliases: ['4', 'sus'] },
   '7sus4': { intervals: [0, 5, 7, 10], family: 'tétrade dominante suspensa com quarta', required: [0, 5, 10], aliases: ['7sus'] },
   add9: { intervals: [0, 2, 4, 7], family: 'tríade maior com nona adicionada', required: [0, 2, 4] },
-  '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [0, 2, 4, 10] }
+  '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [0, 2, 4, 10] },
+  aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], aliases: ['+', 'aum'] },
+  '69': { intervals: [0, 2, 4, 7, 9], family: 'acorde maior com sexta e nona', required: [0, 4, 9], aliases: ['6/9'] },
+  m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [0, 2, 3, 10] },
+  maj9: { intervals: [0, 2, 4, 7, 11], family: 'acorde maior com sétima maior e nona', required: [0, 2, 4, 11], aliases: ['7M(9)'] },
+  madd9: { intervals: [0, 2, 3, 7], family: 'tríade menor com nona adicionada', required: [0, 2, 3], aliases: ['m(add9)'] }
 };
 
 const uniqueSorted = (values) => [...new Set(values)].sort((a, b) => a - b);

@@ -2,7 +2,7 @@ export const chromaticKeys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', '
 
 export const MAX_SEQUENCE_STEPS = 50;
 
-export const suffixCycle = ['major', 'minor', '6', '7', 'm6', '9', 'add9', 'maj7', 'm7', 'm7b5', 'dim', 'dim7', 'sus2', 'sus4', '7sus4'];
+export const suffixCycle = ['major', 'minor', '6', '7', '69', 'm6', '9', 'add9', 'aug', 'maj7', 'maj9', 'm7', 'm9', 'madd9', 'm7b5', 'dim', 'dim7', 'sus2', 'sus4', '7sus4'];
 
 export const defaultSequences = [
   { id: 'sequence-1', title: 'Sequência 1', steps: [], practiceBpm: 60, loopStartIndex: 0 }

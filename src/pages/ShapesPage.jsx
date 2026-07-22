@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { formatChordName, qualityLabels } from '../chordDisplay';
 import ChordShapeCard from '../components/ChordShapeCard';
 import { getAvailableSuffixes, cavaquinhoChords } from '../domain/chords';
+import { analyzeChordVoicing, getVoicingCompleteness } from '../domain/chordTheory';
 import { findChord } from '../progressionOptimizer';
 import { chromaticKeys } from '../sequences';
 
@@ -31,6 +32,11 @@ function ShapesPage() {
         <h3>{formatChordName(key, chord?.suffix || suffix)} {qualityLabels[chord?.suffix || suffix]?.toLowerCase()} · {chord?.positions.length || 0} formas</h3>
         <span>Compare as posições abaixo</span>
       </div>
+      <div className="voicing-status-legend" aria-label="Legenda dos voicings">
+        <span><i className="voicing-status-dot voicing-status-dot--complete" />Completo</span>
+        <span><i className="voicing-status-dot voicing-status-dot--incomplete" />Omite notas</span>
+        <span><i className="voicing-status-dot voicing-status-dot--additional" />Notas adicionais</span>
+      </div>
       <div className="shape-grid wide">
         {(chord?.positions || []).map((position, index) => (
           <ChordShapeCard
@@ -39,6 +45,7 @@ function ShapesPage() {
             position={position}
             shapeIndex={index}
             shapeTotal={chord.positions.length}
+            voicingStatus={getVoicingCompleteness(analyzeChordVoicing({ key, suffix: chord.suffix }, position))}
           />
         ))}
       </div>

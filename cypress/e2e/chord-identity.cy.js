@@ -54,4 +54,21 @@ describe('nome e sufixo dos acordes', () => {
     cy.get('[aria-label="Nota do acorde 1"]').focus();
     cy.get('.chord-identity-root .chord-identity-arrow').should('have.css', 'pointer-events', 'auto');
   });
+
+  it('aceita e apresenta o símbolo brasileiro 6/9', () => {
+    cy.get('[aria-label="Nota do acorde 1"]').clear().type('G6/9{enter}');
+    cy.get('[aria-label="Sequência atual"]').should('contain.text', 'G6/9');
+    cy.get('[aria-label="Sufixo do acorde 1"]').should('have.value', '6/9');
+    cy.get('.lab-card').first().find('.voicing-status-dot').should('be.visible');
+  });
+
+  it('mostra o estado musical de cada forma na galeria sem quebrar o layout', () => {
+    cy.visit('/shapes');
+    cy.get('[aria-label="Escolher qualidade"]').select('69');
+    cy.get('.shape-grid .chord-shape-card').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .voicing-status-dot').should('be.visible');
+    cy.get('body').then(($body) => {
+      expect($body[0].scrollWidth).to.be.at.most($body[0].clientWidth + 1);
+    });
+  });
 });
