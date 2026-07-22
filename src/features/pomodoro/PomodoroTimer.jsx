@@ -94,6 +94,7 @@ function PomodoroTimer() {
               <SkipForward aria-hidden="true" size={16} strokeWidth={2.1} />
             </button>
           </div>
+
         </section>
       ) : null}
     </div>
