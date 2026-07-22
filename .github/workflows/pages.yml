@@ -40,7 +40,7 @@ jobs:
       - name: Preparar Pages
         uses: actions/configure-pages@v5
       - name: Enviar artefato
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
   deploy:
