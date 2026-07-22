@@ -528,6 +528,12 @@ describe('Cavaquinho Lab', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
     fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
     expect(screen.queryByText(/de 1000 notas/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/de 64 notas/)).not.toBeInTheDocument();
+    expect(document.querySelector('.solo-timeline-panel')).toContainElement(screen.getByLabelText('Notas do solo'));
+    expect(document.querySelector('.solo-control-rail')).toContainElement(screen.getByRole('button', { name: 'Praticar solo' }));
+    expect(document.querySelector('.solo-fretboard-pane')).toContainElement(screen.getByLabelText('Criação e prática de solo livre'));
+    expect(document.querySelectorAll('.free-solo-panel .path-progress')).toHaveLength(1);
+    expect(document.querySelector('.free-solo-panel .scale-practice-status')).not.toBeInTheDocument();
     const start = screen.getByRole('button', { name: 'Praticar solo' });
     fireEvent.click(start);
     const dialog = await screen.findByRole('dialog', { name: 'Prática focada: Meu solo' });

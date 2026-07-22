@@ -129,19 +129,27 @@ export default function FreeSoloPracticePanel() {
       : 'Clique nas notas do braço para criar seu solo.';
 
   return <div className="scale-practice-panel free-solo-panel path-view">
-    <div className="fretboard-control-panel">
-      <div className="scale-explorer">
-        <div className="solo-heading"><div><h3>Solo livre</h3><p>Escolha qualquer nota, em qualquer direção. Repetições são permitidas.</p></div><label><span>Solo salvo</span><select aria-label="Solo selecionado" value={selectedId} onChange={event => selectSolo(event.target.value)}><option value="">Novo solo</option>{savedSolos.map(solo => <option key={solo.id} value={solo.id}>{solo.name}</option>)}</select></label></div>
-        <label><span>Nome</span><input aria-label="Nome do solo" value={name} onChange={event => setName(event.target.value)} /></label>
-        <div className="solo-sequence" aria-label="Notas do solo">{positions.length ? positions.map((position, index) => <button type="button" key={index + '-' + positionKey(position)} className={index === currentIndex && practicing ? 'current' : ''} onClick={() => { stopPractice(); setPositions(current => current.filter((_item, itemIndex) => itemIndex !== index)); }} aria-label={'Remover passo ' + (index + 1) + ', ' + position.note + position.octave}>{index + 1}. {position.note}{position.octave}</button>) : <span>Nenhuma nota escolhida.</span>}</div>
-        <p>{positions.length} {positions.length === 1 ? 'nota' : 'notas'}</p>
-        <div className="path-actions"><button type="button" onClick={() => { stopPractice(); setPositions(current => current.slice(0, -1)); }} disabled={!positions.length}><Undo2 size={16} aria-hidden="true" /> Desfazer</button><button type="button" onClick={() => { stopPractice(); setPositions([]); }} disabled={!positions.length}>Limpar</button><button type="button" onClick={saveSolo} disabled={!validation.ok}>Salvar solo</button><button type="button" aria-label="Excluir solo" onClick={deleteSolo} disabled={!selectedId}><Trash2 size={16} aria-hidden="true" /></button></div>
-        <div className="scale-practice"><div><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de solo" variant="practice" /><small>Uma nota por batida · contagem de {countIn} tempos</small></div><button ref={practiceButtonRef} type="button" className="scale-practice-button" onClick={startPractice} disabled={!validation.ok}><Play aria-hidden="true" size={16} />Praticar solo</button></div>
-        <p className="path-progress">{positions.length ? currentIndex + 1 : 0} de {positions.length} · {instruction}</p><p className="scale-practice-status" aria-live="polite">{instruction}</p>{storageError ? <p className="validation-error" role="status">{storageError}</p> : null}
-      </div>
+    <div className="solo-fretboard-pane">
+      <div className="scale-visual-legend" aria-label="Legenda do solo"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>
+      <FretboardGrid ariaLabel="Criação e prática de solo livre" getPositionState={getPositionState} selecting={!practicing} onChoose={choosePosition} />
     </div>
-    <div className="scale-visual-legend" aria-label="Legenda do solo"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>
-    <FretboardGrid ariaLabel="Criação e prática de solo livre" getPositionState={getPositionState} selecting={!practicing} onChoose={choosePosition} />
+    <section className="solo-timeline-panel" aria-labelledby="solo-timeline-title">
+      <div className="solo-timeline-heading"><strong id="solo-timeline-title">Linha do solo</strong><span>{positions.length} {positions.length === 1 ? 'nota' : 'notas'}</span></div>
+      <div className="solo-sequence" aria-label="Notas do solo">{positions.length ? positions.map((position, index) => <button type="button" key={index + '-' + positionKey(position)} className={index === currentIndex && practicing ? 'current' : ''} onClick={() => { stopPractice(); setPositions(current => current.filter((_item, itemIndex) => itemIndex !== index)); }} aria-label={'Remover passo ' + (index + 1) + ', ' + position.note + position.octave}>{index + 1}. {position.note}{position.octave}</button>) : <span>Nenhuma nota escolhida.</span>}</div>
+    </section>
+    <div className="solo-practice-workspace">
+      <aside className="solo-control-rail">
+        <div className="scale-explorer">
+          <div className="solo-heading"><h3>Solo livre</h3><p>Escolha qualquer nota, em qualquer direção. Repetições são permitidas.</p></div>
+          <label><span>Solo salvo</span><select aria-label="Solo selecionado" value={selectedId} onChange={event => selectSolo(event.target.value)}><option value="">Novo solo</option>{savedSolos.map(solo => <option key={solo.id} value={solo.id}>{solo.name}</option>)}</select></label>
+          <label><span>Nome</span><input aria-label="Nome do solo" value={name} onChange={event => setName(event.target.value)} /></label>
+          <div className="path-actions"><button type="button" onClick={() => { stopPractice(); setPositions(current => current.slice(0, -1)); }} disabled={!positions.length}><Undo2 size={16} aria-hidden="true" /> Desfazer</button><button type="button" onClick={() => { stopPractice(); setPositions([]); }} disabled={!positions.length}>Limpar</button><button type="button" onClick={saveSolo} disabled={!validation.ok}>Salvar solo</button><button type="button" aria-label="Excluir solo" onClick={deleteSolo} disabled={!selectedId}><Trash2 size={16} aria-hidden="true" /></button></div>
+          <div className="solo-tempo-control"><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de solo" variant="practice" /><small>Uma nota por batida · contagem de {countIn} tempos</small></div>
+          <button ref={practiceButtonRef} type="button" className="scale-practice-button solo-practice-button" onClick={startPractice} disabled={!validation.ok}><Play aria-hidden="true" size={16} />Praticar solo</button>
+          <p className="path-progress">{positions.length ? currentIndex + 1 : 0} de {positions.length} · {instruction}</p><p className="visually-hidden" aria-live="polite">{instruction}</p>{storageError ? <p className="validation-error" role="status">{storageError}</p> : null}
+        </div>
+      </aside>
+    </div>
     {focusedOpen ? <FretboardPracticeOverlay title={name.trim() || 'Meu solo'} eyebrow="Solo livre" progress={(currentIndex + 1) + ' de ' + positions.length} instruction={instruction} playing={practicing} metronome={metronome} onTogglePlay={togglePractice} onExit={exitPractice} legend={<div className="scale-visual-legend" aria-label="Legenda do solo focado"><span className="legend-octave-4">Oitava 4</span><span className="legend-octave-5">Oitava 5</span><span className="legend-current">Agora</span><span className="legend-next">Próxima</span></div>}><FretboardGrid ariaLabel="Prática focada do solo livre" getPositionState={getPositionState} /></FretboardPracticeOverlay> : null}
   </div>;
 }

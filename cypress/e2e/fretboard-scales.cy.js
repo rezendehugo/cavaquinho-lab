@@ -130,12 +130,54 @@ describe('Braço de referência e prática regional', () => {
       cy.get('[aria-label="Tônica da escala"]').should('not.exist');
     });
 
+    it('prioriza o braço e mantém timeline e controles compactos em todos os breakpoints', () => {
+      cy.contains('[role="tab"]', 'Solo livre').click();
+      Cypress._.times(30, () => cy.get('[aria-label^="Adicionar D4, corda 1, casa 0"]').click());
+      cy.get('.solo-timeline-panel').then(($timeline) => {
+        expect($timeline[0].getBoundingClientRect().height).to.be.lessThan(90);
+      });
+      cy.get('[aria-label="Notas do solo"]').then(($timeline) => {
+        expect($timeline[0].scrollWidth).to.be.greaterThan($timeline[0].clientWidth);
+      });
+      cy.contains('30 notas').should('be.visible');
+      cy.contains(/de (64|1000) notas/).should('not.exist');
+
+      for (const [width, height, desktop] of [[390, 844, false], [720, 900, false], [900, 900, true], [1280, 900, true], [1440, 900, true]]) {
+        cy.viewport(width, height);
+        cy.get('.solo-fretboard-pane').then(($pane) => {
+          cy.get('.solo-timeline-panel').then(($timeline) => {
+            cy.get('.solo-control-rail').then(($rail) => {
+            const rail = $rail[0].getBoundingClientRect();
+            const pane = $pane[0].getBoundingClientRect();
+            const timeline = $timeline[0].getBoundingClientRect();
+            expect(pane.bottom).to.be.at.most(timeline.top + 1);
+            expect(timeline.bottom).to.be.at.most(rail.top + 1);
+            if (desktop) {
+              expect(pane.width).to.be.greaterThan(750);
+              expect(pane.width).to.equal(timeline.width);
+              expect(rail.width).to.equal(pane.width);
+            } else {
+              expect(pane.width).to.be.at.most(width);
+            }
+            });
+          });
+        });
+        cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
+      }
+    });
+
     it('mantém o modo focado dentro da tela do celular e restaura o foco ao sair', () => {
       cy.viewport(390, 844);
       cy.contains('[role="tab"]', 'Solo livre').click();
       cy.get('[aria-label^="Adicionar D4, corda 1, casa 0"]').click();
       cy.contains('button', 'Praticar solo').click();
       cy.get('[role="dialog"][aria-label="Prática focada: Meu solo"]').should('be.visible');
+      cy.get('[role="dialog"][aria-label="Prática focada: Meu solo"] .solo-sequence').should('not.exist');
+      cy.get('[role="dialog"][aria-label="Prática focada: Meu solo"] .sequence-practice-live').then(($instruction) => {
+        cy.get('[role="dialog"][aria-label="Prática focada: Meu solo"] .fretboard-stage').then(($stage) => {
+          expect($instruction[0].getBoundingClientRect().bottom).to.be.at.most($stage[0].getBoundingClientRect().top);
+        });
+      });
       cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
       cy.contains('button', 'Sair').click();
       cy.contains('button', 'Praticar solo').should('have.focus');
