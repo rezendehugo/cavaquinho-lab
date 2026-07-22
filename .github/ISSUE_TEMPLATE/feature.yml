@@ -1,0 +1,23 @@
+name: Propor uma melhoria
+description: Sugira uma melhoria de estudo ou prática musical.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Qual objetivo musical ou problema do usuário?
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Como deveria funcionar?
+      description: Descreva o fluxo principal sem exigir uma solução técnica específica.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: Como saberemos que funcionou?
+

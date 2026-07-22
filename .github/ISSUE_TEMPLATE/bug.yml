@@ -1,0 +1,30 @@
+name: Relatar um problema
+description: Informe um erro de acordes, prática, layout ou persistência.
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: O que aconteceu?
+      description: Explique o resultado atual e o resultado esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Como reproduzir?
+      description: Informe página, acorde ou sequência e os passos realizados.
+    validations:
+      required: true
+  - type: dropdown
+    id: viewport
+    attributes:
+      label: Dispositivo
+      options: [Desktop, Celular, Tablet, Teclado sem mouse, Leitor de tela]
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidências
+      description: Inclua captura de tela, vídeo ou mensagem exibida, sem dados privados.
+
