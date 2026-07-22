@@ -22,6 +22,24 @@ describe('Braço de referência e prática regional', () => {
     });
   });
 
+  it('usa o espaço desktop com controles ao lado do braço', () => {
+    cy.viewport(1440, 900);
+    cy.visit('/fretboard');
+    cy.get('.fretboard-reference-workspace').then(($workspace) => {
+      const workspace = $workspace[0].getBoundingClientRect();
+      expect(workspace.width).to.be.greaterThan(800);
+    });
+    cy.get('.fretboard-reference-sidebar').then(($sidebar) => {
+      cy.get('.fretboard-stage').then(($stage) => {
+        const sidebar = $sidebar[0].getBoundingClientRect();
+        const stage = $stage[0].getBoundingClientRect();
+        expect(sidebar.right).to.be.lessThan(stage.left);
+        expect(stage.width).to.be.greaterThan(500);
+      });
+    });
+    cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
+  });
+
   describe('Prática', () => {
     beforeEach(() => cy.visit('/practice', { onBeforeLoad: installFakeAudioContext }));
 
