@@ -53,6 +53,7 @@ function ChordShapeCard({
                 <div className="chord-shape-name-row">
                   {showName ? <strong>{chordName}</strong> : null}
                   {showTopIndex ? <ShapeIndexBadge index={shapeIndex} total={shapeTotal} /> : null}
+                  {showTopIndex ? <VoicingStatusDot status={voicingStatus} /> : null}
                 </div>
               ) : null}
               {showShapeCode ? <span className="shape-code">{formatShapeCode(position)}</span> : null}

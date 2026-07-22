@@ -311,15 +311,15 @@ describe('Cavaquinho Lab', () => {
 
     fireEvent.change(suffixInput, { target: { value: 'sétima maior' } });
     fireEvent.blur(suffixInput);
-    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('C#maj7');
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('C#7M');
 
     fireEvent.keyDown(rootInput, { key: 'ArrowDown' });
-    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Dmaj7');
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('D7M');
     fireEvent.keyDown(suffixInput, { key: 'ArrowUp' });
-    expect(screen.getByLabelText('Sequência atual')).not.toHaveTextContent('Dmaj7');
+    expect(screen.getByLabelText('Sequência atual')).not.toHaveTextContent('D7M');
   });
 
-  test('reutiliza formas existentes para add9 e m6', () => {
+  test('reutiliza formas existentes para add9, m6 e 6/9', () => {
     renderAt();
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
     const rootInput = screen.getByLabelText('Nota do acorde 1');
@@ -333,6 +333,12 @@ describe('Cavaquinho Lab', () => {
     fireEvent.keyDown(rootInput, { key: 'Enter' });
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Gm6');
     expect(screen.getByLabelText('Forma de Gm6')).toBeInTheDocument();
+
+    fireEvent.change(rootInput, { target: { value: 'G6/9' } });
+    fireEvent.keyDown(rootInput, { key: 'Enter' });
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('G6/9');
+    expect(screen.getByLabelText('Forma de G6/9')).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].suffix).toBe('69');
   });
 
   test('mantém o acorde anterior quando a entrada é inválida e permite cancelar', () => {
