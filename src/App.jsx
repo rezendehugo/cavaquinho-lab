@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import SequenceLab from './components/SequenceLab';
 import { fallbackRoute, getRoutes, routeRedirects } from './config';
 import PomodoroTimer from './features/pomodoro/PomodoroTimer';
+import MetronomeWidget from './features/metronome/MetronomeWidget';
+import { MetronomeProvider } from './features/metronome/MetronomeContext';
 import FretboardPage from './pages/FretboardPage';
+import PracticePage from './pages/PracticePage';
 import ShapesPage from './pages/ShapesPage';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const normalizeBasePath = (basePath) => {
   if (!basePath || basePath === '/') return '';
@@ -77,23 +81,26 @@ function App() {
 
   const page = route === '/shapes' ? <ShapesPage />
     : route === '/fretboard' ? <FretboardPage />
+      : route === '/practice' ? <PracticePage />
       : <SequenceLab />;
 
   return (
-    <main className="app-shell">
+    <MetronomeProvider><main className="app-shell">
       <header className="hero">
         <div className="hero-topline">
           <div>
             <p className="eyebrow">Cavaquinho Lab</p>
-            <h1>Estudo prático de acordes, formas e sequências.</h1>
-            <p>Um laboratório para estudar cavaquinho com diagramas reais, análise harmônica, cores de apoio e exercícios guiados.</p>
+            <h1>Acordes e prática no cavaquinho</h1>
           </div>
-          <PomodoroTimer />
+          <div className="practice-tools">
+            <MetronomeWidget />
+            <PomodoroTimer />
+          </div>
         </div>
         <NavTabs route={route} routes={routes} />
       </header>
-      {page}
-    </main>
+      <ErrorBoundary>{page}</ErrorBoundary>
+    </main></MetronomeProvider>
   );
 }
 
