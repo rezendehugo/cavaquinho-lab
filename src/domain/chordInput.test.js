@@ -16,6 +16,8 @@ describe('entrada de acordes', () => {
     expect(parseQualityInput('suspenso')).toBe('sus4');
     expect(parseQualityInput('m6')).toBe('m6');
     expect(parseQualityInput('nona adicionada')).toBe('add9');
+    expect(parseQualityInput('7 suspenso')).toBe('7sus4');
+    expect(parseRootInput('G7sus', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '7sus4' });
   });
 
   test('rejeita entradas desconhecidas', () => {
