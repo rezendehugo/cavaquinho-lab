@@ -1,5 +1,6 @@
 import { formatChordName, getPlayedNotes, qualityLabels } from './chordDisplay';
 import { chromaticKeys } from './sequences';
+import { analyzeChordVoicing } from './domain/chordTheory';
 
 const minorContext = {
   G: {
@@ -37,12 +38,14 @@ export const analyzeSequence = (sequence, optimizedSteps = []) => {
     const currentNotes = position ? getPlayedNotes(position) : [];
     const nextNotes = optimizedSteps[index + 1]?.position ? getPlayedNotes(optimizedSteps[index + 1].position) : [];
     const commonTones = currentNotes.filter((note, noteIndex) => currentNotes.indexOf(note) === noteIndex && nextNotes.includes(note));
+    const theory = analyzeChordVoicing(step, position);
     return {
       ...step,
       name: formatChordName(step.key, step.suffix),
       numeral: contextInfo?.numeral || 'análise aberta',
       functionName: contextInfo?.functionName || (step.suffix === '7' ? 'dominante possível' : 'cor harmônica'),
       commonTones,
+      theory,
       advice: commonTones.length > 0
         ? 'Mantenha em mente as notas comuns: ' + commonTones.join(', ') + '.'
         : 'Ouça a troca completa de cor entre estes acordes.'

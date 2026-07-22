@@ -14,10 +14,14 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm test",
-    "validate": "npm run check && npm run build",
+    "validate": "npm run check && npm run build && npm run test:e2e",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run --environment jsdom"
+    "test": "vitest run --environment jsdom",
+    "dev:e2e": "vite --host 127.0.0.1 --port 4173 --strictPort",
+    "test:e2e": "start-server-and-test dev:e2e http://127.0.0.1:4173/cavaquinho-lab/ 'cypress run'",
+    "test:e2e:open": "start-server-and-test dev:e2e http://127.0.0.1:4173/cavaquinho-lab/ 'cypress open'",
+    "audit:chords": "node scripts/audit-chord-library.mjs"
   },
   "dependencies": {
     "@tombatossals/chords-db": "git+https://github.com/rezendehugo/chords-db.git#ac8e479f94b31c5906e30f4c868c15acaa7b1f23",
@@ -33,9 +37,11 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^6.0.2",
+    "cypress": "^15.18.1",
     "eslint": "^10.6.0",
     "globals": "^17.7.0",
     "jsdom": "^27.3.0",
+    "start-server-and-test": "^3.0.11",
     "typescript": "^5.9.3",
     "vite": "^8.0.16",
     "vitest": "^4.1.8"

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { formatChordName } from '../chordDisplay';
+import { formatSequenceChord } from '../chordDisplay';
+import { getVoicingCompleteness } from '../domain/chordTheory';
 import ChordIdentityControl from './ChordIdentityControl';
 import ChordShapeCard from './ChordShapeCard';
 import { IconControlButton } from './IconControls';
@@ -10,9 +11,9 @@ const interactiveSelector = 'button, input, select, textarea, a, [role="button"]
 
 const isInteractiveDragSource = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
 
-function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, moveStepById, removeStep, cycleRoot, cycleSuffix, cycleShape, availableSuffixes, setChordIdentity, setChordSuffix }) {
+function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, availableSuffixes, setChordIdentity, setChordSuffix }) {
   const [dragState, setDragState] = useState('idle');
-  const chordName = formatChordName(step.key, step.suffix);
+  const chordName = formatSequenceChord(step);
   const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
 
   const handleDragStart = (event) => {
@@ -51,6 +52,7 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
   return (
     <article
       className={cardClasses}
+      data-step-index={index}
       style={{ '--swatch': color }}
       draggable
       onDragStart={handleDragStart}
@@ -62,8 +64,15 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
       <header className="lab-card-header">
         <div>
           <span className="scale-degree">{analysisChord?.numeral || 'acorde ' + (index + 1)}</span>
+          {isLoopStart ? <span className="sequence-loop-marker">Início da repetição</span> : null}
         </div>
         <div className="card-actions">
+          <IconControlButton className="reorder-step-button" ariaLabel={'Mover acorde ' + (index + 1) + ' para trás'} disabled={index === 0} onClick={() => moveStep(index, index - 1)}>
+            <span aria-hidden="true">←</span>
+          </IconControlButton>
+          <IconControlButton className="reorder-step-button" ariaLabel={'Mover acorde ' + (index + 1) + ' para frente'} disabled={index === stepCount - 1} onClick={() => moveStep(index, index + 1)}>
+            <span aria-hidden="true">→</span>
+          </IconControlButton>
           <IconControlButton className="remove-step-button" ariaLabel={'Remover acorde ' + (index + 1)} onClick={() => removeStep(index)}>
             <X aria-hidden="true" size={15} strokeWidth={2.1} />
           </IconControlButton>
@@ -73,6 +82,7 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
       <div className="sequence-card-main">
         <ChordIdentityControl
           root={step.key}
+          displayRoot={step.displayKey}
           suffix={step.suffix}
           index={index}
           availableSuffixes={availableSuffixes}
@@ -80,7 +90,7 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
           onNextRoot={() => cycleRoot(index, 1)}
           onPreviousSuffix={() => cycleSuffix(index, -1)}
           onNextSuffix={() => cycleSuffix(index, 1)}
-          onCommitChord={(key, suffix) => setChordIdentity(index, key, suffix)}
+          onCommitChord={(key, suffix, displayKey) => setChordIdentity(index, key, suffix, displayKey)}
           onCommitSuffix={(suffix) => setChordSuffix(index, suffix)}
         />
 
@@ -96,6 +106,7 @@ function SequenceChordStep({ step, index, optimizedStep, analysisChord, color, m
             position={optimizedStep.position}
             shapeIndex={optimizedStep.positionIndex}
             shapeTotal={optimizedStep.chord.positions.length}
+            voicingStatus={getVoicingCompleteness(analysisChord?.theory)}
             navigation={{
               previousLabel: 'Forma anterior do acorde ' + (index + 1),
               nextLabel: 'Próxima forma do acorde ' + (index + 1),

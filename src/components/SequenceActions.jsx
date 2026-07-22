@@ -8,10 +8,11 @@ export function AddSequenceButton({ onClick }) {
   );
 }
 
-export function AddChordSlot({ onClick }) {
+export function AddChordSlot({ onClick, disabled = false, title = 'Adicionar acorde' }) {
   return (
-    <button type="button" className="add-lab-card" onClick={onClick} aria-label="Adicionar acorde" title="Adicionar acorde">
+    <button type="button" className="add-lab-card" onClick={onClick} disabled={disabled} aria-label={title} title={title}>
       <Plus aria-hidden="true" size={30} strokeWidth={2.2} />
+      {disabled ? <span>Limite de 50 acordes</span> : null}
     </button>
   );
 }

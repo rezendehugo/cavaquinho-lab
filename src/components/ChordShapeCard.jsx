@@ -6,6 +6,11 @@ export function ShapeIndexBadge({ index, total }) {
   return <span className="shape-index-badge" aria-label={'Forma ' + (index + 1) + ' de ' + total}>{formatShapeIndex(index, total)}</span>;
 }
 
+export function VoicingStatusDot({ status }) {
+  if (!status) return null;
+  return <span className={'voicing-status-dot voicing-status-dot--' + status.id} role="img" aria-label={status.label} title={status.label} />;
+}
+
 export function ShapeNavigationControls({ previousLabel, nextLabel, onPrevious, onNext, previousDisabled = false, nextDisabled = false }) {
   return (
     <>
@@ -28,7 +33,8 @@ function ChordShapeCard({
   variant = 'default',
   showName = true,
   showShapeCode = true,
-  shapeIndexPlacement = 'top'
+  shapeIndexPlacement = 'top',
+  voicingStatus = null
 }) {
   if (!position) return null;
 
@@ -72,6 +78,7 @@ function ChordShapeCard({
       {showBottomIndex ? (
         <div className="chord-shape-footer">
           <ShapeIndexBadge index={shapeIndex} total={shapeTotal} />
+          <VoicingStatusDot status={voicingStatus} />
         </div>
       ) : null}
     </Component>

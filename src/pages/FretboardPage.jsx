@@ -1,50 +1,25 @@
+import { useState } from 'react';
 import { buildFretboardRows, cavaquinhoTuning, enharmonicNotes } from '../domain/fretboard';
+import { chromaticKeys } from '../sequences';
 
-function NoteMarker({ note, stringIndex, fret }) {
-  return (
-    <span className="fretboard-note" tabIndex="0" aria-label={'Corda ' + (stringIndex + 1) + ', casa ' + fret + ': ' + note}>
-      <strong>{note}</strong>
-      {enharmonicNotes[note] ? <small>{enharmonicNotes[note]}</small> : null}
-    </span>
-  );
+function NoteMarker({ note, stringIndex, fret, highlighted }) {
+  return <span className={'fretboard-note ' + (highlighted ? 'highlighted' : '')} aria-label={'Corda ' + (stringIndex + 1) + ', casa ' + fret + ': ' + note}>
+    <strong>{note}</strong>{enharmonicNotes[note] ? <small>{enharmonicNotes[note]}</small> : null}
+  </span>;
 }
 
-function FretboardPage() {
+export default function FretboardPage() {
+  const [highlightedNote, setHighlightedNote] = useState('');
   const rows = buildFretboardRows();
-
-  return (
-    <section className="panel fretboard-page" aria-labelledby="fretboard-title">
-      <header className="fretboard-hero">
-        <div>
-          <p className="eyebrow">Mapa do instrumento</p>
-          <h2 id="fretboard-title">Braço e notas no cavaquinho</h2>
-          <p>Localize as notas diretamente no braço do cavaquinho.</p>
-        </div>
-      </header>
-
-      <div className="fretboard-stage" aria-label="Mapa de notas do braço do cavaquinho em D G B D">
-        <div className="tuning-row" aria-label="Afinação do cavaquinho: D G B D">
-          {cavaquinhoTuning.map((note, index) => <span key={note + index}>{note}</span>)}
-        </div>
-        <div className="fretboard-neck">
-          <div className="fretboard-strings" aria-hidden="true">
-            {cavaquinhoTuning.map((note, index) => <span key={note + index} />)}
-          </div>
-          <div className="fretboard-frets" aria-hidden="true">
-            {rows.map(row => <span key={row.fret} />)}
-          </div>
-          <div className="fretboard-note-grid">
-            {rows.map(row => (
-              <div key={row.fret} className="note-row">
-                <span className="fret-number">{row.fret}</span>
-                {row.notes.map(item => <NoteMarker key={item.stringIndex + '-' + item.fret} {...item} />)}
-              </div>
-            ))}
-          </div>
-        </div>
+  const isHighlighted = note => highlightedNote === note || enharmonicNotes[note] === highlightedNote;
+  return <section className="panel fretboard-page" aria-labelledby="fretboard-title">
+    <header className="fretboard-hero"><div><p className="eyebrow">Mapa do instrumento</p><h2 id="fretboard-title">Braço e notas no cavaquinho</h2><p>Localize uma nota em todas as suas posições no braço.</p></div></header>
+    <div className="fretboard-tools"><label><span>Destacar nota</span><select aria-label="Destacar nota" value={highlightedNote} onChange={event => setHighlightedNote(event.target.value)}><option value="">Todas as notas</option>{chromaticKeys.map(note => <option key={note}>{note}</option>)}</select></label><p className="fretboard-legend"><strong>Nota principal</strong><small>Nome enarmônico</small></p></div>
+    <div className="fretboard-stage" aria-label="Mapa de notas do braço do cavaquinho em D G B D">
+      <div className="tuning-row" aria-label="Afinação do cavaquinho: D G B D">{cavaquinhoTuning.map((note, index) => <span key={note + index}>{note}</span>)}</div>
+      <div className="fretboard-neck"><div className="fretboard-strings" aria-hidden="true">{cavaquinhoTuning.map((note, index) => <span key={note + index} />)}</div><div className="fretboard-frets" aria-hidden="true">{rows.map(row => <span key={row.fret} />)}</div>
+        <div className="fretboard-note-grid">{rows.map(row => <div key={row.fret} className="note-row"><span className="fret-number">{row.fret}</span>{row.notes.map(item => <NoteMarker key={item.stringIndex + '-' + item.fret} {...item} highlighted={isHighlighted(item.note)} />)}</div>)}</div>
       </div>
-    </section>
-  );
+    </div>
+  </section>;
 }
-
-export default FretboardPage;

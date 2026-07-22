@@ -6,6 +6,8 @@ coverage/
 # Test and browser artifacts
 playwright-report/
 test-results/
+cypress/screenshots/
+cypress/videos/
 *.log
 
 # Local environment files; the public template is intentionally tracked.

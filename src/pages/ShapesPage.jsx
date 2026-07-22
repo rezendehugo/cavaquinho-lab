@@ -27,6 +27,10 @@ function ShapesPage() {
         <label><span>Raiz</span><select aria-label="Escolher raiz" value={key} onChange={(event) => setKey(event.target.value)}>{chromaticKeys.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
         <label><span>Qualidade</span><select aria-label="Escolher qualidade" value={suffix} onChange={(event) => setSuffix(event.target.value)}>{suffixes.map(item => <option key={item} value={item}>{qualityLabels[item] || item}</option>)}</select></label>
       </div>
+      <div className="shape-results-heading" aria-live="polite">
+        <h3>{formatChordName(key, chord?.suffix || suffix)} {qualityLabels[chord?.suffix || suffix]?.toLowerCase()} · {chord?.positions.length || 0} formas</h3>
+        <span>Compare as posições abaixo</span>
+      </div>
       <div className="shape-grid wide">
         {(chord?.positions || []).map((position, index) => (
           <ChordShapeCard

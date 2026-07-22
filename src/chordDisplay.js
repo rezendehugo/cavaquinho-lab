@@ -2,8 +2,10 @@ export const suffixLabels = {
   major: '',
   minor: 'm',
   '6': '6',
+  m6: 'm6',
   '7': '7',
   '9': '9',
+  add9: 'add9',
   maj7: 'maj7',
   m7: 'm7',
   m7b5: 'm7(5b)',
@@ -17,8 +19,10 @@ export const qualityLabels = {
   major: 'Maior',
   minor: 'Menor',
   '6': 'Sexta',
+  m6: 'Menor com sexta',
   '7': 'Sétima dominante',
   '9': 'Nona',
+  add9: 'Nona adicionada',
   maj7: 'Sétima maior',
   m7: 'Menor com sétima',
   m7b5: 'Meio diminuto',
@@ -30,7 +34,9 @@ export const qualityLabels = {
 
 export const formatSuffix = (suffix) => suffixLabels[suffix] ?? suffix;
 
-export const formatChordName = (key, suffix) => key + formatSuffix(suffix);
+export const formatChordName = (key, suffix, displayKey) => (displayKey || key) + formatSuffix(suffix);
+
+export const formatSequenceChord = (step) => formatChordName(step.key, step.suffix, step.displayKey);
 
 export const formatShapeIndex = (index, total) => (index + 1) + '/' + total;
 

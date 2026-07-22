@@ -34,6 +34,8 @@ npm run build      # build de produção em dist/
 npm run preview    # prévia local do build
 npm run check      # lint, typecheck e testes
 npm run validate   # todas as verificações e build
+npm run test:e2e   # abre o app e executa os testes Cypress
+npm run test:e2e:open # abre o Cypress interativo para aprender e depurar
 ```
 
 ## Docker
@@ -62,7 +64,19 @@ Variáveis com prefixo `VITE_` são incorporadas ao bundle e ficam públicas no 
 
 ## Testes e acessibilidade
 
-Os testes atuais cobrem parsing de acordes, normalização, sequências, harmonia, diagramas e interações principais. Antes de enviar alterações, execute:
+Os testes unitários cobrem parsing de acordes, normalização, sequências, harmonia, diagramas e interações principais. O Cypress cobre contratos que dependem do navegador real, incluindo alinhamento visual dos nomes dos acordes.
+
+Para acompanhar um teste no navegador e inspecionar cada comando:
+
+```bash
+npm run test:e2e:open
+```
+
+Escolha `E2E Testing`, selecione Chrome e abra `chord-identity.cy.js`. Para uma execução automática, como no CI, use `npm run test:e2e`.
+
+O teste de alinhamento não depende apenas de uma captura de tela: ele mede as caixas renderizadas da nota e do sufixo, confirma que permanecem unidos e verifica que o símbolo completo continua centralizado. A captura gerada ajuda na revisão humana; comparação automática pixel a pixel pode ser adicionada depois, quando houver baselines estáveis por navegador.
+
+Antes de enviar alterações, execute:
 
 ```bash
 npm run validate

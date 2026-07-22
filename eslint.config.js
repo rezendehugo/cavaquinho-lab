@@ -20,5 +20,14 @@ export default [
         ...globals.vitest
       }
     }
+  },
+  {
+    files: ['cypress/**/*.js'],
+    languageOptions: {
+      globals: {
+        cy: 'readonly',
+        Cypress: 'readonly'
+      }
+    }
   }
 ];
