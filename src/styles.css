@@ -206,7 +206,7 @@ p { line-height: 1.55; }
 .sequence-duration-stepper button { width: 34px; height: 34px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .sequence-duration-stepper output { font-weight: 900; text-align: center; }
 
-body.sequence-practice-active { overflow: hidden; }
+body.sequence-practice-active, body.focused-practice-active { overflow: hidden; }
 .sequence-practice-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; padding: clamp(16px, 3vw, 36px); color: var(--color-text); background: var(--color-page); }
 .sequence-practice-overlay-header { display: flex; justify-content: space-between; align-items: start; gap: var(--space-4); }
 .sequence-practice-overlay-header h1, .sequence-practice-overlay-header p { margin: 0; }
@@ -239,6 +239,9 @@ body.sequence-practice-active { overflow: hidden; }
 .sequence-practice-transport { display: flex; justify-content: center; align-items: center; gap: var(--space-3); }
 .sequence-practice-transport button { width: 48px; height: 48px; padding: 0; display: grid; place-items: center; border-radius: 50%; }
 .sequence-practice-transport .sequence-transport-primary { width: 60px; height: 60px; color: #fff; background: var(--color-accent); border-color: var(--color-accent); }
+.focused-fretboard-stage { min-height: 0; display: grid; align-content: center; gap: var(--space-3); padding-block: var(--space-3); overflow: auto; }
+.focused-fretboard-stage > .fretboard-stage { width: min(1120px, 100%); margin: 0 auto; }
+.focused-fretboard-stage .scale-visual-legend { margin: 0 auto; }
 .scale-degree { display: block; color: var(--color-subtle); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
 .card-actions { display: flex; gap: var(--space-1); }
 .reorder-step-button { opacity: 0; pointer-events: none; }

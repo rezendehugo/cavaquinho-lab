@@ -515,6 +515,41 @@ describe('Cavaquinho Lab', () => {
     expect(screen.queryByLabelText('Tônica da escala')).not.toBeInTheDocument();
   });
 
+  test('abre o solo livre em modo focado sem divulgar o limite interno', async () => {
+    class FakeAudioContext {
+      constructor() { this.currentTime = 0; this.destination = {}; }
+      resume() { return Promise.resolve(); }
+      close() { return Promise.resolve(); }
+      createOscillator() { return { frequency: { setValueAtTime() {} }, connect() {}, start() {}, stop() {} }; }
+      createGain() { return { gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }; }
+    }
+    window.AudioContext = FakeAudioContext;
+    renderAt('/practice');
+    fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
+    expect(screen.queryByText(/de 1000 notas/)).not.toBeInTheDocument();
+    const start = screen.getByRole('button', { name: 'Praticar solo' });
+    fireEvent.click(start);
+    const dialog = await screen.findByRole('dialog', { name: 'Prática focada: Meu solo' });
+    expect(within(dialog).getByLabelText('Prática focada do solo livre')).toBeInTheDocument();
+    expect(document.querySelector('[inert]')).toBeInTheDocument();
+    expect(document.body).toHaveClass('focused-practice-active');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(start).toHaveFocus());
+    expect(screen.queryByRole('dialog', { name: 'Prática focada: Meu solo' })).not.toBeInTheDocument();
+    delete window.AudioContext;
+  });
+
+  test('preserva o editor quando o áudio da prática focada não está disponível', async () => {
+    delete window.AudioContext;
+    renderAt('/practice');
+    fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Praticar solo' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Prática focada: Meu solo' })).not.toBeInTheDocument());
+    expect(screen.getByLabelText('Notas do solo')).toHaveTextContent('1. D4');
+  });
+
   test('pratica qualquer sequência salva sem selecionar uma escala', () => {
     window.localStorage.clear();
     window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([

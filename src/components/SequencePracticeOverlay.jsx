@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Metronome, Pause, Play, Repeat2, Timer, X } from 'lucide-react';
 import { formatSequenceChord } from '../chordDisplay';
 import { getSequenceCarouselItems } from '../domain/sequencePractice';
 import BpmInput from '../features/metronome/BpmInput';
 import ChordShapeCard from './ChordShapeCard';
 import SequenceDurationPanel from './SequenceDurationPanel';
+import FocusedPracticePortal from './FocusedPracticePortal';
 
 function PracticeCarouselCard({ item, step, resolvedStep }) {
   const chordName = formatSequenceChord(step);
@@ -26,32 +26,10 @@ function PracticeCarouselCard({ item, step, resolvedStep }) {
 export default function SequencePracticeOverlay({ sequence, resolvedSteps, filmState, playing, status, beatsRemaining, metronome, onBpmChange, durationsOpen, onToggleDurations, onChangeDuration, onTogglePlay, onPrevious, onNext, onExit }) {
   const carouselItems = useMemo(() => getSequenceCarouselItems(filmState.cardIndex, sequence.steps.length, sequence.loopStartIndex, filmState.hasCompletedFirstPass), [filmState.cardIndex, filmState.hasCompletedFirstPass, sequence.loopStartIndex, sequence.steps.length]);
 
-  useEffect(() => {
-    const root = document.getElementById('root');
-    root?.setAttribute('inert', '');
-    root?.setAttribute('aria-hidden', 'true');
-    document.body.classList.add('sequence-practice-active');
-    return () => {
-      root?.removeAttribute('inert');
-      root?.removeAttribute('aria-hidden');
-      document.body.classList.remove('sequence-practice-active');
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleEscape = (event) => {
-      if (event.key !== 'Escape') return;
-      if (durationsOpen) onToggleDurations(false);
-      else onExit();
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [durationsOpen, onExit, onToggleDurations]);
-
   const currentStep = sequence.steps[filmState.cardIndex];
   const progress = currentStep ? ((filmState.cardIndex + 1) / sequence.steps.length) * 100 : 0;
 
-  return createPortal(<div className="sequence-practice-overlay" role="dialog" aria-modal="true" aria-label="Prática imersiva de sequência">
+  return <FocusedPracticePortal className="sequence-practice-overlay" ariaLabel="Prática imersiva de sequência" onEscape={() => durationsOpen ? onToggleDurations(false) : onExit()}>
     <header className="sequence-practice-overlay-header">
       <div>
         <p className="eyebrow">Filme de acordes</p>
@@ -82,5 +60,5 @@ export default function SequencePracticeOverlay({ sequence, resolvedSteps, filmS
     </footer>
 
     <SequenceDurationPanel sequence={sequence} currentIndex={filmState.cardIndex} open={durationsOpen} onClose={() => onToggleDurations(false)} onChange={onChangeDuration} />
-  </div>, document.body);
+  </FocusedPracticePortal>;
 }

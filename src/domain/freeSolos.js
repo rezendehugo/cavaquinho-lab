@@ -1,7 +1,7 @@
 import { cavaquinhoOpenMidi } from './scalePaths';
 
 export const freeSoloStorageVersion = 1;
-export const maximumSoloSteps = 64;
+export const maximumSoloSteps = 1000;
 
 const validPosition = (position) => Number.isInteger(position?.stringIndex)
   && position.stringIndex >= 0 && position.stringIndex < cavaquinhoOpenMidi.length
@@ -13,7 +13,7 @@ const validPosition = (position) => Number.isInteger(position?.stringIndex)
 
 export const validateFreeSolo = (solo) => {
   if (!solo || !Array.isArray(solo.positions) || !solo.positions.length) return { ok: false, message: 'Adicione ao menos uma nota.' };
-  if (solo.positions.length > maximumSoloSteps) return { ok: false, message: 'O solo pode ter até 64 notas.' };
+  if (solo.positions.length > maximumSoloSteps) return { ok: false, message: 'O solo ultrapassa o tamanho permitido.' };
   if (!solo.positions.every(validPosition)) return { ok: false, message: 'O solo contém uma posição inválida.' };
   return { ok: true, message: '' };
 };
