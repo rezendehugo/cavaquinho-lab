@@ -84,4 +84,12 @@ describe('nome e sufixo dos acordes', () => {
       expect($body[0].scrollWidth).to.be.at.most($body[0].clientWidth + 1);
     });
   });
+
+  it('oferece a cobertura expandida dos dominantes acidentais', () => {
+    cy.visit('/shapes');
+    cy.get('[aria-label="Escolher raiz"]').select('Db');
+    cy.get('[aria-label="Escolher qualidade"]').select('7');
+    cy.get('.shape-grid .chord-shape-card').should('have.length', 11);
+    cy.contains('h3', 'Db7').should('contain.text', '11 formas');
+  });
 });

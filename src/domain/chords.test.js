@@ -38,6 +38,15 @@ describe('biblioteca expandida de acordes', () => {
     });
   });
 
+  test.each([['Db', 11], ['Eb', 9], ['Gb', 10], ['Ab', 9], ['Bb', 10]])('expande %s7 com dominantes cromáticos validados', (key, count) => {
+    const positions = cavaquinhoChords.chords[key].find(chord => chord.suffix === '7').positions;
+    expect(positions).toHaveLength(count);
+    expect(positions.filter(position => {
+      const analysis = analyzeChordVoicing({ key, suffix: '7' }, position);
+      return analysis.extraNotes.length === 0 && analysis.missingEssentialNotes.length === 0;
+    }).length).toBeGreaterThanOrEqual(8);
+  });
+
   test('recebe os rótulos em português da dependência', () => {
     expect(cavaquinhoChords.suffixMetadata['7sus4']).toMatchObject({
       label: 'Sétima suspensa com quarta',
