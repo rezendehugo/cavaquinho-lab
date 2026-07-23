@@ -13,10 +13,10 @@ npm run audit:chords
 | Raízes | 12 | 12 |
 | Definições de sufixo | 15 | 20 |
 | Acordes raiz + qualidade | 180 | 240 |
-| Referências de shapes | 1.498 | 1.669 |
+| Referências de shapes | 1.498 | 1.775 |
 | Duplicatas físicas no mesmo acorde | 12 | 0 |
 
-O total atual contém 956 voicings completos, 324 incompletos sem notas
+O total atual contém 1.059 voicings completos, 327 incompletos sem notas
 externas, 126 com notas adicionais e 263 que omitem ao menos um tom essencial.
 O relatório mantém essas categorias separadas; uma contagem alta não significa
 automaticamente boa cobertura musical.
@@ -49,8 +49,9 @@ evita apresentar um acorde sem diagrama ou renomear um shape incompatível.
 
 ## Cobertura ainda rasa
 
-O relatório atual lista 22 acordes com uma ou duas formas. `sus2` continua sendo
-a família mais rasa. As famílias `aug`, `m9`, `maj9` e `madd9` ainda não possuem
+`sus2` agora oferece entre 6 e 7 shapes por raiz, e `m7` oferece entre 9 e 13.
+Restam cinco acordes publicados com apenas duas formas: `Db7`, `Eb7`, `Gb7`,
+`Ab7` e `Bb7`. As famílias `aug`, `m9`, `maj9` e `madd9` ainda não possuem
 nenhum shape compatível no corpus conhecido e são a principal pendência de
 pesquisa musical.
 
