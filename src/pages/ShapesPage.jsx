@@ -35,6 +35,7 @@ function ShapesPage() {
       <div className="voicing-status-legend" aria-label="Legenda dos voicings">
         <span><i className="voicing-status-dot voicing-status-dot--complete" />Completo</span>
         <span><i className="voicing-status-dot voicing-status-dot--incomplete" />Omite notas</span>
+        <span><i className="voicing-status-dot voicing-status-dot--rootless" />Sem raiz</span>
         <span><i className="voicing-status-dot voicing-status-dot--additional" />Notas adicionais</span>
       </div>
       <div className="shape-grid wide">

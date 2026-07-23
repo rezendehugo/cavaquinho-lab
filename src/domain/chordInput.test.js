@@ -24,6 +24,8 @@ describe('entrada de acordes', () => {
     expect(parseRootInput('G7(4)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '7sus4' });
     expect(parseRootInput('G6/9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '69' });
     expect(parseRootInput('G7M(9)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'maj9' });
+    expect(parseRootInput('Gmaj9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'maj9' });
+    expect(parseRootInput('Gm9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'm9' });
     expect(parseRootInput('Gm(add9)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'madd9' });
   });
 

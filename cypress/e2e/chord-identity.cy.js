@@ -62,6 +62,19 @@ describe('nome e sufixo dos acordes', () => {
     cy.get('.lab-card').first().find('.voicing-status-dot').should('be.visible');
   });
 
+  it('aceita m9 e 7M(9) e identifica os shapes sem raiz', () => {
+    cy.get('[aria-label="Nota do acorde 1"]').clear().type('Gm9{enter}');
+    cy.get('[aria-label="Sequência atual"]').should('contain.text', 'Gm9');
+    cy.get('.lab-card').first().find('.voicing-status-dot--rootless').should('be.visible');
+
+    cy.visit('/shapes');
+    cy.get('[aria-label="Escolher qualidade"]').select('maj9');
+    cy.get('.shape-grid .voicing-status-dot--rootless').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .voicing-status-dot--rootless').first()
+      .should('have.attr', 'aria-label')
+      .and('contain', 'Voicing sem raiz');
+  });
+
   it('mostra o estado musical de cada forma na galeria sem quebrar o layout', () => {
     cy.visit('/shapes');
     cy.get('[aria-label="Escolher qualidade"]').select('69');
@@ -70,5 +83,13 @@ describe('nome e sufixo dos acordes', () => {
     cy.get('body').then(($body) => {
       expect($body[0].scrollWidth).to.be.at.most($body[0].clientWidth + 1);
     });
+  });
+
+  it('oferece a cobertura expandida dos dominantes acidentais', () => {
+    cy.visit('/shapes');
+    cy.get('[aria-label="Escolher raiz"]').select('Db');
+    cy.get('[aria-label="Escolher qualidade"]').select('7');
+    cy.get('.shape-grid .chord-shape-card').should('have.length', 11);
+    cy.contains('h3', 'Db7').should('contain.text', '11 formas');
   });
 });

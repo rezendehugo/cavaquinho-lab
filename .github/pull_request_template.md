@@ -16,4 +16,4 @@ Descreva o resultado para o usuário e as decisões importantes.
 - [ ] Nenhum segredo, caminho local ou dado privado foi incluído
 - [ ] Persistência e sequências antigas continuam compatíveis
 - [ ] Mudanças de música/teoria têm testes determinísticos
-
+- [ ] Dependências novas ou atualizadas passaram pela revisão de segurança

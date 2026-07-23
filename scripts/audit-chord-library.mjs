@@ -26,19 +26,23 @@ function classifyPosition(key, suffix, position) {
   const missing = expected.filter(note => !played.includes(note));
   const additional = played.filter(note => !expected.includes(note));
   const missingEssential = essential.filter(note => !played.includes(note));
+  const rootMissing = !played.includes(root);
   const kind = additional.length
     ? 'additional'
     : missingEssential.length
       ? 'invalid'
-      : missing.length
-        ? 'incomplete'
-        : 'complete';
+      : rootMissing && missing.length
+        ? 'rootless'
+        : missing.length
+          ? 'incomplete'
+          : 'complete';
 
   return {
     kind,
     missing: missing.map(note => pitchNames[note]),
     additional: additional.map(note => pitchNames[note]),
-    missingEssential: missingEssential.map(note => pitchNames[note])
+    missingEssential: missingEssential.map(note => pitchNames[note]),
+    rootMissing
   };
 }
 
@@ -76,6 +80,7 @@ function auditLibrary() {
         shapes: 0,
         complete: 0,
         incomplete: 0,
+        rootless: 0,
         additional: 0,
         invalid: 0
       };
@@ -117,9 +122,10 @@ const shallowChords = pitchNames.flatMap(key => suffixCycle.map(suffix => {
 const classification = Object.values(audit.bySuffix).reduce((total, suffix) => ({
   complete: total.complete + suffix.complete,
   incomplete: total.incomplete + suffix.incomplete,
+  rootless: total.rootless + suffix.rootless,
   additional: total.additional + suffix.additional,
   invalid: total.invalid + suffix.invalid
-}), { complete: 0, incomplete: 0, additional: 0, invalid: 0 });
+}), { complete: 0, incomplete: 0, rootless: 0, additional: 0, invalid: 0 });
 
 const report = {
   source: '@tombatossals/chords-db/lib/cavaquinho.json',
