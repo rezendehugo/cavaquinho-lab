@@ -101,6 +101,10 @@ O fallback `404.html` permite abrir diretamente as rotas da aplicação no GitHu
 
 Consulte `CONTRIBUTING.md` para colaborar e `SECURITY.md` para relatar vulnerabilidades.
 
+## Contribuidores
+
+Desenvolvido e mantido por [Hugo Rezende](https://github.com/rezendehugo), com assistência de desenvolvimento do [OpenAI Codex](https://openai.com/codex/).
+
 ## Licença
 
 Distribuído sob a licença MIT. Consulte `LICENSE`.
