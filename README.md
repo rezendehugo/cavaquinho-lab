@@ -36,6 +36,8 @@ npm run check      # lint, typecheck e testes
 npm run validate   # todas as verificações e build
 npm run test:e2e   # abre o app e executa os testes Cypress
 npm run test:e2e:open # abre o Cypress interativo para aprender e depurar
+npm run dev:api      # API local de importação em 127.0.0.1:8080
+npm run test:api     # contratos, ownership e normalização MusicXML
 ```
 
 ## Docker
@@ -50,16 +52,16 @@ Os perfis expõem, respectivamente, as portas `5173` e `4173`.
 
 ## Configuração de ambiente
 
-O aplicativo não exige variáveis de ambiente atualmente. Consulte `.env.example` antes de adicionar configuração local.
+O editor principal continua local. A importação de partituras exige a API e as variáveis documentadas em `.env.example`.
 
 Variáveis com prefixo `VITE_` são incorporadas ao bundle e ficam públicas no navegador. Nunca armazene tokens, senhas ou outras credenciais nelas.
 
 ## Arquitetura e persistência
 
-- React e Vite compõem a interface estática.
+- React e Vite compõem a interface; a importação usa uma API Fastify separada.
 - Componentes visuais ficam em `src/components` e páginas em `src/pages`.
 - Regras determinísticas de acordes e braço ficam em `src/domain` e módulos de domínio relacionados em `src/`.
-- Sequências são armazenadas somente no `localStorage` do navegador; não existe conta, servidor ou sincronização em nuvem.
+- Sequências existentes continuam no `localStorage`. Rascunhos de partitura usam PostgreSQL e storage privado, sempre atrás da API autenticada.
 - A base de acordes vem de uma dependência fixada por commit.
 
 ## Testes e acessibilidade
@@ -95,11 +97,13 @@ O fallback `404.html` permite abrir diretamente as rotas da aplicação no GitHu
 ## Limitações e roadmap
 
 - Os dados ficam restritos ao navegador e podem ser apagados pelo usuário.
-- Não há autenticação, backend ou sincronização.
+- O backend de importação está em fase inicial: MusicXML funciona localmente; Supabase, OMR e publicação da API ainda exigem configuração de infraestrutura.
 - O typecheck é uma baseline incremental para JS/JSX; `checkJs` estrito será habilitado por módulo.
 - Persistência versionada, reordenação acessível por teclado, testes axe e Playwright estão planejados.
 
 Consulte `CONTRIBUTING.md` para colaborar e `SECURITY.md` para relatar vulnerabilidades.
+
+Detalhes do modelo de confiança, licenças e operação estão em [docs/score-import-architecture.md](docs/score-import-architecture.md).
 
 ## Contribuidores
 

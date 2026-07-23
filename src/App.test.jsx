@@ -39,7 +39,7 @@ describe('Cavaquinho Lab', () => {
 
   test('mostra Formas, Sequências, Braço e Prática na navegação', () => {
     renderAt();
-    expect(getRoutes().map(route => route.label)).toEqual(['Formas', 'Sequências', 'Braço', 'Prática']);
+    expect(getRoutes().map(route => route.label)).toEqual(['Formas', 'Sequências', 'Braço', 'Prática', 'Importar']);
     expect(screen.getByRole('link', { name: 'Formas' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sequências' })).toHaveClass('active');
     expect(screen.getByRole('link', { name: 'Braço' })).toBeInTheDocument();
@@ -51,6 +51,13 @@ describe('Cavaquinho Lab', () => {
     renderAt('/cavaquinho/practice');
     await waitFor(() => expect(window.location.pathname).toBe('/practice'));
     expect(screen.getByRole('link', { name: 'Prática' })).toHaveClass('active');
+  });
+
+  test('abre o workspace privado de importação sem acessar banco diretamente', () => {
+    renderAt('/imports');
+    expect(screen.getByRole('heading', { name: 'Partitura para prática' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Escolher MusicXML')).toHaveAttribute('accept', expect.stringContaining('.musicxml'));
+    expect(screen.getByText(/rascunho são privados/i)).toBeInTheDocument();
   });
 
   test('normaliza hashes antigos para rotas reais', async () => {

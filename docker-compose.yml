@@ -22,3 +22,31 @@ services:
       target: preview
     ports:
       - "4173:4173"
+  postgres:
+    profiles: ["backend"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cavaquinho_lab
+      POSTGRES_USER: cavaquinho
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - score_import_db:/var/lib/postgresql/data
+  api:
+    profiles: ["backend"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATABASE_URL: postgres://cavaquinho:local-development-only@postgres:5432/cavaquinho_lab
+      CORS_ALLOWED_ORIGINS: http://127.0.0.1:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  score_import_db:
