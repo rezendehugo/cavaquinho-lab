@@ -339,6 +339,13 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('G6/9');
     expect(screen.getByLabelText('Forma de G6/9')).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].suffix).toBe('69');
+
+    fireEvent.change(rootInput, { target: { value: 'G7M(9)' } });
+    fireEvent.keyDown(rootInput, { key: 'Enter' });
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('G7M(9)');
+    expect(screen.getByLabelText('Forma de G7M(9)')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Voicing sem raiz/)).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].suffix).toBe('maj9');
   });
 
   test('mantém o acorde anterior quando a entrada é inválida e permite cancelar', () => {
@@ -404,6 +411,13 @@ describe('Cavaquinho Lab', () => {
     expect(screen.queryByText(/Notas:/)).not.toBeInTheDocument();
     expect(document.querySelector('.chord-diagram figcaption')).toBe(null);
     expect(document.querySelector('.diagram-tuning')).toBe(null);
+  });
+
+  test('apresenta voicings de nona sem raiz com orientação acessível', () => {
+    renderAt('/shapes');
+    fireEvent.change(screen.getByLabelText('Escolher qualidade'), { target: { value: 'maj9' } });
+    expect(screen.getByText(/C7M\(9\).*10 formas/)).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.')).toHaveLength(10);
   });
 
   test('adiciona, remove e reordena acordes preservando cards', () => {

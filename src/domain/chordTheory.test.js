@@ -27,11 +27,24 @@ describe('teoria aplicada às formas', () => {
   });
 
   test('classifica voicings completos, incompletos e com notas adicionais', () => {
-    expect(getVoicingCompleteness({ missingNotes: [], extraNotes: [] })).toMatchObject({ id: 'complete' });
-    expect(getVoicingCompleteness({ missingNotes: ['D'], extraNotes: [] })).toEqual({
+    expect(getVoicingCompleteness({ missingNotes: [], missingEssentialNotes: [], extraNotes: [], rootMissing: false })).toMatchObject({ id: 'complete' });
+    expect(getVoicingCompleteness({ missingNotes: ['D'], missingEssentialNotes: [], extraNotes: [], rootMissing: false })).toEqual({
       id: 'incomplete',
       label: 'Voicing incompleto: omite D. Válido no cavaquinho.'
     });
-    expect(getVoicingCompleteness({ missingNotes: [], extraNotes: ['A'] })).toMatchObject({ id: 'additional' });
+    expect(getVoicingCompleteness({ missingNotes: [], missingEssentialNotes: [], extraNotes: ['A'], rootMissing: false })).toMatchObject({ id: 'additional' });
+  });
+
+  test('identifica voicing de nona sem raiz com aviso de acompanhamento', () => {
+    const analysis = analyzeChordVoicing({ key: 'G', suffix: 'maj9' }, { midi: [59, 66, 69, 71] });
+    expect(analysis).toMatchObject({
+      rootMissing: true,
+      missingEssentialNotes: [],
+      extraNotes: []
+    });
+    expect(getVoicingCompleteness(analysis)).toEqual({
+      id: 'rootless',
+      label: 'Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.'
+    });
   });
 });

@@ -13,11 +13,12 @@ npm run audit:chords
 | Raízes | 12 | 12 |
 | Definições de sufixo | 15 | 20 |
 | Acordes raiz + qualidade | 180 | 240 |
-| Referências de shapes | 1.498 | 1.775 |
+| Referências de shapes | 1.498 | 1.994 |
 | Duplicatas físicas no mesmo acorde | 12 | 0 |
 
-O total atual contém 1.059 voicings completos, 327 incompletos sem notas
-externas, 126 com notas adicionais e 263 que omitem ao menos um tom essencial.
+O total atual contém 1.059 voicings completos, 327 incompletos com raiz, 219
+voicings de nona sem raiz, 126 com notas adicionais e 263 que omitem ao menos
+um tom essencial.
 O relatório mantém essas categorias separadas; uma contagem alta não significa
 automaticamente boa cobertura musical.
 
@@ -28,8 +29,8 @@ automaticamente boa cobertura musical.
 | `7sus4` | `7(4)` | 12/12 | Validado |
 | `69` | `6/9` | 12/12 | Validado pela política de tons essenciais |
 | `aug` | `+` | 0/12 | Aguarda shapes com fonte conhecida |
-| `m9` | `m9` | 0/12 | Aguarda shapes com fonte conhecida |
-| `maj9` | `7M(9)` | 0/12 | Aguarda shapes com fonte conhecida |
+| `m9` | `m9` | 12/12 | 8 voicings sem raiz por tom |
+| `maj9` | `7M(9)` | 12/12 | 10–11 voicings sem raiz por tom |
 | `madd9` | `m(add9)` | 0/12 | Aguarda shapes com fonte conhecida |
 
 As definições sem cobertura existem no domínio e aceitam aliases na entrada,
@@ -39,8 +40,11 @@ evita apresentar um acorde sem diagrama ou renomear um shape incompatível.
 ## Política musical
 
 - Um voicing completo contém todas as notas da fórmula e nenhuma nota externa.
-- Um voicing incompleto reutilizável não contém notas externas e preserva raiz
-  e tons essenciais da qualidade.
+- Um voicing incompleto reutilizável não contém notas externas e preserva os
+  tons essenciais da qualidade.
+- Em `m9`, os tons essenciais são ♭3, ♭7 e 9; em `maj9`, são 3, 7M e 9.
+  A raiz e a quinta podem ser omitidas, com indicação explícita de que o shape
+  é recomendado para acompanhamento com baixo ou outro instrumento harmônico.
 - Um shape com nota adicional nunca alimenta equivalências automáticas.
 - Shapes `dim` e `dim7` com notas adicionais continuam explicitamente ligados
   ao acorde de origem, mas ficam na fila de revisão manual.
@@ -51,9 +55,8 @@ evita apresentar um acorde sem diagrama ou renomear um shape incompatível.
 
 `sus2` agora oferece entre 6 e 7 shapes por raiz, e `m7` oferece entre 9 e 13.
 Restam cinco acordes publicados com apenas duas formas: `Db7`, `Eb7`, `Gb7`,
-`Ab7` e `Bb7`. As famílias `aug`, `m9`, `maj9` e `madd9` ainda não possuem
-nenhum shape compatível no corpus conhecido e são a principal pendência de
-pesquisa musical.
+`Ab7` e `Bb7`. As famílias `aug` e `madd9` ainda não possuem nenhum shape
+compatível no corpus conhecido e são a principal pendência de pesquisa musical.
 
 ## Responsabilidade entre repositórios
 

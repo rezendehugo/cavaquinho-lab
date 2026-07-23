@@ -24,7 +24,7 @@
     "audit:chords": "node scripts/audit-chord-library.mjs"
   },
   "dependencies": {
-    "@tombatossals/chords-db": "github:rezendehugo/chords-db#f0ac1da85b08781bb1729ca9f71130b6a33987aa",
+    "@tombatossals/chords-db": "github:rezendehugo/chords-db#a93520202a355fd3cdda8bedc66d43cf155649db",
     "@tombatossals/react-chords": "git+https://github.com/rezendehugo/react-chords.git#83bae79ebcffbc0351cfc7bb86670e8e6e511c34",
     "lucide-react": "^1.21.0",
     "prop-types": "^15.8.1",

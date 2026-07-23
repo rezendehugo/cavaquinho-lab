@@ -18,8 +18,8 @@ export const chordQualities = {
   '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [0, 2, 4, 10] },
   aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], aliases: ['+', 'aum'] },
   '69': { intervals: [0, 2, 4, 7, 9], family: 'acorde maior com sexta e nona', required: [0, 4, 9], aliases: ['6/9'] },
-  m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [0, 2, 3, 10] },
-  maj9: { intervals: [0, 2, 4, 7, 11], family: 'acorde maior com sétima maior e nona', required: [0, 2, 4, 11], aliases: ['7M(9)'] },
+  m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [2, 3, 10] },
+  maj9: { intervals: [0, 2, 4, 7, 11], family: 'acorde maior com sétima maior e nona', required: [2, 4, 11], aliases: ['7M(9)'] },
   madd9: { intervals: [0, 2, 3, 7], family: 'tríade menor com nona adicionada', required: [0, 2, 3], aliases: ['m(add9)'] }
 };
 
@@ -41,6 +41,12 @@ export const getVoicingCompleteness = (analysis) => {
   if (!analysis) return null;
   if (analysis.extraNotes.length) {
     return { id: 'additional', label: `Voicing com notas adicionais: ${analysis.extraNotes.join(', ')}.` };
+  }
+  if (analysis.rootMissing && analysis.missingEssentialNotes.length === 0) {
+    return {
+      id: 'rootless',
+      label: 'Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.'
+    };
   }
   if (analysis.missingNotes.length) {
     return { id: 'incomplete', label: `Voicing incompleto: omite ${analysis.missingNotes.join(', ')}. Válido no cavaquinho.` };
@@ -65,6 +71,8 @@ export const analyzeChordVoicing = (step, position) => {
   const extra = played.filter(note => !expected.includes(note));
   const equivalents = getEquivalentChords(step.key, step.suffix);
   const root = pitchNames.indexOf(step.key);
+  const essentialPitchClasses = quality.required.map(interval => (root + interval) % 12);
+  const missingEssential = essentialPitchClasses.filter(note => !played.includes(note));
   const notes = quality.intervals.map(interval => pitchNames[(root + interval) % 12]);
   const playedInStringOrder = [...new Set((position?.midi || []).map(note => note % 12))];
   const lowestMidi = position?.midi?.length ? Math.min(...position.midi) : null;
@@ -74,7 +82,9 @@ export const analyzeChordVoicing = (step, position) => {
     notes,
     playedNotes: playedInStringOrder.map(note => pitchNames[note]),
     missingNotes: missing.map(note => pitchNames[note]),
+    missingEssentialNotes: missingEssential.map(note => pitchNames[note]),
     extraNotes: extra.map(note => pitchNames[note]),
+    rootMissing: !played.includes(root),
     exact: missing.length === 0 && extra.length === 0,
     equivalents,
     aliases: (quality.aliases || []).map(alias => `${step.key}${alias}`),
