@@ -1,6 +1,7 @@
 import { formatChordName, getPlayedNotes, qualityLabels } from './chordDisplay';
 import { chromaticKeys } from './sequences';
 import { analyzeChordVoicing } from './domain/chordTheory';
+import { analyzeHarmonicFunction, buildHarmonicField, getFunctionalSubstitutions } from './domain/appliedHarmony';
 
 const minorContext = {
   G: {
@@ -29,11 +30,22 @@ export const inferKeyCenter = (sequence) => {
   return { key: last.key, mode: 'maior', label: last.key + ' maior' };
 };
 
-export const analyzeSequence = (sequence, optimizedSteps = []) => {
-  const keyCenter = inferKeyCenter(sequence);
+const describeMovement = (score, index) => {
+  if (index === 0) return 'Forma inicial da prática.';
+  if (score <= 15) return 'Troca próxima: pouca movimentação entre as formas.';
+  if (score <= 30) return 'Troca moderada: antecipe a nova posição da mão.';
+  return 'Troca ampla: pratique lentamente a mudança de região.';
+};
+
+export const analyzeSequence = (sequence, optimizedSteps = [], options = {}) => {
+  const inferredCenter = inferKeyCenter(sequence);
+  const keyCenter = options.tonic
+    ? { key: options.tonic, mode: options.mode || inferredCenter?.mode || 'maior', label: `${options.tonic} ${options.mode || inferredCenter?.mode || 'maior'}` }
+    : inferredCenter;
   const context = keyCenter?.mode === 'menor' ? minorContext[keyCenter.key] : null;
   const chords = sequence.map((step, index) => {
     const contextInfo = context?.[step.key];
+    const harmonicFunction = analyzeHarmonicFunction(step, keyCenter);
     const position = optimizedSteps[index]?.position;
     const currentNotes = position ? getPlayedNotes(position) : [];
     const nextNotes = optimizedSteps[index + 1]?.position ? getPlayedNotes(optimizedSteps[index + 1].position) : [];
@@ -42,10 +54,13 @@ export const analyzeSequence = (sequence, optimizedSteps = []) => {
     return {
       ...step,
       name: formatChordName(step.key, step.suffix),
-      numeral: contextInfo?.numeral || 'análise aberta',
-      functionName: contextInfo?.functionName || (step.suffix === '7' ? 'dominante possível' : 'cor harmônica'),
+      numeral: contextInfo?.numeral || harmonicFunction?.numeral || 'análise aberta',
+      functionName: contextInfo?.functionName || harmonicFunction?.functionName || (step.suffix === '7' ? 'dominante possível' : 'cor harmônica'),
+      substitutions: getFunctionalSubstitutions(step, keyCenter),
       commonTones,
       theory,
+      movementScore: optimizedSteps[index]?.movementScore || 0,
+      movementAdvice: describeMovement(optimizedSteps[index]?.movementScore || 0, index),
       advice: commonTones.length > 0
         ? 'Mantenha em mente as notas comuns: ' + commonTones.join(', ') + '.'
         : 'Ouça a troca completa de cor entre estes acordes.'
@@ -54,6 +69,7 @@ export const analyzeSequence = (sequence, optimizedSteps = []) => {
   return {
     keyCenter,
     chords,
+    harmonicField: buildHarmonicField(keyCenter),
     summary: keyCenter
       ? 'Centro tonal provável: ' + keyCenter.label + '.'
       : 'Centro tonal ainda não definido para esta sequência.',

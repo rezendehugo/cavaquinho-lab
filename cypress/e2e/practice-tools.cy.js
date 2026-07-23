@@ -177,4 +177,16 @@ describe('ferramentas da sessão de prática', () => {
     });
     cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
   });
+
+  it('explica campo harmônico, função, substituições e movimento das formas', () => {
+    cy.get('[aria-label="Adicionar acorde"]').click();
+    cy.contains('summary', 'Entender e praticar esta sequência').click();
+    cy.get('[aria-label="Estudo da sequência"]')
+      .should('contain.text', 'Campo harmônico:')
+      .and('contain.text', 'Função provável:')
+      .and('contain.text', 'Substituições pela função:')
+      .and('contain.text', 'Movimento da forma:');
+    cy.viewport(390, 844);
+    cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
+  });
 });

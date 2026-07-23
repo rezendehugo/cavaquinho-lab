@@ -461,6 +461,10 @@ describe('Cavaquinho Lab', () => {
     expect(firstCard.querySelector('.chord-diagram figcaption')).toBe(null);
     expect(within(lab).queryByText('Teoria')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Teoria');
+    expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Campo harmônico:');
+    expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Função provável:');
+    expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Substituições pela função:');
+    expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Movimento da forma:');
     expect(screen.getByText('Entender e praticar esta sequência').closest('details')).not.toHaveAttribute('open');
   });
 

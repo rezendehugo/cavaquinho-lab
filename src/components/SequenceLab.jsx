@@ -83,6 +83,7 @@ function LabSummary({ analysis, exercises, sequence, colorMode }) {
         <h2>Teoria</h2>
         <p>{analysis.summary}</p>
         <p>{analysis.tension}</p>
+        {analysis.harmonicField.length ? <p className="harmonic-field-line"><strong>Campo harmônico:</strong> {analysis.harmonicField.map(degree => `${degree.numeral} ${formatChordName(degree.key, degree.suffix)}`).join(' · ')}.</p> : null}
         {analysis.chords.length ? <div className="chord-theory-list">{analysis.chords.map(chord => (
           <div key={chord.id} className="chord-theory-item">
             <h3>{chord.name} <span>{chord.theory?.family}</span></h3>
@@ -91,11 +92,14 @@ function LabSummary({ analysis, exercises, sequence, colorMode }) {
               <p><strong>Forma selecionada:</strong> {chord.theory.playedNotes.join(' · ')}.
                 {chord.theory.missingNotes.length ? ' Omite ' + chord.theory.missingNotes.join(', ') + ' nesta digitação.' : ' Contém todas as classes de nota do acorde.'}</p>
               {chord.theory.bassNote ? <p><strong>Baixo soando:</strong> {chord.theory.bassNote}{chord.theory.inversion ? ` — uma inversão de ${chord.name}.` : ' — a fundamental está no baixo.'}</p> : null}
+              <p><strong>Função provável:</strong> {chord.numeral} · {chord.functionName}.</p>
+              {chord.substitutions.length ? <p><strong>Substituições pela função:</strong> {chord.substitutions.map(item => formatChordName(item.key, item.suffix)).join(', ')}. Compare o resultado antes de trocar.</p> : null}
               {chord.theory.aliases.length ? <p><strong>Grafias usuais:</strong> {chord.theory.aliases.join(', ')}.</p> : null}
               {chord.theory.equivalents.length ? <p><strong>Mesmas notas, outro nome:</strong> {chord.theory.equivalents.slice(0, 4).map(item => formatChordName(item.key, item.suffix)).join(', ')}. O contexto e o baixo definem a melhor leitura.</p> : null}
               {chord.theory.symmetry ? <p><strong>Simetria:</strong> repete-se a cada {chord.theory.symmetry} semitons; qualquer nota do conjunto pode ser reinterpretada como fundamental.</p> : null}
             </> : null}
             <p>{chord.advice}</p>
+            <p><strong>Movimento da forma:</strong> {chord.movementAdvice}</p>
           </div>
         ))}</div> : <p>Adicione acordes para ver tríades, tétrades, equivalências e notas comuns.</p>}
       </section>
@@ -144,7 +148,7 @@ function SequenceLab() {
   const optimized = useMemo(() => optimizeSequence(activeSequence.steps, cavaquinhoChords), [activeSequence.steps]);
   const sequenceShapes = optimized.missing.length ? activeSequence.steps.map(() => null) : optimized.steps;
   const missingShapes = activeSequence.steps.filter((_step, index) => !sequenceShapes[index]);
-  const analysis = useMemo(() => analyzeSequence(activeSequence.steps, optimized.steps), [activeSequence.steps, optimized.steps]);
+  const analysis = useMemo(() => analyzeSequence(activeSequence.steps, optimized.steps, { tonic: activeSequence.tonic }), [activeSequence.steps, activeSequence.tonic, optimized.steps]);
   const exercises = useMemo(() => buildExercises(activeSequence.steps, analysis, optimized.steps), [activeSequence.steps, analysis, optimized.steps]);
   const practiceDurations = useMemo(() => activeSequence.steps.map(step => normalizePracticeBeats(step.practiceBeats)), [activeSequence.steps]);
   const countIn = metronome.beatsPerMeasure;
