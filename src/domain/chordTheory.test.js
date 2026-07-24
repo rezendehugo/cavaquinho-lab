@@ -1,4 +1,4 @@
-import { analyzeChordVoicing, getChordPitchClasses, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
+import { analyzeChordVoicing, getChordFormulaLegend, getChordPitchClasses, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
 
 describe('teoria aplicada às formas', () => {
   test('reconhece equivalências exatas entre tétrades', () => {
@@ -70,5 +70,15 @@ describe('teoria aplicada às formas', () => {
       description: 'nona',
       colorGroup: 'ninth'
     });
+  });
+
+  test('gera a fórmula completa de C7(9) mesmo para shapes sem raiz', () => {
+    expect(getChordFormulaLegend('C', '9')).toEqual([
+      expect.objectContaining({ note: 'C', degreeLabel: '1', description: 'tônica' }),
+      expect.objectContaining({ note: 'D', degreeLabel: '9', description: 'nona' }),
+      expect.objectContaining({ note: 'E', degreeLabel: '3', description: 'terça maior' }),
+      expect.objectContaining({ note: 'G', degreeLabel: '5', description: 'quinta justa' }),
+      expect.objectContaining({ note: 'Bb', degreeLabel: '♭7', description: 'sétima menor' })
+    ]);
   });
 });

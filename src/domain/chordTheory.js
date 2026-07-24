@@ -52,10 +52,20 @@ export function getChordToneDetail(key, suffix, midi) {
   return {
     pitchClass,
     note: pitchNames[pitchClass],
+    spokenNote: spokenPitchNames[pitchClass],
     interval,
     ...detail,
     accessibleName: `${spokenPitchNames[pitchClass]}, ${detail.description} de ${spokenPitchNames[root]}`
   };
+}
+
+export function getChordFormulaLegend(key, suffix) {
+  const root = pitchNames.indexOf(key);
+  const quality = chordQualities[suffix];
+  if (root < 0 || !quality) return [];
+  return quality.intervals.map((interval) =>
+    getChordToneDetail(key, suffix, root + interval)
+  );
 }
 
 export function getChordDegreeLegend(key, suffix, position) {
