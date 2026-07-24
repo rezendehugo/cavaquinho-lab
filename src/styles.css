@@ -15,6 +15,12 @@
   --color-accent-soft: #e7f2ed;
   --color-danger: #9f3a32;
   --color-focus: #8fbfad;
+  --degree-root: #936000;
+  --degree-third: #2563a6;
+  --degree-fifth: #5f6b76;
+  --degree-seventh: #b5472f;
+  --degree-ninth: #6842b8;
+  --degree-fourth: #087f72;
   --shadow-card: 0 1px 2px rgba(31, 41, 51, 0.08);
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -341,9 +347,19 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .diagram-open { fill: transparent; stroke: var(--color-muted); stroke-width: 1.4; }
 .diagram-muted, .diagram-fret-label { fill: var(--color-muted); font-family: Verdana, sans-serif; font-size: 8px; font-weight: 700; }
 .diagram-dot { fill: var(--color-accent); stroke: var(--color-accent-hover); stroke-width: 1; }
+.diagram-dot.degree-root, .diagram-open.degree-root, .degree-swatch.degree-root { fill: var(--degree-root); stroke: var(--degree-root); }
+.diagram-dot.degree-third, .diagram-open.degree-third, .degree-swatch.degree-third { fill: var(--degree-third); stroke: var(--degree-third); }
+.diagram-dot.degree-fifth, .diagram-open.degree-fifth, .degree-swatch.degree-fifth { fill: var(--degree-fifth); stroke: var(--degree-fifth); }
+.diagram-dot.degree-seventh, .diagram-open.degree-seventh, .degree-swatch.degree-seventh { fill: var(--degree-seventh); stroke: var(--degree-seventh); }
+.diagram-dot.degree-ninth, .diagram-open.degree-ninth, .degree-swatch.degree-ninth { fill: var(--degree-ninth); stroke: var(--degree-ninth); }
+.diagram-dot.degree-fourth, .diagram-open.degree-fourth, .degree-swatch.degree-fourth { fill: var(--degree-fourth); stroke: var(--degree-fourth); }
 .diagram-dot-label { fill: #fff; font-size: 7px; font-weight: 900; font-family: Verdana, sans-serif; }
 .diagram-dot-accidental { font-size: 4.5px; font-weight: 800; }
 .diagram-barre { fill: var(--color-text); opacity: 0.82; }
+.chord-degree-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin-top: -8px; color: var(--color-muted); font-size: 0.64rem; line-height: 1.2; }
+.chord-degree-legend > span { display: inline-flex; align-items: center; gap: 3px; }
+.chord-degree-legend strong { color: var(--color-text); }
+.degree-swatch { display: inline-block; flex: 0 0 auto; width: 8px; height: 8px; border-radius: 50%; }
 .missing { color: var(--color-danger); font-weight: 800; }
 
 .fretboard-page { overflow: hidden; }

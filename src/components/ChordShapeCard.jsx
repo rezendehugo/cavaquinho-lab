@@ -1,4 +1,5 @@
 import { formatShapeCode, formatShapeIndex } from '../chordDisplay';
+import { getChordDegreeLegend } from '../domain/chordTheory';
 import ChordDiagram from './ChordDiagram';
 import { ArrowControlButton } from './IconControls';
 
@@ -20,8 +21,26 @@ export function ShapeNavigationControls({ previousLabel, nextLabel, onPrevious, 
   );
 }
 
+export function ChordDegreeLegend({ chordKey, chordSuffix, position }) {
+  const degrees = getChordDegreeLegend(chordKey, chordSuffix, position);
+  if (!degrees.length) return null;
+  return (
+    <div className="chord-degree-legend" aria-label="Graus presentes nesta forma">
+      {degrees.map((degree) => (
+        <span key={degree.interval}>
+          <i className={`degree-swatch degree-${degree.colorGroup}`} aria-hidden="true" />
+          <strong>{degree.degreeLabel}</strong>
+          <span>{degree.description}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function ChordShapeCard({
   chordName,
+  chordKey,
+  chordSuffix,
   position,
   shapeIndex,
   shapeTotal,
@@ -74,8 +93,9 @@ function ChordShapeCard({
             nextDisabled={navigation.nextDisabled}
           />
         ) : null}
-        <ChordDiagram position={position} name={chordName} mode={mode} />
+        <ChordDiagram position={position} name={chordName} chordKey={chordKey} chordSuffix={chordSuffix} mode={mode} />
       </div>
+      <ChordDegreeLegend chordKey={chordKey} chordSuffix={chordSuffix} position={position} />
       {showBottomIndex ? (
         <div className="chord-shape-footer">
           <ShapeIndexBadge index={shapeIndex} total={shapeTotal} />

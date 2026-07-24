@@ -15,7 +15,7 @@ export const chordQualities = {
   sus4: { intervals: [0, 5, 7], family: 'tríade suspensa com quarta', required: [0, 5], aliases: ['4', 'sus'] },
   '7sus4': { intervals: [0, 5, 7, 10], family: 'tétrade dominante suspensa com quarta', required: [0, 5, 10], aliases: ['7sus'] },
   add9: { intervals: [0, 2, 4, 7], family: 'tríade maior com nona adicionada', required: [0, 2, 4] },
-  '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [0, 2, 4, 10] },
+  '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [2, 4, 10] },
   aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], aliases: ['+', 'aum'] },
   '69': { intervals: [0, 2, 4, 7, 9], family: 'acorde maior com sexta e nona', required: [0, 4, 9], aliases: ['6/9'] },
   m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [2, 3, 10] },
@@ -25,6 +25,51 @@ export const chordQualities = {
 
 const uniqueSorted = (values) => [...new Set(values)].sort((a, b) => a - b);
 const sameSet = (left, right) => left.length === right.length && left.every((value, index) => value === right[index]);
+const spokenPitchNames = ['Dó', 'Ré bemol', 'Ré', 'Mi bemol', 'Mi', 'Fá', 'Sol bemol', 'Sol', 'Lá bemol', 'Lá', 'Si bemol', 'Si'];
+const degreeDetails = {
+  0: { degreeId: 'root', degreeLabel: '1', description: 'tônica', colorGroup: 'root' },
+  1: { degreeId: 'ninth', degreeLabel: '♭9', description: 'nona menor', colorGroup: 'ninth' },
+  2: { degreeId: 'ninth', degreeLabel: '9', description: 'nona', colorGroup: 'ninth' },
+  3: { degreeId: 'third', degreeLabel: '♭3', description: 'terça menor', colorGroup: 'third' },
+  4: { degreeId: 'third', degreeLabel: '3', description: 'terça maior', colorGroup: 'third' },
+  5: { degreeId: 'fourth', degreeLabel: '4', description: 'quarta justa', colorGroup: 'fourth' },
+  6: { degreeId: 'fifth', degreeLabel: '♭5', description: 'quinta diminuta', colorGroup: 'fifth' },
+  7: { degreeId: 'fifth', degreeLabel: '5', description: 'quinta justa', colorGroup: 'fifth' },
+  8: { degreeId: 'fifth', degreeLabel: '♯5', description: 'quinta aumentada', colorGroup: 'fifth' },
+  9: { degreeId: 'sixth', degreeLabel: '6', description: 'sexta', colorGroup: 'seventh' },
+  10: { degreeId: 'seventh', degreeLabel: '♭7', description: 'sétima menor', colorGroup: 'seventh' },
+  11: { degreeId: 'seventh', degreeLabel: '7M', description: 'sétima maior', colorGroup: 'seventh' }
+};
+
+export function getChordToneDetail(key, suffix, midi) {
+  const root = pitchNames.indexOf(key);
+  const quality = chordQualities[suffix];
+  if (root < 0 || !quality || !Number.isFinite(midi)) return null;
+  const pitchClass = ((midi % 12) + 12) % 12;
+  const interval = (pitchClass - root + 12) % 12;
+  if (!quality.intervals.includes(interval)) return null;
+  const detail = degreeDetails[interval];
+  return {
+    pitchClass,
+    note: pitchNames[pitchClass],
+    interval,
+    ...detail,
+    accessibleName: `${spokenPitchNames[pitchClass]}, ${detail.description} de ${spokenPitchNames[root]}`
+  };
+}
+
+export function getChordDegreeLegend(key, suffix, position) {
+  const details = (position?.midi || [])
+    .map((midi) => getChordToneDetail(key, suffix, midi))
+    .filter(Boolean);
+  return [...details
+    .reduce((items, detail) => {
+      if (!items.has(detail.interval)) items.set(detail.interval, detail);
+      return items;
+    }, new Map())
+    .values()]
+    .sort((left, right) => left.interval - right.interval);
+}
 
 export const getChordPitchClasses = (key, suffix) => {
   const root = pitchNames.indexOf(key);
@@ -45,7 +90,9 @@ export const getVoicingCompleteness = (analysis) => {
   if (analysis.rootMissing && analysis.missingEssentialNotes.length === 0) {
     return {
       id: 'rootless',
-      label: 'Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.'
+      label: analysis.suffix === '9'
+        ? 'Voicing sem raiz: contém terça, sétima menor e nona. Recomendado com baixo ou acompanhamento.'
+        : 'Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.'
     };
   }
   if (analysis.missingNotes.length) {
@@ -78,6 +125,7 @@ export const analyzeChordVoicing = (step, position) => {
   const lowestMidi = position?.midi?.length ? Math.min(...position.midi) : null;
   const bassNote = lowestMidi === null ? null : pitchNames[lowestMidi % 12];
   return {
+    suffix: step.suffix,
     family: quality.family,
     notes,
     playedNotes: playedInStringOrder.map(note => pitchNames[note]),

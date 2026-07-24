@@ -43,6 +43,8 @@ function ShapesPage() {
           <ChordShapeCard
             key={index}
             chordName={formatChordName(key, chord.suffix)}
+            chordKey={key}
+            chordSuffix={chord.suffix}
             position={position}
             shapeIndex={index}
             shapeTotal={chord.positions.length}

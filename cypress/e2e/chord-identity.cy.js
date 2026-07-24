@@ -92,4 +92,31 @@ describe('nome e sufixo dos acordes', () => {
     cy.get('.shape-grid .chord-shape-card').should('have.length', 11);
     cy.contains('h3', 'Db7').should('contain.text', '11 formas');
   });
+
+  it('distingue C7(9) e apresenta cores e texto para os graus', () => {
+    cy.get('[aria-label="Nota do acorde 1"]').clear().type('G7(9){enter}');
+    cy.get('[aria-label="Sequência atual"]').should('contain.text', 'G7(9)');
+    cy.get('.lab-card').first().find('.degree-seventh').should('exist');
+    cy.get('.lab-card').first().find('.degree-ninth').should('exist');
+
+    cy.visit('/shapes');
+    cy.get('[aria-label="Escolher qualidade"]').select('9');
+    cy.contains('h3', 'C7(9)').should('contain.text', '8 formas');
+    cy.get('.shape-grid .chord-shape-card').should('have.length', 8);
+    cy.get('.shape-grid .degree-third').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .degree-seventh').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .degree-ninth').should('have.length.greaterThan', 0);
+    cy.get('[aria-label="Mi, terça maior de Dó"]').should('have.length.greaterThan', 0);
+    cy.get('[aria-label="Si bemol, sétima menor de Dó"]').should('have.length.greaterThan', 0);
+    cy.get('[aria-label="Ré, nona de Dó"]').should('have.length.greaterThan', 0);
+    cy.get('.voicing-status-dot--rootless[aria-label*="sétima menor"]').should('have.length', 8);
+
+    cy.viewport(390, 844);
+    cy.get('body').then(($body) => {
+      expect($body[0].scrollWidth).to.be.at.most($body[0].clientWidth + 1);
+    });
+    cy.get('.chord-degree-legend').each(($legend) => {
+      expect($legend[0].scrollWidth).to.be.at.most($legend[0].clientWidth + 1);
+    });
+  });
 });

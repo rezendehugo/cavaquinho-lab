@@ -14,6 +14,8 @@ function PracticeCarouselCard({ item, step, resolvedStep }) {
       as="div"
       variant="focus"
       chordName={chordName}
+      chordKey={step.key}
+      chordSuffix={step.suffix}
       position={resolvedStep.position}
       shapeIndex={resolvedStep.positionIndex}
       shapeTotal={resolvedStep.chord.positions.length}
