@@ -1,6 +1,7 @@
-import type { Pitch, ScoreDraft, ScoreEvent } from './types.js';
+import type { Pitch, ScoreDraft } from './types.js';
 
-const openMidi = [50, 55, 59, 62];
+// Must match the physical D4-G4-B4-D5 tuning used by the frontend fretboard.
+const openMidi = [62, 67, 71, 74];
 const pitchClasses: Record<Pitch['step'], number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 export interface PhysicalPosition { stringIndex: number; fret: number; midi: number }
 
@@ -21,25 +22,37 @@ function transitionCost(left: PhysicalPosition, right: PhysicalPosition): number
 }
 
 export function suggestMelodyRoute(draft: ScoreDraft): Map<string, PhysicalPosition | null> {
-  const pitchedEvents = draft.measures.flatMap(measure => measure.events).filter(event => !event.rest && event.pitch);
-  if (!pitchedEvents.length) return new Map();
-  let states = getPitchPositions(pitchedEvents[0].pitch!).map(position => ({
-    score: position.fret * 0.03 - position.stringIndex * 0.001,
-    path: [position]
-  }));
-  for (const event of pitchedEvents.slice(1)) {
+  const result = new Map<string, PhysicalPosition | null>();
+  let states: Array<{ score: number; path: Array<{ eventId: string; position: PhysicalPosition }> }> = [];
+  const commitBestPath = () => {
+    if (!states.length) return;
+    const best = states.reduce((left, right) => right.score < left.score ? right : left);
+    best.path.forEach(({ eventId, position }) => result.set(eventId, position));
+    states = [];
+  };
+  for (const event of draft.measures.flatMap(measure => measure.events)) {
+    if (event.rest || !event.pitch) {
+      result.set(event.id, null);
+      continue;
+    }
     const candidates = getPitchPositions(event.pitch!);
-    if (!candidates.length || !states.length) { states = []; break; }
+    if (!candidates.length) {
+      commitBestPath();
+      result.set(event.id, null);
+      continue;
+    }
+    if (!states.length) {
+      states = candidates.map(position => ({
+        score: position.fret * 0.03 - position.stringIndex * 0.001,
+        path: [{ eventId: event.id, position }]
+      }));
+      continue;
+    }
     states = candidates.map(position => states.map(state => ({
-      score: state.score + transitionCost(state.path.at(-1)!, position),
-      path: [...state.path, position]
+      score: state.score + transitionCost(state.path.at(-1)!.position, position),
+      path: [...state.path, { eventId: event.id, position }]
     })).reduce((best, current) => current.score < best.score ? current : best));
   }
-  const route = states.length ? states.reduce((best, current) => current.score < best.score ? current : best).path : [];
-  const result = new Map<string, PhysicalPosition | null>();
-  let index = 0;
-  draft.measures.flatMap(measure => measure.events).forEach((event: ScoreEvent) => {
-    result.set(event.id, event.rest ? null : route[index++] ?? null);
-  });
+  commitBestPath();
   return result;
 }

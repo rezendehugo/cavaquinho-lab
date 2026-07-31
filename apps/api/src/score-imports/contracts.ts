@@ -5,7 +5,14 @@ export const importStatusSchema = z.enum(['uploaded', 'queued', 'processing', 'd
 
 export const uploadRequestSchema = z.object({
   fileName: z.string().trim().min(1).max(180),
-  contentType: z.enum(['application/pdf', 'application/vnd.recordare.musicxml+xml', 'application/xml', 'text/xml']),
+  contentType: z.enum([
+    'application/pdf',
+    'application/vnd.recordare.musicxml+xml',
+    'application/vnd.recordare.musicxml',
+    'application/zip',
+    'application/xml',
+    'text/xml'
+  ]),
   size: z.number().int().positive().max(20 * 1024 * 1024),
   sha256: z.string().regex(/^[a-f0-9]{64}$/)
 });
@@ -47,5 +54,9 @@ export const measurePatchSchema = z.object({
 });
 
 export const createPracticeSchema = z.object({
-  targets: z.array(z.enum(['sequence', 'melody'])).min(1).max(2)
+  targets: z.array(z.enum(['sequence', 'melody'])).min(1).max(2),
+  range: z.object({
+    startMeasure: z.number().int().positive(),
+    endMeasure: z.number().int().positive()
+  }).refine(value => value.startMeasure <= value.endMeasure, 'Invalid measure range').optional()
 });

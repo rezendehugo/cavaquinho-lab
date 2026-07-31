@@ -1,0 +1,77 @@
+{
+  "title": "Nivaldo no choro",
+  "composer": "Severino Araujo",
+  "pageCount": 2,
+  "sha256": "15a5a7f3dd30a4214d1697cca6ea317566641498d28e8b1a522854c6df95c884",
+  "meter": {
+    "beats": 2,
+    "beatType": 4
+  },
+  "tempo": 85,
+  "measureCount": {
+    "minimum": 68,
+    "maximum": 75
+  },
+  "minimumCounts": {
+    "pitchedEvents": 350,
+    "rests": 15,
+    "ties": 20,
+    "chords": 24
+  },
+  "requiredSections": [
+    "A",
+    "B"
+  ],
+  "requiredChordSymbols": [
+    "G",
+    "Am7",
+    "D7",
+    "G7",
+    "C",
+    "Cm6",
+    "G/B",
+    "Em7",
+    "F#m7(b5)",
+    "E7/G#",
+    "C7",
+    "B7"
+  ],
+  "checkpoints": [
+    {
+      "id": "section-a-opening",
+      "startMeasure": 1,
+      "endMeasure": 4,
+      "requiredChords": ["G", "Am7", "D7"],
+      "chordCorrections": [
+        { "measure": 2, "symbols": ["G"] },
+        { "measure": 3, "symbols": ["Am7", "D7"] },
+        { "measure": 4, "symbols": ["G"] }
+      ]
+    },
+    {
+      "id": "section-b-opening",
+      "startMeasure": 36,
+      "endMeasure": 44,
+      "requiredChords": ["Am6", "Em/G", "E7/G#", "Am"],
+      "chordCorrections": [
+        { "measure": 36, "symbols": ["Am6"] },
+        { "measure": 39, "symbols": ["Em/G"] },
+        { "measure": 41, "symbols": ["E7/G#"] },
+        { "measure": 43, "symbols": ["Am"] }
+      ]
+    },
+    {
+      "id": "coda",
+      "startMeasure": 68,
+      "endMeasure": 72,
+      "requiredChords": ["D7", "A7", "G"],
+      "chordCorrections": [
+        { "measure": 68, "symbols": ["D7"] },
+        { "measure": 69, "symbols": ["A7"] },
+        { "measure": 70, "symbols": ["D7"] },
+        { "measure": 71, "symbols": ["G"] }
+      ]
+    }
+  ],
+  "notes": "Referência não reconstrutiva. O PDF e a transcrição melódica integral permanecem privados."
+}

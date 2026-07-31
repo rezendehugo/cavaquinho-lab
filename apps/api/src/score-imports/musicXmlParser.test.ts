@@ -27,4 +27,27 @@ describe('MusicXML normalizer', () => {
     expect(() => parseMusicXml('<!DOCTYPE x [<!ENTITY a "b">]><score-partwise/>', { importId: 'i', ownerId: 'u' })).toThrow('unsafe_musicxml');
     expect(() => parseMusicXml(score.replace('</part></score-partwise>', '</part><part id="P2"/></score-partwise>'), { importId: 'i', ownerId: 'u' })).toThrow('unsupported_musicxml_structure');
   });
+
+  test('preserves rehearsal sections, composer, slash bass and compact chord qualities', () => {
+    const nivaldoLike = score
+      .replace('<work-title>Estudo em C</work-title>', '<work-title>Nivaldo no choro</work-title>')
+      .replace('<part-list>', '<identification><creator type="composer">Severino Araujo</creator></identification><part-list>')
+      .replace('<direction><sound tempo="96"/></direction>', '<direction><direction-type><rehearsal>A</rehearsal></direction-type><sound tempo="85"/></direction>')
+      .replace(
+        '<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>',
+        '<harmony><root><root-step>E</root-step></root><kind>dominant</kind><bass><bass-step>G</bass-step><bass-alter>1</bass-alter></bass></harmony>'
+      )
+      .replace('</measure>', '</measure><measure number="2"><direction><direction-type><rehearsal>B</rehearsal></direction-type></direction><note><rest/><duration>8</duration></note></measure>');
+    const draft = parseMusicXml(nivaldoLike, { importId: 'nivaldo', ownerId: 'reviewer' });
+    expect(draft).toMatchObject({
+      title: 'Nivaldo no choro',
+      composer: 'Severino Araujo',
+      tempo: 85,
+      sections: [
+        { title: 'Seção A', startMeasure: 1, endMeasure: 1 },
+        { title: 'Seção B', startMeasure: 2, endMeasure: 2 }
+      ]
+    });
+    expect(draft.measures[0].chords[0].symbol).toBe('E7/G#');
+  });
 });

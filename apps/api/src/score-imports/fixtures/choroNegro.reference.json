@@ -1,0 +1,16 @@
+{
+  "sha256": "83886ad691a56cd572105e236814d37df415bbad14ec9b1517d106784fcd1967",
+  "pageCount": 1,
+  "measureCount": {
+    "minimum": 34,
+    "maximum": 40
+  },
+  "minimumCounts": {
+    "pitchedEvents": 280,
+    "systems": 8
+  },
+  "preprocessing": {
+    "geometryNormalized": true,
+    "originalEstimatedPixels": 210375000
+  }
+}

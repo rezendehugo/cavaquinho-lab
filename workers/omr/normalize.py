@@ -1,21 +1,32 @@
-# SPDX-License-Identifier: AGPL-3.0-only
-"""AGPL worker boundary: normalize Audiveris MusicXML without calling the application database."""
-from pathlib import Path
-import json
-import sys
-from music21 import converter
+#!/usr/bin/env python3
+"""Normalize trusted MusicXML output into a safe, canonical MusicXML document."""
 
-def normalize(source: Path, destination: Path) -> None:
-    score = converter.parse(source)
+from __future__ import annotations
+
+import defusedxml
+from defusedxml import ElementTree
+from xml.etree import ElementTree as StandardElementTree
+
+defusedxml.defuse_stdlib()
+
+from music21 import converter  # noqa: E402
+
+
+def sanitize_musicxml(xml_text: str) -> str:
+    """Remove local worker paths while retaining useful pipeline provenance."""
+    root = ElementTree.fromstring(xml_text)
+    for field in root.findall(".//miscellaneous-field"):
+        if field.attrib.get("name") == "source-file":
+            field.text = "private-source"
+    return StandardElementTree.tostring(root, encoding="unicode")
+
+
+def normalize_musicxml(source_path: str, output_path: str) -> str:
+    score = converter.parse(source_path, format="musicxml", forceSource=True)
     if len(score.parts) != 1:
-        raise ValueError("only_monophonic_lead_sheets_are_supported")
-    payload = {
-        "title": score.metadata.title if score.metadata else None,
-        "parts": len(score.parts),
-        "measures": len(score.parts[0].getElementsByClass("Measure")),
-        "musicXmlPath": str(source),
-    }
-    destination.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-
-if __name__ == "__main__":
-    normalize(Path(sys.argv[1]), Path(sys.argv[2]))
+        raise ValueError("unsupported_polyphonic_score")
+    if len(list(score.parts[0].getElementsByClass("Measure"))) > 2000:
+        raise ValueError("score_measure_limit")
+    written_path = score.write("musicxml", fp=output_path)
+    with open(written_path, "r", encoding="utf-8") as handle:
+        return sanitize_musicxml(handle.read())

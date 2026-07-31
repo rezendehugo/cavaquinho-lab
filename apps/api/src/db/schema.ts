@@ -16,7 +16,7 @@ export const scoreImports = pgTable('score_imports', {
   lastErrorCode: text('last_error_code'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-}, table => [uniqueIndex('score_import_owner_hash').on(table.ownerId, table.sha256)]);
+}, table => [uniqueIndex('score_import_owner_hash_pipeline').on(table.ownerId, table.sha256, table.pipelineVersion)]);
 
 export const scoreDrafts = pgTable('score_drafts', {
   id: uuid('id').primaryKey(),
@@ -35,6 +35,7 @@ export const importJobs = pgTable('score_import_jobs', {
   availableAt: timestamp('available_at', { withTimezone: true }).notNull(),
   lockedAt: timestamp('locked_at', { withTimezone: true }),
   attemptCount: integer('attempt_count').notNull().default(0),
+  lastErrorCode: text('last_error_code'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 

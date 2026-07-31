@@ -38,6 +38,10 @@ export interface ScoreMeasure {
   number: number;
   divisions: number;
   expectedTicks: number;
+  page?: number;
+  system?: number;
+  newSystem?: boolean;
+  newPage?: boolean;
   events: ScoreEvent[];
   chords: ChordEvent[];
   issues: ScoreIssue[];
@@ -52,6 +56,20 @@ export interface ScoreDraft {
   tempo: number;
   meter: { beats: number; beatType: number };
   revision: number;
+  sourceMusicXml?: string;
+  sections?: Array<{ id: string; title: string; startMeasure: number; endMeasure: number }>;
+  provenance?: {
+    omrEngine: string;
+    omrVersion: string;
+    pipelineVersion: string;
+    pageCount: number;
+    preprocessing?: {
+      geometryNormalized: boolean;
+      blankPagesRemoved: number[];
+      repaired: boolean;
+      grayscaleFallback?: boolean;
+    };
+  };
   measures: ScoreMeasure[];
   createdAt: string;
   updatedAt: string;
@@ -81,6 +99,7 @@ export interface ImportJob {
   lockedAt: string | null;
   attemptCount: number;
   createdAt: string;
+  lastErrorCode?: string | null;
 }
 
 export interface MelodyExercise {

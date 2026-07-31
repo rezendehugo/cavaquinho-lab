@@ -18,6 +18,35 @@ async function fixture() {
 }
 
 describe('score import API', () => {
+  test('allows the private PDF PUT preflight only for configured origins', async () => {
+    const app = await fixture();
+    const allowed = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/development-uploads/ticket',
+      headers: {
+        origin: 'http://127.0.0.1:5173',
+        'access-control-request-method': 'PUT',
+        'access-control-request-headers': 'content-type'
+      }
+    });
+    expect(allowed.statusCode).toBe(204);
+    expect(allowed.headers['access-control-allow-origin']).toBe('http://127.0.0.1:5173');
+    expect(allowed.headers['access-control-allow-methods']).toContain('PUT');
+    expect(allowed.headers['access-control-allow-headers']).toContain('content-type');
+
+    const unknown = await app.inject({
+      method: 'OPTIONS',
+      url: '/v1/development-uploads/ticket',
+      headers: {
+        origin: 'https://unknown.example',
+        'access-control-request-method': 'PUT',
+        'access-control-request-headers': 'content-type'
+      }
+    });
+    expect(unknown.headers['access-control-allow-origin']).toBeUndefined();
+    await app.close();
+  });
+
   test('requires authentication and enforces ownership', async () => {
     const app = await fixture();
     const unauthorized = await app.inject({ method: 'POST', url: '/v1/score-imports/musicxml', payload: { fileName: 'study.musicxml', content: xml } });
@@ -27,6 +56,18 @@ describe('score import API', () => {
     const id = created.json().item.id;
     const forbiddenAsNotFound = await app.inject({ method: 'GET', url: `/v1/score-imports/${id}`, headers: { authorization: 'Bearer dev:bob' } });
     expect(forbiddenAsNotFound.statusCode).toBe(404);
+    await app.close();
+  });
+
+  test('lists only the authenticated owner import history', async () => {
+    const app = await fixture();
+    await app.inject({ method: 'POST', url: '/v1/score-imports/musicxml', headers: { authorization: 'Bearer dev:alice' }, payload: { fileName: 'alice.musicxml', content: xml } });
+    await app.inject({ method: 'POST', url: '/v1/score-imports/musicxml', headers: { authorization: 'Bearer dev:bob' }, payload: { fileName: 'bob.musicxml', content: xml.replace('<step>D</step>', '<step>E</step>') } });
+    const response = await app.inject({ method: 'GET', url: '/v1/score-imports?limit=10', headers: { authorization: 'Bearer dev:alice' } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().items).toHaveLength(1);
+    expect(response.json().items[0].item.originalName).toBe('alice.musicxml');
+    expect(response.json().items[0].summary.measureCount).toBe(1);
     await app.close();
   });
 
@@ -41,6 +82,24 @@ describe('score import API', () => {
     expect(practice.statusCode).toBe(200);
     expect(practice.json().sequence.steps[0].symbol).toBe('C');
     expect(practice.json().melody.events[0]).toMatchObject({ durationTicks: 4, measure: 1, suggestedPosition: expect.any(Object) });
+    await app.close();
+  });
+
+  test('creates practice only from the selected measure range', async () => {
+    const app = await fixture();
+    const headers = { authorization: 'Bearer dev:alice' };
+    const twoMeasures = xml.replace('</part>', '<measure number="2"><note><rest/><duration>4</duration></note></measure></part>');
+    const created = await app.inject({ method: 'POST', url: '/v1/score-imports/musicxml', headers, payload: { fileName: 'study.musicxml', content: twoMeasures } });
+    const id = created.json().item.id;
+    await app.inject({ method: 'POST', url: `/v1/score-imports/${id}/validate`, headers });
+    const practice = await app.inject({
+      method: 'POST',
+      url: `/v1/score-imports/${id}/create-practice`,
+      headers,
+      payload: { targets: ['melody'], range: { startMeasure: 2, endMeasure: 2 } }
+    });
+    expect(practice.statusCode).toBe(200);
+    expect(practice.json().melody.events).toEqual([expect.objectContaining({ measure: 2, rest: true })]);
     await app.close();
   });
 
