@@ -1,4 +1,4 @@
-import { analyzeChordVoicing, getChordPitchClasses, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
+import { analyzeChordVoicing, getChordFormulaLegend, getChordPitchClasses, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
 
 describe('teoria aplicada às formas', () => {
   test('reconhece equivalências exatas entre tétrades', () => {
@@ -36,7 +36,7 @@ describe('teoria aplicada às formas', () => {
   });
 
   test('identifica voicing de nona sem raiz com aviso de acompanhamento', () => {
-    const analysis = analyzeChordVoicing({ key: 'G', suffix: 'maj9' }, { midi: [59, 66, 69, 71] });
+    const analysis = analyzeChordVoicing({ key: 'C', suffix: '9' }, { midi: [64, 70, 74] });
     expect(analysis).toMatchObject({
       rootMissing: true,
       missingEssentialNotes: [],
@@ -44,7 +44,41 @@ describe('teoria aplicada às formas', () => {
     });
     expect(getVoicingCompleteness(analysis)).toEqual({
       id: 'rootless',
-      label: 'Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.'
+      label: 'Voicing sem raiz: contém terça, sétima menor e nona. Recomendado com baixo ou acompanhamento.'
     });
+  });
+
+  test('descreve os graus de C7(9) sem depender da cor', () => {
+    expect(getChordToneDetail('C', '9', 64)).toMatchObject({
+      note: 'E',
+      interval: 4,
+      degreeId: 'third',
+      degreeLabel: '3',
+      description: 'terça maior',
+      colorGroup: 'third',
+      accessibleName: 'Mi, terça maior de Dó'
+    });
+    expect(getChordToneDetail('C', '9', 70)).toMatchObject({
+      degreeId: 'seventh',
+      degreeLabel: '♭7',
+      description: 'sétima menor',
+      colorGroup: 'seventh'
+    });
+    expect(getChordToneDetail('C', '9', 74)).toMatchObject({
+      degreeId: 'ninth',
+      degreeLabel: '9',
+      description: 'nona',
+      colorGroup: 'ninth'
+    });
+  });
+
+  test('gera a fórmula completa de C7(9) mesmo para shapes sem raiz', () => {
+    expect(getChordFormulaLegend('C', '9')).toEqual([
+      expect.objectContaining({ note: 'C', degreeLabel: '1', description: 'tônica' }),
+      expect.objectContaining({ note: 'D', degreeLabel: '9', description: 'nona' }),
+      expect.objectContaining({ note: 'E', degreeLabel: '3', description: 'terça maior' }),
+      expect.objectContaining({ note: 'G', degreeLabel: '5', description: 'quinta justa' }),
+      expect.objectContaining({ note: 'Bb', degreeLabel: '♭7', description: 'sétima menor' })
+    ]);
   });
 });

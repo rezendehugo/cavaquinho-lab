@@ -43,7 +43,7 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/rate-limit": "^11.1.0",
-    "@tombatossals/chords-db": "github:rezendehugo/chords-db#4dbb2f929c3e0b2afafd754500089b07029ef72a",
+    "@tombatossals/chords-db": "github:rezendehugo/chords-db#94bd04be46b6e3c3fe56adc2caea8ba09ef72118",
     "@tombatossals/react-chords": "git+https://github.com/rezendehugo/react-chords.git#83bae79ebcffbc0351cfc7bb86670e8e6e511c34",
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.10.1",

@@ -76,10 +76,37 @@ describe('ChordDiagram', () => {
   });
 
   test('mostra dedos quando solicitado', () => {
-    render(<ChordDiagram position={position} name="C" mode="fingers" />);
+    const { container } = render(<ChordDiagram position={position} name="C" chordKey="C" chordSuffix="add9" mode="fingers" />);
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
+    expect(container.querySelector('.degree-root')).toBeInTheDocument();
+    expect(container.querySelector('.degree-third')).toBeInTheDocument();
+  });
+
+  test('colore C7(9) por grau e descreve cada nota de forma acessível', () => {
+    const dominantNinth = {
+      frets: [1, 2, 2, 4],
+      fingers: [1, 2, 2, 4],
+      baseFret: 2,
+      barres: [],
+      midi: [64, 70, 74, 67]
+    };
+    const { container } = render(
+      <ChordDiagram
+        position={dominantNinth}
+        name="C7(9)"
+        chordKey="C"
+        chordSuffix="9"
+      />
+    );
+
+    expect(container.querySelectorAll('.degree-third')).toHaveLength(1);
+    expect(container.querySelectorAll('.degree-seventh')).toHaveLength(1);
+    expect(container.querySelectorAll('.degree-ninth')).toHaveLength(1);
+    expect(screen.getByLabelText('Mi, terça maior de Dó')).toBeInTheDocument();
+    expect(screen.getByLabelText('Si bemol, sétima menor de Dó')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ré, nona de Dó')).toBeInTheDocument();
   });
 });

@@ -15,6 +15,12 @@
   --color-accent-soft: #e7f2ed;
   --color-danger: #9f3a32;
   --color-focus: #8fbfad;
+  --degree-root: #936000;
+  --degree-third: #2563a6;
+  --degree-fifth: #5f6b76;
+  --degree-seventh: #b5472f;
+  --degree-ninth: #6842b8;
+  --degree-fourth: #087f72;
   --shadow-card: 0 1px 2px rgba(31, 41, 51, 0.08);
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -482,9 +488,28 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .diagram-open { fill: transparent; stroke: var(--color-muted); stroke-width: 1.4; }
 .diagram-muted, .diagram-fret-label { fill: var(--color-muted); font-family: Verdana, sans-serif; font-size: 8px; font-weight: 700; }
 .diagram-dot { fill: var(--color-accent); stroke: var(--color-accent-hover); stroke-width: 1; }
+.diagram-dot.degree-root, .diagram-open.degree-root { fill: var(--degree-root); stroke: var(--degree-root); }
+.diagram-dot.degree-third, .diagram-open.degree-third { fill: var(--degree-third); stroke: var(--degree-third); }
+.diagram-dot.degree-fifth, .diagram-open.degree-fifth { fill: var(--degree-fifth); stroke: var(--degree-fifth); }
+.diagram-dot.degree-seventh, .diagram-open.degree-seventh { fill: var(--degree-seventh); stroke: var(--degree-seventh); }
+.diagram-dot.degree-ninth, .diagram-open.degree-ninth { fill: var(--degree-ninth); stroke: var(--degree-ninth); }
+.diagram-dot.degree-fourth, .diagram-open.degree-fourth { fill: var(--degree-fourth); stroke: var(--degree-fourth); }
 .diagram-dot-label { fill: #fff; font-size: 7px; font-weight: 900; font-family: Verdana, sans-serif; }
 .diagram-dot-accidental { font-size: 4.5px; font-weight: 800; }
 .diagram-barre { fill: var(--color-text); opacity: 0.82; }
+.chord-legend-strip { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-height: 28px; margin: calc(-1 * var(--space-2)) 0 var(--space-3); }
+.chord-legend-group { display: flex; align-items: center; gap: var(--space-2); }
+.chord-legend-indicator { position: relative; display: inline-grid; place-items: center; }
+.chord-legend-dot { display: block; width: 13px; height: 13px; border: 2px solid var(--color-surface); border-radius: 50%; box-shadow: 0 0 0 1px currentColor; cursor: help; }
+.chord-legend-dot:focus-visible, .chord-legend-status:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.chord-legend-dot.degree-root { color: var(--degree-root); background: var(--degree-root); }
+.chord-legend-dot.degree-third { color: var(--degree-third); background: var(--degree-third); }
+.chord-legend-dot.degree-fifth { color: var(--degree-fifth); background: var(--degree-fifth); }
+.chord-legend-dot.degree-seventh { color: var(--degree-seventh); background: var(--degree-seventh); }
+.chord-legend-dot.degree-ninth { color: var(--degree-ninth); background: var(--degree-ninth); }
+.chord-legend-dot.degree-fourth { color: var(--degree-fourth); background: var(--degree-fourth); }
+.chord-legend-status { width: 11px; height: 11px; cursor: help; }
+.chord-legend-tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; z-index: 8; width: max-content; max-width: min(260px, 75vw); padding: 6px 8px; transform: translateX(-50%); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-text); color: var(--color-surface); box-shadow: var(--shadow-card); font-size: 0.72rem; font-weight: 700; line-height: 1.25; text-align: center; }
 .missing { color: var(--color-danger); font-weight: 800; }
 
 .fretboard-page { overflow: hidden; }

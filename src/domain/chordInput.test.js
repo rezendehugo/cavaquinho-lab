@@ -27,6 +27,10 @@ describe('entrada de acordes', () => {
     expect(parseRootInput('Gmaj9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'maj9' });
     expect(parseRootInput('Gm9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'm9' });
     expect(parseRootInput('Gm(add9)', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: 'madd9' });
+    expect(parseRootInput('C9', 'major')).toEqual({ key: 'C', displayKey: 'C', suffix: '9' });
+    expect(parseRootInput('C7(9)', 'major')).toEqual({ key: 'C', displayKey: 'C', suffix: '9' });
+    expect(parseRootInput('C dominante9', 'major')).toEqual({ key: 'C', displayKey: 'C', suffix: '9' });
+    expect(parseRootInput('C nona dominante', 'major')).toEqual({ key: 'C', displayKey: 'C', suffix: '9' });
   });
 
   test('rejeita entradas desconhecidas', () => {

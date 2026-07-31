@@ -22,6 +22,8 @@ export function ShapeNavigationControls({ previousLabel, nextLabel, onPrevious, 
 
 function ChordShapeCard({
   chordName,
+  chordKey,
+  chordSuffix,
   position,
   shapeIndex,
   shapeTotal,
@@ -74,7 +76,7 @@ function ChordShapeCard({
             nextDisabled={navigation.nextDisabled}
           />
         ) : null}
-        <ChordDiagram position={position} name={chordName} mode={mode} />
+        <ChordDiagram position={position} name={chordName} chordKey={chordKey} chordSuffix={chordSuffix} mode={mode} />
       </div>
       {showBottomIndex ? (
         <div className="chord-shape-footer">

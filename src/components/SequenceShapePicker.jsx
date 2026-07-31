@@ -12,7 +12,7 @@ export default function SequenceShapePicker({ open, step, chord, selectedIndex, 
         {chord.positions.map((position, index) => {
           const status = getVoicingCompleteness(analyzeChordVoicing(step, position));
           return <button type="button" className={'shape-picker-option ' + (selectedIndex === index ? 'selected' : '')} aria-pressed={selectedIndex === index} aria-label={'Fixar forma ' + (index + 1) + ' de ' + chord.positions.length} title={'Fixar forma ' + (index + 1) + ' de ' + chord.positions.length} key={index} onClick={() => { onSelect(index); onClose(); }}>
-            <ChordShapeCard as="div" chordName={step.displayKey || step.key} position={position} shapeIndex={index} shapeTotal={chord.positions.length} showName={false} showShapeCode={false} voicingStatus={status} />
+            <ChordShapeCard as="div" chordName={step.displayKey || step.key} chordKey={step.key} chordSuffix={step.suffix} position={position} shapeIndex={index} shapeTotal={chord.positions.length} showName={false} showShapeCode={false} voicingStatus={status} />
           </button>;
         })}
       </div>

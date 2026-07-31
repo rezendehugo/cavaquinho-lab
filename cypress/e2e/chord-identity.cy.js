@@ -92,4 +92,46 @@ describe('nome e sufixo dos acordes', () => {
     cy.get('.shape-grid .chord-shape-card').should('have.length', 11);
     cy.contains('h3', 'Db7').should('contain.text', '11 formas');
   });
+
+  it('distingue C7(9) e apresenta cores e texto para os graus', () => {
+    cy.get('[aria-label="Nota do acorde 1"]').clear().type('G7(9){enter}');
+    cy.get('[aria-label="Sequência atual"]').should('contain.text', 'G7(9)');
+    cy.get('.lab-card').first().find('.degree-seventh').should('exist');
+    cy.get('.lab-card').first().find('.degree-ninth').should('exist');
+
+    cy.visit('/shapes');
+    cy.get('[aria-label="Escolher qualidade"]').select('9');
+    cy.get('[aria-label="Escolher qualidade"] option:selected').should('have.text', '7(9)');
+    cy.contains('h3', 'C7(9) · 8 formas').should('be.visible');
+    cy.contains('Compare as posições abaixo').should('not.exist');
+    cy.get('.shape-grid .chord-shape-card').should('have.length', 8);
+    cy.get('.chord-legend-strip').should('have.length', 1);
+    cy.get('.chord-legend-degree').should('have.length', 5);
+    cy.get('.chord-legend-status').should('have.length', 1);
+    cy.get('.chord-degree-legend').should('not.exist');
+    cy.get('.shape-grid .degree-third').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .degree-seventh').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .degree-ninth').should('have.length.greaterThan', 0);
+    cy.get('[aria-label="Mi, terça maior de Dó"]').should('have.length.greaterThan', 0);
+    cy.get('[aria-label="Si bemol, sétima menor de Dó"]').should('have.length.greaterThan', 0);
+    cy.get('[aria-label="Ré, nona de Dó"]').should('have.length.greaterThan', 0);
+    cy.get('.shape-grid .voicing-status-dot--rootless[aria-label*="sétima menor"]').should('have.length', 8);
+    ['Dó · 1 · tônica', 'Ré · 9 · nona', 'Mi · 3 · terça maior', 'Sol · 5 · quinta justa', 'Si bemol · ♭7 · sétima menor']
+      .forEach((label) => cy.get(`.chord-legend-degree[aria-label="${label}"]`).should('have.length', 1));
+    cy.contains('.chord-legend-tooltip', 'Mi · 3 · terça maior').should('not.be.visible');
+    cy.get('.chord-legend-degree[aria-label="Mi · 3 · terça maior"]').trigger('mouseover');
+    cy.contains('.chord-legend-tooltip', 'Mi · 3 · terça maior').should('be.visible');
+    cy.get('.chord-legend-degree[aria-label="Mi · 3 · terça maior"]').trigger('mouseout');
+    cy.contains('.chord-legend-tooltip', 'Mi · 3 · terça maior').should('not.be.visible');
+    cy.get('.chord-legend-degree[aria-label="Mi · 3 · terça maior"]').focus();
+    cy.contains('.chord-legend-tooltip', 'Mi · 3 · terça maior').should('be.visible');
+
+    cy.viewport(390, 844);
+    cy.get('body').then(($body) => {
+      expect($body[0].scrollWidth).to.be.at.most($body[0].clientWidth + 1);
+    });
+    cy.get('.chord-legend-strip').each(($legend) => {
+      expect($legend[0].scrollWidth).to.be.at.most($legend[0].clientWidth + 1);
+    });
+  });
 });
