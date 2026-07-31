@@ -1,4 +1,5 @@
 import { getPlayedNotes } from '../chordDisplay';
+import { getChordToneDetail } from '../domain/chordTheory';
 
 const minVisibleFretCount = 4;
 const maxVisibleFretCount = 8;
@@ -22,9 +23,17 @@ const getFretGap = (visibleFretCount) => gridHeight / visibleFretCount;
 
 const getDotY = (fret, visibleFretCount) => topY + (fret - 0.5) * getFretGap(visibleFretCount);
 
-const getLabel = (position, stringIndex, mode) => {
+const getStringMidi = (position, stringIndex) => {
+  let playedIndex = -1;
+  for (let index = 0; index <= stringIndex; index += 1) {
+    if (position.frets[index] >= 0) playedIndex += 1;
+  }
+  return position.frets[stringIndex] >= 0 ? position.midi?.[playedIndex] : null;
+};
+
+const getLabel = (position, stringIndex, mode, tone) => {
   if (mode === 'fingers') return position.fingers?.[stringIndex] || '';
-  return getPlayedNotes(position)[stringIndex] || '';
+  return tone?.note || getPlayedNotes(position)[stringIndex] || '';
 };
 
 function Barre({ barre, position, visibleFretCount }) {
@@ -51,21 +60,31 @@ function DotLabel({ label, x, y }) {
   );
 }
 
-function Dot({ position, stringIndex, mode, visibleFretCount }) {
+function Dot({ position, stringIndex, mode, visibleFretCount, chordKey, chordSuffix }) {
   const fret = position.frets[stringIndex];
   const x = stringXs[stringIndex];
   if (fret === -1) return <text className="diagram-muted" x={x} y={openNoteY + 3} textAnchor="middle">x</text>;
-  if (fret === 0) return <circle className="diagram-open" cx={x} cy={openNoteY} r="5" />;
+  const tone = getChordToneDetail(chordKey, chordSuffix, getStringMidi(position, stringIndex));
+  const degreeClass = tone ? ` degree-${tone.colorGroup}` : '';
+  const accessibleProps = tone ? { role: 'img', 'aria-label': tone.accessibleName } : {};
+  if (fret === 0) return (
+    <g {...accessibleProps}>
+      {tone ? <title>{tone.accessibleName}</title> : null}
+      <circle className={`diagram-open${degreeClass}`} cx={x} cy={openNoteY} r={dotRadius} />
+      <DotLabel label={getLabel(position, stringIndex, mode, tone)} x={x} y={openNoteY} />
+    </g>
+  );
   const y = getDotY(fret, visibleFretCount);
   return (
-    <g>
-      <circle className="diagram-dot" cx={x} cy={y} r={dotRadius} />
-      <DotLabel label={getLabel(position, stringIndex, mode)} x={x} y={y} />
+    <g {...accessibleProps}>
+      {tone ? <title>{tone.accessibleName}</title> : null}
+      <circle className={`diagram-dot${degreeClass}`} cx={x} cy={y} r={dotRadius} />
+      <DotLabel label={getLabel(position, stringIndex, mode, tone)} x={x} y={y} />
     </g>
   );
 }
 
-function ChordDiagram({ position, name, mode = 'notes' }) {
+function ChordDiagram({ position, name, chordKey, chordSuffix, mode = 'notes' }) {
   if (!position) return null;
   const startFret = position.baseFret || 1;
   const isNutVisible = startFret === 1;
@@ -81,7 +100,7 @@ function ChordDiagram({ position, name, mode = 'notes' }) {
           <line key={index} className={index === 0 && isNutVisible ? 'diagram-nut' : 'diagram-line'} x1={stringXs[0]} y1={topY + index * fretGap} x2={stringXs[3]} y2={topY + index * fretGap} />
         ))}
         {(position.barres || []).map(barre => <Barre key={barre} barre={barre} position={position} visibleFretCount={visibleFretCount} />)}
-        {position.frets.map((_fret, index) => <Dot key={index} position={position} stringIndex={index} mode={mode} visibleFretCount={visibleFretCount} />)}
+        {position.frets.map((_fret, index) => <Dot key={index} position={position} stringIndex={index} mode={mode} visibleFretCount={visibleFretCount} chordKey={chordKey} chordSuffix={chordSuffix} />)}
       </svg>
     </figure>
   );

@@ -10,6 +10,8 @@ export const qualityLabels = Object.fromEntries(
 
 export const formatSuffix = (suffix) => suffixLabels[suffix] ?? suffix;
 
+export const formatQualityOption = (suffix) => formatSuffix(suffix) || qualityLabels[suffix] || suffix;
+
 export const formatChordName = (key, suffix, displayKey) => (displayKey || key) + formatSuffix(suffix);
 
 export const formatSequenceChord = (step) => formatChordName(step.key, step.suffix, step.displayKey);

@@ -417,7 +417,9 @@ describe('Cavaquinho Lab', () => {
     renderAt('/shapes');
     fireEvent.change(screen.getByLabelText('Escolher qualidade'), { target: { value: 'maj9' } });
     expect(screen.getByText(/C7M\(9\).*10 formas/)).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.')).toHaveLength(10);
+    expect(document.querySelectorAll('.shape-grid .voicing-status-dot--rootless')).toHaveLength(10);
+    expect(document.querySelectorAll('.chord-legend-strip .chord-legend-status')).toHaveLength(1);
+    expect(document.querySelectorAll('.chord-degree-legend')).toHaveLength(0);
   });
 
   test('adiciona, remove e reordena acordes preservando cards', () => {
