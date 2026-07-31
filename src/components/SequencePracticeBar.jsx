@@ -12,7 +12,7 @@ export default function SequencePracticeBar({ sequence, metronome, canStart, sta
     <button type="button" className="sequence-durations-trigger" onClick={onOpenDurations} disabled={!canStart}>
       <Timer aria-hidden="true" size={17} />Durações
     </button>
-    <button ref={startButtonRef} type="button" className="sequence-practice-start" onClick={onStart} disabled={!canStart}>
+    <button ref={startButtonRef} type="button" data-ui-text-reason="workflow" className="sequence-practice-start" onClick={onStart} disabled={!canStart}>
       <Play aria-hidden="true" size={16} />Iniciar prática
     </button>
     <p className="sequence-practice-status" aria-live="polite">{status}</p>

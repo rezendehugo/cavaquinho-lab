@@ -27,6 +27,7 @@ Use `npm install` somente ao alterar dependências. Para instalações reproduz�
 
 ```bash
 npm run dev        # servidor local com recarregamento
+npm run audit:ui   # contrato de textos e botões da interface
 npm run lint       # análise estática
 npm run typecheck  # baseline TypeScript para JS/JSX
 npm test           # testes Vitest em jsdom
@@ -42,13 +43,77 @@ npm run test:api     # contratos, ownership e normalização MusicXML
 
 ## Docker
 
+Para iniciar a aplicação completa, incluindo importação de PDF:
+
 ```bash
-docker compose --profile dev up --build
+npm run stack:up
+```
+
+Abra `http://127.0.0.1:5173/cavaquinho-lab/`. O Compose aguarda PostgreSQL,
+worker OMR e API ficarem saudáveis antes de iniciar a interface. React/CSS,
+API TypeScript e os arquivos de produção do worker Python usam hot reload.
+Alterações em dependências, Dockerfiles, Audiveris ou tessdata ainda exigem
+rebuild.
+
+Comandos operacionais:
+
+```bash
+npm run stack:status # estado e healthchecks
+npm run stack:logs   # logs do frontend, API e worker
+npm run stack:rebuild # reconstrói imagens e dependências
+npm run stack:down   # encerra a pilha; o banco local é preservado
+```
+
+Os perfis isolados continuam disponíveis:
+
+```bash
 docker compose --profile ci up --build --abort-on-container-exit
 docker compose --profile preview up --build
 ```
 
-Os perfis expõem, respectivamente, as portas `5173` e `4173`.
+Se a tela mostrar `api_unavailable`, confirme que `api`, `omr-worker` e
+`postgres` aparecem como saudáveis em `npm run stack:status`.
+
+### Publicar na rede privada Tailscale
+
+O Tailscale Serve disponibiliza a aplicação somente para dispositivos
+autorizados na mesma tailnet. Primeiro descubra o nome HTTPS desta máquina:
+
+```bash
+tailscale status
+tailscale serve status
+```
+
+Defina a origem HTTPS exibida pelo Tailscale, recrie apenas os processos que
+consomem essa configuração e publique a interface e as rotas da API:
+
+```bash
+export CAVAQUINHO_TAILSCALE_URL="https://nome-da-maquina.exemplo.ts.net"
+
+VITE_API_URL="$CAVAQUINHO_TAILSCALE_URL" \
+VITE_ALLOWED_HOSTS="nome-da-maquina.exemplo.ts.net" \
+CORS_ALLOWED_ORIGINS="http://127.0.0.1:5173,http://localhost:5173,$CAVAQUINHO_TAILSCALE_URL" \
+PUBLIC_API_URL="$CAVAQUINHO_TAILSCALE_URL" \
+docker compose --profile dev --profile backend up --detach --force-recreate dev api
+
+tailscale serve reset
+tailscale serve --bg 5173
+tailscale serve --bg --set-path /api http://127.0.0.1:8080/api
+tailscale serve --bg --set-path /v1 http://127.0.0.1:8080/v1
+tailscale serve status
+```
+
+Abra a URL HTTPS em outro dispositivo conectado à tailnet. `/` encaminha para
+o Vite, enquanto `/api` e `/v1` permanecem na mesma origem e chegam à API.
+Uploads e banco continuam nos volumes Docker locais. `tailscale serve reset`
+remove a configuração Serve anterior desta máquina; execute-o apenas quando
+quiser substituir o proxy existente.
+
+Para retirar a publicação privada sem desligar os containers:
+
+```bash
+tailscale serve reset
+```
 
 ## Configuração de ambiente
 
@@ -66,7 +131,14 @@ Variáveis com prefixo `VITE_` são incorporadas ao bundle e ficam públicas no 
 
 ## Testes e acessibilidade
 
-Os testes unitários cobrem parsing de acordes, normalização, sequências, harmonia, diagramas e interações principais. O Cypress cobre contratos que dependem do navegador real, incluindo alinhamento visual dos nomes dos acordes.
+Os testes unitários cobrem parsing de acordes, normalização, sequências,
+harmonia, diagramas e interações principais. O Cypress cobre contratos que
+dependem do navegador real, incluindo alinhamento e duplicação de textos
+estáticos em todas as rotas e modos. Botões iconográficos precisam de nome
+acessível e tooltip; textos longos exigem uma justificativa controlada.
+
+O hook de pre-commit executa `npm run audit:ui`. O CI repete a auditoria e a
+matriz Cypress em pushes de qualquer branch e em pull requests.
 
 Para acompanhar um teste no navegador e inspecionar cada comando:
 
@@ -93,6 +165,15 @@ O workflow de GitHub Pages valida lint, tipos, testes e build antes de publicar 
 https://rezendehugo.github.io/cavaquinho-lab/
 
 O fallback `404.html` permite abrir diretamente as rotas da aplicação no GitHub Pages.
+
+GitHub Pages publica somente a interface. Para habilitar **Partitura** em
+produção, publique API, PostgreSQL/storage privado e worker separadamente e
+configure a variável de repositório `VITE_API_URL` com a URL HTTPS pública da
+API antes do build. Não use `localhost`, URLs privadas ou segredos nessa
+variável.
+
+Consulte [arquitetura e deploy da importação](docs/score-import-architecture.md)
+para topologia, comandos, healthchecks e requisitos de segurança.
 
 ## Limitações e roadmap
 

@@ -103,7 +103,19 @@ describe('Braço de referência e prática regional', () => {
       cy.contains('[role="tab"]', 'Sequência').click();
       cy.get('[aria-label="Sequência para praticar"]').should('have.value', 'daily');
       cy.get('[aria-label="Batidas por acorde"]').select('1');
-      cy.contains('C → G').should('be.visible');
+      cy.get('[aria-label="Acordes da sequência"]').within(() => {
+        cy.get('[aria-label="Acorde 1 de 2: C"]').should('be.visible');
+        cy.get('[aria-label="Acorde 2 de 2: G"]').should('be.visible').click();
+        cy.get('.sequence-inline-shapes span').invoke('text').then(before => {
+          cy.get('[aria-label="Próxima forma"]').click();
+          cy.get('.sequence-inline-shapes span').should('not.have.text', before).invoke('text').should('match', /^\d+\/\d+$/);
+        });
+      });
+      cy.window().then(window => {
+        const steps = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps;
+        expect(steps[0].positionIndex).to.equal(0);
+        expect(steps[1].positionIndex).to.be.a('number');
+      });
       cy.get('[aria-label="Tônica da escala"]').should('not.exist');
       cy.get('.fretboard-open-strings .fretboard-note.path-note').should('exist');
       cy.contains('button', 'Praticar sequência').should('be.enabled');

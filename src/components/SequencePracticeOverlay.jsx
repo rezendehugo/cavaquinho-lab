@@ -53,10 +53,10 @@ export default function SequencePracticeOverlay({ sequence, resolvedSteps, filmS
     </main>
 
     <footer className="sequence-practice-transport" aria-label="Controles da prática">
-      <button type="button" onClick={onPrevious} aria-label="Acorde anterior"><ChevronLeft aria-hidden="true" /></button>
-      <button type="button" className="sequence-transport-primary" onClick={onTogglePlay} aria-label={playing ? 'Pausar prática' : 'Continuar prática'}>{playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}</button>
-      <button type="button" onClick={onNext} aria-label="Próximo acorde"><ChevronRight aria-hidden="true" /></button>
-      <button type="button" aria-label="Repetição contínua ativada" aria-pressed="true" disabled><Repeat2 aria-hidden="true" /></button>
+      <button type="button" onClick={onPrevious} aria-label="Acorde anterior" title="Acorde anterior"><ChevronLeft aria-hidden="true" /></button>
+      <button type="button" className="sequence-transport-primary" onClick={onTogglePlay} aria-label={playing ? 'Pausar prática' : 'Continuar prática'} title={playing ? 'Pausar prática' : 'Continuar prática'}>{playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}</button>
+      <button type="button" onClick={onNext} aria-label="Próximo acorde" title="Próximo acorde"><ChevronRight aria-hidden="true" /></button>
+      <button type="button" aria-label="Repetição contínua ativada" title="Repetição contínua ativada" aria-pressed="true" disabled><Repeat2 aria-hidden="true" /></button>
     </footer>
 
     <SequenceDurationPanel sequence={sequence} currentIndex={filmState.cardIndex} open={durationsOpen} onClose={() => onToggleDurations(false)} onChange={onChangeDuration} />

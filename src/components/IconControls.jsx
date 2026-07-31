@@ -7,7 +7,7 @@ const arrowIcons = {
   down: ArrowDown
 };
 
-export function IconControlButton({ children, ariaLabel, onClick, disabled = false, className = '', title }) {
+export function IconControlButton({ children, ariaLabel, onClick, disabled = false, className = '', title = ariaLabel }) {
   const classes = ['icon-control-button', className].filter(Boolean).join(' ');
 
   return (

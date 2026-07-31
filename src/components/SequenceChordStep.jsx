@@ -115,7 +115,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
               onPrevious: () => cycleShape(index, -1),
               onNext: () => cycleShape(index, 1)
             }}
-          /><div className="shape-selection-summary"><button type="button" onClick={() => setShapePickerOpen(true)}>Escolher forma</button><span>{Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} selectedIndex={step.positionIndex} onSelect={positionIndex => setShape(index, positionIndex)} onClose={() => setShapePickerOpen(false)} /></>
+          /><div className="shape-selection-summary"><button type="button" data-ui-text-reason="domain-choice" onClick={() => setShapePickerOpen(true)}>Escolher forma</button><span>{Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} selectedIndex={step.positionIndex} onSelect={positionIndex => setShape(index, positionIndex)} onClose={() => setShapePickerOpen(false)} /></>
         ) : null}
       </div>
     </article>

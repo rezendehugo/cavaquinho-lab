@@ -14,7 +14,7 @@ class ErrorBoundary extends Component {
       <section className="panel error-boundary" role="alert">
         <h2>Não foi possível abrir esta área.</h2>
         <p>Seus dados salvos não foram alterados. Recarregue a página para tentar novamente.</p>
-        <button type="button" onClick={() => window.location.reload()}>Recarregar página</button>
+        <button type="button" data-ui-text-reason="workflow" onClick={() => window.location.reload()}>Recarregar página</button>
       </section>
     );
   }

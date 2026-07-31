@@ -12,10 +12,20 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "dev:api": "tsx watch apps/api/src/server.ts",
+    "stack:up": "node scripts/start-stack.mjs",
+    "stack:down": "docker compose --profile dev --profile backend down",
+    "stack:status": "docker compose --profile dev --profile backend ps",
+    "stack:logs": "docker compose --profile dev --profile backend logs --follow dev api omr-worker",
+    "stack:rebuild": "docker compose --profile dev --profile backend up --build --detach",
+    "audit:ui": "node scripts/audit-ui-static.mjs",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit && tsc -p apps/api/tsconfig.json",
     "test:api": "vitest run apps/api/src/**/*.test.ts --environment node",
-    "check": "npm run lint && npm run typecheck && npm test",
+    "test:omr": "python3 -m unittest discover -s workers/omr -p 'test_*.py'",
+    "test:corpus": "python3 -m unittest workers.omr.test_corpus",
+    "test:corpus:nivaldo": "node scripts/test-nivaldo-corpus.mjs",
+    "test:corpus:choro": "node scripts/test-choro-negro-corpus.mjs",
+    "check": "npm run audit:ui && npm run lint && npm run typecheck && npm test",
     "validate": "npm run check && npm run build && npm run test:e2e",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
@@ -23,7 +33,12 @@
     "dev:e2e": "vite --host 127.0.0.1 --port 4173 --strictPort",
     "test:e2e": "start-server-and-test dev:e2e http://127.0.0.1:4173/cavaquinho-lab/ 'cypress run'",
     "test:e2e:open": "start-server-and-test dev:e2e http://127.0.0.1:4173/cavaquinho-lab/ 'cypress open'",
-    "audit:chords": "node scripts/audit-chord-library.mjs"
+    "test:e2e:nivaldo": "node scripts/test-nivaldo-e2e.mjs",
+    "audit:chords": "node scripts/audit-chord-library.mjs",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npm run audit:ui"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
@@ -34,12 +49,14 @@
     "fast-xml-parser": "^5.10.1",
     "fastify": "^5.10.0",
     "jose": "^6.2.4",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.21.0",
     "opensheetmusicdisplay": "^2.1.0",
     "postgres": "^3.4.9",
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "svg2pdf.js": "^2.7.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -53,6 +70,7 @@
     "eslint": "^10.6.0",
     "globals": "^17.7.0",
     "jsdom": "^27.3.0",
+    "simple-git-hooks": "^2.13.1",
     "start-server-and-test": "^3.0.11",
     "tsx": "^4.23.1",
     "typescript": "^5.9.3",

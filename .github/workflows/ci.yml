@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
 
 permissions:
   contents: read
@@ -23,6 +21,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Audit UI copy and controls
+        run: npm run audit:ui
       - name: Lint
         run: npm run lint
       - name: Typecheck
@@ -33,3 +33,36 @@ jobs:
         run: npm run test:e2e
       - name: Build
         run: npm run build
+
+  private-nivaldo-corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NIVALDO_CORPUS_URL: ${{ secrets.NIVALDO_CORPUS_URL }}
+      NIVALDO_CORPUS_SHA256: ${{ secrets.NIVALDO_CORPUS_SHA256 }}
+    steps:
+      - name: Explain optional corpus
+        if: env.NIVALDO_CORPUS_URL == ''
+        run: echo "Private Nivaldo corpus is not configured; public validation remains deterministic."
+      - name: Checkout
+        if: env.NIVALDO_CORPUS_URL != ''
+        uses: actions/checkout@v4
+      - name: Setup Node
+        if: env.NIVALDO_CORPUS_URL != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        if: env.NIVALDO_CORPUS_URL != ''
+        run: npm ci
+      - name: Download private corpus
+        if: env.NIVALDO_CORPUS_URL != ''
+        run: |
+          curl --fail --location --silent --show-error "$NIVALDO_CORPUS_URL" --output "$RUNNER_TEMP/Nivaldo_no_choro.pdf"
+          echo "$NIVALDO_CORPUS_SHA256  $RUNNER_TEMP/Nivaldo_no_choro.pdf" | sha256sum --check --strict
+      - name: Run real Audiveris and API regression
+        if: env.NIVALDO_CORPUS_URL != ''
+        env:
+          NIVALDO_NO_CHORO_PDF: ${{ runner.temp }}/Nivaldo_no_choro.pdf
+        run: npm run test:corpus:nivaldo

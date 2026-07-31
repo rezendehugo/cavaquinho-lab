@@ -40,7 +40,7 @@ export default function SequencePresetDialog({ open, initialBpm, onClose, onCrea
     <section className="sequence-preset-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-dialog-title">
       <header>
         <div><p className="eyebrow">Biblioteca local</p><h2 id="preset-dialog-title">Exercícios prontos</h2></div>
-        <button ref={closeRef} type="button" className="icon-button" onClick={onClose} aria-label="Fechar exercícios prontos"><X aria-hidden="true" size={18} /></button>
+        <button ref={closeRef} type="button" className="icon-button" onClick={onClose} aria-label="Fechar exercícios prontos" title="Fechar exercícios prontos"><X aria-hidden="true" size={18} /></button>
       </header>
       <div className="sequence-preset-fields">
         <label><span>Exercício</span><select aria-label="Exercício" value={presetId} onChange={event => setPresetId(event.target.value)}>{sequencePresetDefinitions.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
@@ -54,7 +54,7 @@ export default function SequencePresetDialog({ open, initialBpm, onClose, onCrea
         {definition.loopStartIndex > 0 ? <p>Na repetição, retorna ao segundo acorde: <strong>{formatSequenceChord(chords[definition.loopStartIndex])}</strong>.</p> : <p>A sequência repete desde o primeiro acorde.</p>}
       </div>
       {missing.length ? <p className="missing" role="alert">Sem forma disponível: {missing.map(formatSequenceChord).join(', ')}. Substitua esses acordes antes de criar.</p> : null}
-      <footer><button type="button" onClick={onClose}>Cancelar</button><button type="button" className="primary-button" onClick={create} disabled={missing.length > 0}>Criar sequência</button></footer>
+      <footer><button type="button" onClick={onClose}>Cancelar</button><button type="button" data-ui-text-reason="workflow" className="primary-button" onClick={create} disabled={missing.length > 0}>Criar sequência</button></footer>
     </section>
   </div>, document.body);
 }
