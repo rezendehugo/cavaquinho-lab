@@ -1,19 +1,21 @@
-import { Play } from 'lucide-react';
+import { Download, Play } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatChordName } from '../chordDisplay';
+import { formatSequenceChord } from '../chordDisplay';
 import { cavaquinhoChords } from '../domain/chords';
 import { buildSequencePractice, getSequenceBeatState } from '../domain/sequencePractice';
+import { buildChordMarkdown, downloadMarkdown } from '../domain/practiceExports';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import BpmInput from '../features/metronome/BpmInput';
-import { loadActiveSequenceId, loadSequences } from '../storage';
+import { loadActiveSequenceId, loadSequences, sequencesStorageKey, writeStorage } from '../storage';
 import FretboardGrid from './FretboardGrid';
 import FretboardPracticeOverlay from './FretboardPracticeOverlay';
+import SequenceChordNavigator from './SequenceChordNavigator';
 
 const positionKey = (position) => position.stringIndex + ':' + position.fret;
 
 export default function SequencePracticePanel() {
   const metronome = useSharedMetronome();
-  const [sequences] = useState(loadSequences);
+  const [sequences, setSequences] = useState(loadSequences);
   const [sequenceId, setSequenceId] = useState(() => loadActiveSequenceId(loadSequences()));
   const [beatsPerChord, setBeatsPerChord] = useState(4);
   const [practicing, setPracticing] = useState(false);
@@ -22,6 +24,7 @@ export default function SequencePracticePanel() {
   const [beatsRemaining, setBeatsRemaining] = useState(4);
   const [playbackStartIndex, setPlaybackStartIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [playbackOriginPulse, setPlaybackOriginPulse] = useState(0);
   const practiceButtonRef = useRef(null);
   const sequence = sequences.find(item => item.id === sequenceId) || sequences[0];
   const resolved = useMemo(() => buildSequencePractice(sequence?.steps || [], cavaquinhoChords), [sequence]);
@@ -52,6 +55,7 @@ export default function SequencePracticePanel() {
     if (!canPractice) return;
     setCurrentIndex(0);
     setPlaybackStartIndex(0);
+    setPlaybackOriginPulse(0);
     setBeatsRemaining(beatsPerChord);
     setHasStarted(false);
     setFocusedOpen(true);
@@ -62,16 +66,18 @@ export default function SequencePracticePanel() {
   const togglePractice = async () => {
     if (practicing) return stopPractice();
     setPlaybackStartIndex(currentIndex);
+    setPlaybackOriginPulse(practicePulse);
     if (await metronome.start().catch(() => false)) setPracticing(true);
   };
 
   useEffect(() => {
     if (!practicing || practicePulse < 1 || !resolved.steps.length) return;
-    const state = getSequenceBeatState(practicePulse, resolved.steps.length, beatsPerChord);
+    const relativePulse = playbackOriginPulse ? Math.max(1, practicePulse - playbackOriginPulse + 1) : practicePulse;
+    const state = getSequenceBeatState(relativePulse, resolved.steps.length, beatsPerChord);
     setHasStarted(true);
     setCurrentIndex((playbackStartIndex + state.chordIndex) % resolved.steps.length);
     setBeatsRemaining(state.beatsRemaining);
-  }, [beatsPerChord, playbackStartIndex, practicePulse, practicing, resolved.steps.length]);
+  }, [beatsPerChord, playbackOriginPulse, playbackStartIndex, practicePulse, practicing, resolved.steps.length]);
 
   const selectSequence = (nextId) => {
     stopPractice();
@@ -79,9 +85,28 @@ export default function SequencePracticePanel() {
     setSequenceId(nextId);
   };
 
+  const selectShape = (stepIndex, positionIndex) => {
+    if (!sequence) return;
+    const nextSequences = sequences.map(item => item.id !== sequence.id ? item : {
+      ...item,
+      steps: item.steps.map((step, index) => index === stepIndex ? { ...step, positionIndex } : step)
+    });
+    setSequences(nextSequences);
+    writeStorage(sequencesStorageKey, JSON.stringify(nextSequences));
+  };
+
+  const selectOccurrence = index => {
+    setCurrentIndex(index);
+    if (practicing) {
+      setPlaybackStartIndex(index);
+      setPlaybackOriginPulse(practicePulse);
+      setBeatsRemaining(beatsPerChord);
+    }
+  };
+
   const instruction = practicing && !hasStarted
     ? 'Contagem: ' + metronome.pulseIndex + ' de ' + countIn
-    : current ? formatChordName(current.key, current.suffix) + ' · acorde ' + (currentIndex + 1) + ' de ' + resolved.steps.length + ' · troque em ' + beatsRemaining + (beatsRemaining === 1 ? ' batida' : ' batidas')
+    : current ? formatSequenceChord(current) + ' · acorde ' + (currentIndex + 1) + ' de ' + resolved.steps.length + ' · troque em ' + beatsRemaining + (beatsRemaining === 1 ? ' batida' : ' batidas')
       : 'Escolha uma sequência com acordes para começar.';
 
   return <div className="sequence-practice-panel">
@@ -91,13 +116,20 @@ export default function SequencePracticePanel() {
           <label><span>Sequência</span><select aria-label="Sequência para praticar" value={sequence?.id || ''} onChange={event => selectSequence(event.target.value)}>{sequences.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
           <label><span>Batidas por acorde</span><select aria-label="Batidas por acorde" value={beatsPerChord} onChange={event => { stopPractice(); setBeatsPerChord(Number(event.target.value)); }}>{[1, 2, 4].map(value => <option key={value} value={value}>{value}</option>)}</select></label>
         </div>
-        <p className="sequence-practice-path">{sequence?.steps.length ? sequence.steps.map(step => formatChordName(step.key, step.suffix)).join(' → ') : 'Esta sequência ainda não tem acordes.'}</p>
+        <SequenceChordNavigator
+          sequence={sequence}
+          resolvedSteps={resolved.steps}
+          currentIndex={currentIndex}
+          onSelectOccurrence={selectOccurrence}
+          onSelectShape={selectShape}
+        />
         {resolved.missing.length ? <p className="validation-error" role="status">Há acordes sem forma disponível nesta sequência.</p> : null}
         {!sequence?.steps.length ? <a className="practice-sequence-link" href={import.meta.env.BASE_URL + 'sequences'}>Adicionar acordes em Sequências</a> : null}
-        <div className="scale-practice"><div><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de sequência" variant="practice" /><small>{beatsPerChord} {beatsPerChord === 1 ? 'batida' : 'batidas'} por acorde · contagem de {countIn} tempos</small></div><button ref={practiceButtonRef} type="button" className="scale-practice-button" onClick={startPractice} disabled={!canPractice}><Play aria-hidden="true" size={16} />Praticar sequência</button></div>
+        <div className="scale-practice"><div><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de sequência" variant="practice" /><small>{beatsPerChord} {beatsPerChord === 1 ? 'batida' : 'batidas'} por acorde · contagem de {countIn} tempos</small></div><button ref={practiceButtonRef} type="button" data-ui-text-reason="workflow" className="scale-practice-button" onClick={startPractice} disabled={!canPractice}><Play aria-hidden="true" size={16} />Praticar sequência</button></div>
         <p className="path-progress">{instruction}</p>
-        <p className="scale-practice-status" aria-live="polite">{instruction}</p>
-        {current ? <p className="sequence-next-chord">Próximo: {formatChordName(next.key, next.suffix)}</p> : null}
+        <p className="visually-hidden" aria-live="polite">{instruction}</p>
+        {current ? <p className="sequence-next-chord">Próximo: {formatSequenceChord(next)}</p> : null}
+        {sequence?.steps.length ? <button type="button" data-ui-text-reason="workflow" className="practice-export-button" onClick={() => downloadMarkdown(buildChordMarkdown(sequence))}><Download size={15} /> Exportar acordes</button> : null}
       </div>
     </div>
     <div className="scale-visual-legend" aria-label="Legenda da sequência"><span className="legend-current">Acorde atual</span><span className="legend-next">Próximo acorde</span><span className="legend-played">Acorde anterior</span></div>

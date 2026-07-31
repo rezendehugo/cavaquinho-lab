@@ -43,7 +43,7 @@ function SequenceManager({ sequences, activeSequenceId, setActiveSequenceId, cre
         {sequences.map(sequence => <option key={sequence.id} value={sequence.id}>{sequence.title}</option>)}
       </select></label>
       <AddSequenceButton onClick={createNewSequence} />
-      <button type="button" className="preset-sequence-button" onClick={openPresets}><BookOpen aria-hidden="true" size={17} />Exercícios prontos</button>
+      <button type="button" data-ui-text-reason="workflow" className="preset-sequence-button" onClick={openPresets}><BookOpen aria-hidden="true" size={17} />Exercícios prontos</button>
       <button type="button" className="delete-sequence-button icon-button" onClick={deleteSequence} disabled={sequences.length === 1} aria-label="Excluir sequência atual" title="Excluir sequência atual">
         <Trash2 aria-hidden="true" size={16} strokeWidth={2.1} />
       </button>
@@ -134,6 +134,7 @@ function SequenceLab() {
   const [colorMode, setColorMode] = useState('graus');
   const [storageError, setStorageError] = useState('');
   const [visibleCard, setVisibleCard] = useState(0);
+  const [cardPage, setCardPage] = useState(0);
   const [focusAfterUpdate, setFocusAfterUpdate] = useState(null);
   const [isPracticing, setIsPracticing] = useState(false);
   const [practiceOpen, setPracticeOpen] = useState(false);
@@ -147,6 +148,10 @@ function SequenceLab() {
   const activeSequence = sequences.find(sequence => sequence.id === activeSequenceId) || sequences[0] || defaultSequences[0];
   const optimized = useMemo(() => optimizeSequence(activeSequence.steps, cavaquinhoChords), [activeSequence.steps]);
   const sequenceShapes = optimized.missing.length ? activeSequence.steps.map(() => null) : optimized.steps;
+  const pageSize = 50;
+  const pageCount = Math.max(1, Math.ceil(activeSequence.steps.length / pageSize));
+  const pageStart = Math.min(cardPage, pageCount - 1) * pageSize;
+  const visibleSequenceShapes = sequenceShapes.slice(pageStart, pageStart + pageSize);
   const missingShapes = activeSequence.steps.filter((_step, index) => !sequenceShapes[index]);
   const analysis = useMemo(() => analyzeSequence(activeSequence.steps, optimized.steps, { tonic: activeSequence.tonic }), [activeSequence.steps, activeSequence.tonic, optimized.steps]);
   const exercises = useMemo(() => buildExercises(activeSequence.steps, analysis, optimized.steps), [activeSequence.steps, analysis, optimized.steps]);
@@ -366,13 +371,15 @@ function SequenceLab() {
           <span><i className="voicing-status-dot voicing-status-dot--rootless" />Sem raiz</span>
           <span><i className="voicing-status-dot voicing-status-dot--additional" />Notas adicionais</span>
         </div>
-        {activeSequence.steps.length ? <button type="button" className="automatic-shapes-button" onClick={useAutomaticShapes}>Usar formas automáticas</button> : null}
+        {activeSequence.steps.length ? <button type="button" data-ui-text-reason="domain-choice" className="automatic-shapes-button" onClick={useAutomaticShapes}>Usar formas automáticas</button> : null}
         <p className="storage-status" aria-live="polite">{storageError}</p>
         <SequencePracticeBar sequence={activeSequence} metronome={metronome} canStart={activeSequence.steps.length > 0 && missingShapes.length === 0} status={practiceStatus} onBpmChange={changeSequenceBpm} onStart={startPractice} onOpenDurations={() => setDurationsOpen(true)} startButtonRef={practiceStartRef} />
         {missingShapes.length > 0 ? <p className="missing">Dados ausentes para {missingShapes.map(step => formatChordName(step.key, step.suffix)).join(', ')}.</p> : (
           activeSequence.steps.length === 0 ? <EmptySequence addStep={addStep} /> : (
             <div ref={cardRowRef} className="lab-card-row" aria-label="Acordes da sequência" onScroll={trackVisibleCard}>
-              {sequenceShapes.map((step, index) => (
+              {visibleSequenceShapes.map((step, localIndex) => {
+                const index = pageStart + localIndex;
+                return (
                 <SequenceChordStep
                   key={activeSequence.steps[index].id}
                   step={activeSequence.steps[index]}
@@ -393,11 +400,13 @@ function SequenceLab() {
                   setChordIdentity={setChordIdentity}
                   setChordSuffix={setChordSuffix}
                 />
-              ))}
-              <AddChordSlot onClick={addStep} disabled={activeSequence.steps.length >= MAX_SEQUENCE_STEPS} title={activeSequence.steps.length >= MAX_SEQUENCE_STEPS ? 'Limite de 50 acordes' : 'Adicionar acorde'} />
+                );
+              })}
+              <AddChordSlot onClick={addStep} disabled={activeSequence.steps.length >= MAX_SEQUENCE_STEPS} title={activeSequence.steps.length >= MAX_SEQUENCE_STEPS ? 'Limite de 500 acordes' : 'Adicionar acorde'} />
             </div>
           )
         )}
+        {pageCount > 1 ? <nav className="sequence-card-pagination" aria-label="Páginas de acordes"><button type="button" disabled={cardPage === 0} onClick={() => setCardPage(page => Math.max(0, page - 1))}>Anterior</button><span>Página {cardPage + 1} de {pageCount}</span><button type="button" disabled={cardPage >= pageCount - 1} onClick={() => setCardPage(page => Math.min(pageCount - 1, page + 1))}>Próxima</button></nav> : null}
         {activeSequence.steps.length > 1 ? <p className="mobile-card-position" aria-live="polite">{visibleCard + 1} de {activeSequence.steps.length}</p> : null}
       </section>
       <LabSummary analysis={analysis} exercises={exercises} sequence={activeSequence} colorMode={colorMode} />

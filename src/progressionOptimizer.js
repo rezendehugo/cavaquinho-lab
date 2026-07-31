@@ -1,3 +1,5 @@
+import { noteNames } from './chordDisplay';
+
 const DEFAULT_SHAPE_WEIGHT = 0.08;
 
 export const getAbsoluteFrets = (position) => {
@@ -66,7 +68,14 @@ const getAllowedPositions = (step) => {
   if (Number.isInteger(step.positionIndex) && step.positionIndex >= 0 && step.positionIndex < positions.length) {
     return [{ position: positions[step.positionIndex], positionIndex: step.positionIndex }];
   }
-  return positions.map((position, positionIndex) => ({ position, positionIndex }));
+  const candidates = positions.map((position, positionIndex) => ({ position, positionIndex }));
+  if (!step.bassNote) return candidates;
+  const bassPitchClass = noteNames.indexOf(step.bassNote);
+  const matchingBass = candidates.filter(({ position }) => {
+    const played = (position.midi || []).filter(Number.isFinite);
+    return played.length > 0 && Math.min(...played) % 12 === bassPitchClass;
+  });
+  return matchingBass.length ? matchingBass : candidates;
 };
 
 export const optimizeSequence = (sequence, chordDb, options = {}) => {

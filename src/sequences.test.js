@@ -55,8 +55,8 @@ describe('sequências', () => {
     expect(createSequence('abc')).toMatchObject({ title: 'Sequência', steps: [] });
   });
 
-  test('limita sequências persistidas a cinquenta acordes', () => {
-    const steps = Array.from({ length: 55 }, (_, index) => ({ id: 'step-' + index, key: 'C', suffix: 'major' }));
+  test('limita sequências persistidas a quinhentos acordes', () => {
+    const steps = Array.from({ length: 505 }, (_, index) => ({ id: 'step-' + index, key: 'C', suffix: 'major' }));
     expect(normalizeSequence(steps)).toHaveLength(MAX_SEQUENCE_STEPS);
   });
 });

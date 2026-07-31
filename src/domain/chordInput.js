@@ -26,7 +26,11 @@ const normalizeAlias = (value) => value.trim().toLowerCase().normalize('NFD')
 export const parseQualityInput = (value) => suffixAliases.get(normalizeAlias(value)) || null;
 
 export const parseRootInput = (value, currentSuffix) => {
-  const match = value.trim().match(/^([a-gA-G])([#b♯♭]?)(.*)$/);
+  const trimmed = value.trim();
+  const slashMatch = trimmed.match(/\/([a-gA-G][#b♯♭]?)$/);
+  const bassInput = slashMatch?.[1] || '';
+  const symbol = slashMatch ? trimmed.slice(0, slashMatch.index) : trimmed;
+  const match = symbol.match(/^([a-gA-G])([#b♯♭]?)(.*)$/);
   if (!match) return null;
   const accidental = match[2].replace('♯', '#').replace('♭', 'b');
   const offset = accidental === '#' ? 1 : accidental === 'b' ? -1 : 0;
@@ -34,5 +38,18 @@ export const parseRootInput = (value, currentSuffix) => {
   const key = chromaticKeys[pitchClass];
   const displayKey = match[1].toUpperCase() + accidental;
   const suffix = match[3] ? parseQualityInput(match[3]) : currentSuffix;
-  return suffix ? { key, suffix, displayKey } : null;
+  if (!suffix) return null;
+  if (!bassInput) return { key, suffix, displayKey };
+  const bassMatch = bassInput.trim().match(/^([a-gA-G])([#b♯♭]?)$/);
+  if (!bassMatch) return null;
+  const bassAccidental = bassMatch[2].replace('♯', '#').replace('♭', 'b');
+  const bassOffset = bassAccidental === '#' ? 1 : bassAccidental === 'b' ? -1 : 0;
+  const bassPitchClass = (pitchClasses[bassMatch[1].toUpperCase()] + bassOffset + 12) % 12;
+  return {
+    key,
+    suffix,
+    displayKey,
+    bassNote: chromaticKeys[bassPitchClass],
+    displayBassNote: bassMatch[1].toUpperCase() + bassAccidental
+  };
 };

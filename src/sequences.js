@@ -1,6 +1,6 @@
 export const chromaticKeys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
-export const MAX_SEQUENCE_STEPS = 50;
+export const MAX_SEQUENCE_STEPS = 500;
 
 export const suffixCycle = ['major', 'minor', '6', '7', '69', 'm6', '9', 'add9', 'aug', 'maj7', 'maj9', 'm7', 'm9', 'madd9', 'm7b5', 'dim', 'dim7', 'sus2', 'sus4', '7sus4'];
 
@@ -46,6 +46,11 @@ export const normalizeSteps = (value) => {
       id,
       key: chromaticKeys.includes(step.key) ? step.key : 'C',
       ...(typeof step.displayKey === 'string' && step.displayKey.trim() ? { displayKey: step.displayKey.trim() } : {}),
+      ...(chromaticKeys.includes(step.bassNote) ? { bassNote: step.bassNote } : {}),
+      ...(typeof step.displayBassNote === 'string' && step.displayBassNote.trim() ? { displayBassNote: step.displayBassNote.trim() } : {}),
+      ...(Number.isInteger(step.measure) ? { measure: step.measure } : {}),
+      ...(Number.isInteger(step.offsetTicks) ? { offsetTicks: step.offsetTicks } : {}),
+      ...(typeof step.sourceSymbol === 'string' ? { sourceSymbol: step.sourceSymbol } : {}),
       suffix: suffixCycle.includes(step.suffix) ? step.suffix : 'major',
       positionIndex: Number.isInteger(step.positionIndex) ? step.positionIndex : null,
       practiceBeats: Math.min(16, Math.max(1, Math.round(Number(step.practiceBeats) || 4)))
