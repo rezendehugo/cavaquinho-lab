@@ -8,7 +8,6 @@ import FretboardPage from './pages/FretboardPage';
 import PracticePage from './pages/PracticePage';
 import ShapesPage from './pages/ShapesPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import ScoreImportPage from './pages/ScoreImportPage';
 
 const normalizeBasePath = (basePath) => {
   if (!basePath || basePath === '/') return '';
@@ -83,7 +82,7 @@ function App() {
   const page = route === '/shapes' ? <ShapesPage />
     : route === '/fretboard' ? <FretboardPage />
       : route === '/practice' ? <PracticePage />
-        : route === '/imports' ? <ScoreImportPage />
+        : route === '/imports' ? <PracticePage initialMode="score" />
       : <SequenceLab />;
 
   return (
@@ -97,7 +96,6 @@ function App() {
           <div className="practice-tools">
             <MetronomeWidget />
             <PomodoroTimer />
-            <a className="button header-import-link" href={getPublicPath('/imports')} onClick={(event) => { event.preventDefault(); pushBrowserRoute('/imports'); }}>Importar</a>
           </div>
         </div>
         <NavTabs route={route} routes={routes} />

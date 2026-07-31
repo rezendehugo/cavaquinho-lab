@@ -3,13 +3,19 @@ import ScalePracticePanel from '../components/ScalePracticePanel';
 import SequencePracticePanel from '../components/SequencePracticePanel';
 import FreeSoloPracticePanel from '../components/FreeSoloPracticePanel';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
+import ScoreImportPage from './ScoreImportPage';
 
-export default function PracticePage() {
+export default function PracticePage({ initialMode = 'scale' }) {
   const metronome = useSharedMetronome();
-  const [mode, setMode] = useState('scale');
+  const [mode, setMode] = useState(initialMode);
+  const [createdSoloId, setCreatedSoloId] = useState('');
   const selectMode = (nextMode) => {
     metronome.stop();
     setMode(nextMode);
+  };
+  const openCreatedPractice = (type, id) => {
+    if (type === 'solo') setCreatedSoloId(id);
+    selectMode(type);
   };
   return <section className="panel practice-page fretboard-page" aria-labelledby="practice-title">
     <header className="fretboard-hero"><div><p className="eyebrow">Treino guiado</p><h2 id="practice-title">Prática no cavaquinho</h2><p>Pratique escalas, crie solos livres ou acompanhe as formas de uma sequência.</p></div></header>
@@ -17,7 +23,8 @@ export default function PracticePage() {
       <button type="button" role="tab" aria-selected={mode === 'scale'} onClick={() => selectMode('scale')}>Escala</button>
       <button type="button" role="tab" aria-selected={mode === 'solo'} onClick={() => selectMode('solo')}>Solo livre</button>
       <button type="button" role="tab" aria-selected={mode === 'sequence'} onClick={() => selectMode('sequence')}>Sequência</button>
+      <button type="button" role="tab" aria-selected={mode === 'score'} onClick={() => selectMode('score')}>Partitura</button>
     </div>
-    {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key="solo" /> : <SequencePracticePanel key="sequence" />}
+    {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' ? <SequencePracticePanel key="sequence" /> : <ScoreImportPage embedded onOpenPractice={openCreatedPractice} />}
   </section>;
 }
