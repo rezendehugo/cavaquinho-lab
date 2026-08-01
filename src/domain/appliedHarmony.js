@@ -28,7 +28,7 @@ const functionNames = {
 
 function normalizeSuffix(suffix) {
   if (suffix === '7') return 'major';
-  if (suffix === 'm7' || suffix === 'm9') return 'minor';
+  if (suffix === 'm7' || suffix === 'm9' || suffix === 'mmaj7' || suffix === 'madd9') return 'minor';
   if (suffix === 'maj7' || suffix === 'maj9' || suffix === '6' || suffix === '69') return 'major';
   return suffix;
 }

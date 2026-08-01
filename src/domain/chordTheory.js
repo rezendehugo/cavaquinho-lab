@@ -16,11 +16,12 @@ export const chordQualities = {
   '7sus4': { intervals: [0, 5, 7, 10], family: 'tétrade dominante suspensa com quarta', required: [0, 5, 10], aliases: ['7sus'] },
   add9: { intervals: [0, 2, 4, 7], family: 'tríade maior com nona adicionada', required: [0, 2, 4] },
   '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [2, 4, 10] },
-  aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], aliases: ['+', 'aum'] },
+  aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], aliases: ['+', 'aum'], rootRequired: true },
   '69': { intervals: [0, 2, 4, 7, 9], family: 'acorde maior com sexta e nona', required: [0, 4, 9], aliases: ['6/9'] },
   m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [2, 3, 10] },
   maj9: { intervals: [0, 2, 4, 7, 11], family: 'acorde maior com sétima maior e nona', required: [2, 4, 11], aliases: ['7M(9)'] },
-  madd9: { intervals: [0, 2, 3, 7], family: 'tríade menor com nona adicionada', required: [0, 2, 3], aliases: ['m(add9)'] }
+  madd9: { intervals: [0, 2, 3, 7], family: 'tríade menor com nona adicionada', required: [0, 2, 3], aliases: ['m(add9)'], rootRequired: true },
+  mmaj7: { intervals: [0, 3, 7, 11], family: 'acorde menor com sétima maior', required: [0, 3, 11], aliases: ['m(7M)', 'm(maj7)', 'mM7'], rootRequired: true }
 };
 
 const uniqueSorted = (values) => [...new Set(values)].sort((a, b) => a - b);
@@ -97,7 +98,16 @@ export const getVoicingCompleteness = (analysis) => {
   if (analysis.extraNotes.length) {
     return { id: 'additional', label: `Voicing com notas adicionais: ${analysis.extraNotes.join(', ')}.` };
   }
-  if (analysis.rootMissing && analysis.missingEssentialNotes.length === 0) {
+  if (analysis.blocked) {
+    return {
+      id: 'blocked',
+      label: `Voicing bloqueado: omite tom característico (${analysis.missingCharacteristicNotes.join(', ')}).`
+    };
+  }
+  if (analysis.acceptedDim7Omission) {
+    return { id: 'incomplete', label: `Voicing incompleto: omite ${analysis.missingNotes.join(', ')}. Válido no cavaquinho.` };
+  }
+  if (analysis.rootMissing && !analysis.rootRequired) {
     return {
       id: 'rootless',
       label: analysis.suffix === '9'
@@ -109,6 +119,11 @@ export const getVoicingCompleteness = (analysis) => {
     return { id: 'incomplete', label: `Voicing incompleto: omite ${analysis.missingNotes.join(', ')}. Válido no cavaquinho.` };
   }
   return { id: 'complete', label: 'Voicing completo: contém todas as notas do acorde.' };
+};
+
+export const getVoicingPreferenceRank = (analysis) => {
+  const state = getVoicingCompleteness(analysis)?.id;
+  return { complete: 0, incomplete: 1, rootless: 2, blocked: 3, additional: 4 }[state] ?? 4;
 };
 
 export const getEquivalentChords = (key, suffix) => {
@@ -130,6 +145,10 @@ export const analyzeChordVoicing = (step, position) => {
   const root = pitchNames.indexOf(step.key);
   const essentialPitchClasses = quality.required.map(interval => (root + interval) % 12);
   const missingEssential = essentialPitchClasses.filter(note => !played.includes(note));
+  const characteristicIntervals = quality.required.filter(interval => interval !== 0);
+  const characteristicPitchClasses = characteristicIntervals.map(interval => (root + interval) % 12);
+  const missingCharacteristic = characteristicPitchClasses.filter(note => !played.includes(note));
+  const acceptedDim7Omission = step.suffix === 'dim7' && missingEssential.length === 1 && extra.length === 0;
   const notes = quality.intervals.map(interval => pitchNames[(root + interval) % 12]);
   const playedInStringOrder = [...new Set((position?.midi || []).map(note => note % 12))];
   const lowestMidi = position?.midi?.length ? Math.min(...position.midi) : null;
@@ -141,8 +160,15 @@ export const analyzeChordVoicing = (step, position) => {
     playedNotes: playedInStringOrder.map(note => pitchNames[note]),
     missingNotes: missing.map(note => pitchNames[note]),
     missingEssentialNotes: missingEssential.map(note => pitchNames[note]),
+    missingCharacteristicNotes: missingCharacteristic.map(note => pitchNames[note]),
     extraNotes: extra.map(note => pitchNames[note]),
     rootMissing: !played.includes(root),
+    rootRequired: Boolean(quality.rootRequired),
+    acceptedDim7Omission,
+    blocked:
+      extra.length > 0 ||
+      (missingCharacteristic.length > 0 && !acceptedDim7Omission) ||
+      (Boolean(quality.rootRequired) && !played.includes(root)),
     exact: missing.length === 0 && extra.length === 0,
     equivalents,
     aliases: (quality.aliases || []).map(alias => `${step.key}${alias}`),

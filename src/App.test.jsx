@@ -5,6 +5,7 @@ import rawCavaquinhoChords from '@tombatossals/chords-db/lib/cavaquinho.json';
 import App from './App.jsx';
 import { getRoutes, uiAuditScenarios } from './config';
 import { cavaquinhoChords } from './domain/chords';
+import { analyzeChordVoicing } from './domain/chordTheory';
 
 const renderAt = (route = '/sequences') => {
   window.localStorage.clear();
@@ -187,17 +188,20 @@ describe('Cavaquinho Lab', () => {
     expect(saved.positionIndex).toBe(before);
   });
 
-  test('indica voicing incompleto e atualiza o ponto ao trocar a forma', () => {
-    const bm = cavaquinhoChords.chords.B.find(chord => chord.suffix === 'minor');
-    const incompleteIndex = bm.positions.findIndex(position => !position.midi.some(note => note % 12 === 2));
+  test('indica dim7 incompleto e atualiza o ponto ao trocar a forma', () => {
+    const diminished = cavaquinhoChords.chords.C.find(chord => chord.suffix === 'dim7');
+    const incompleteIndex = diminished.positions.findIndex(position =>
+      analyzeChordVoicing({ key: 'C', suffix: 'dim7' }, position).missingNotes.length === 1
+    );
     window.localStorage.clear();
     window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
-      id: 'sequence-1', title: 'Teste de Bm', steps: [{ id: 'bm', key: 'B', suffix: 'minor', positionIndex: incompleteIndex }]
+      id: 'sequence-1', title: 'Teste de Cdim7', steps: [{ id: 'dim', key: 'C', suffix: 'dim7', positionIndex: incompleteIndex }]
     }]));
     window.history.pushState(null, '', '/sequences');
     render(<App />);
-    expect(screen.getByLabelText(/Voicing incompleto: omite D/)).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText('Próxima forma do acorde 1'));
+    expect(screen.getByLabelText(/Voicing incompleto: omite/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Escolher forma' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Formas de C' })).getByRole('button', { name: /Fixar forma 1 de/ }));
     expect(screen.getByLabelText('Voicing completo: contém todas as notas do acorde.')).toBeInTheDocument();
   });
 
@@ -358,6 +362,12 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Forma de G7M(9)')).toBeInTheDocument();
     expect(screen.getByLabelText(/Voicing sem raiz/)).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].suffix).toBe('maj9');
+
+    fireEvent.change(rootInput, { target: { value: 'Gm(7M)' } });
+    fireEvent.keyDown(rootInput, { key: 'Enter' });
+    expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Gm(7M)');
+    expect(screen.getByLabelText('Forma de Gm(7M)')).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].suffix).toBe('mmaj7');
   });
 
   test('mantém o acorde anterior quando a entrada é inválida e permite cancelar', () => {

@@ -48,6 +48,14 @@ describe('teoria aplicada às formas', () => {
     });
   });
 
+  test('bloqueia tons característicos ausentes e aceita uma omissão em dim7', () => {
+    const blocked = analyzeChordVoicing({ key: 'G', suffix: 'mmaj7' }, { midi: [55, 62, 66] });
+    expect(getVoicingCompleteness(blocked)).toMatchObject({ id: 'blocked' });
+
+    const incompleteDim7 = analyzeChordVoicing({ key: 'C', suffix: 'dim7' }, { midi: [63, 66, 69] });
+    expect(getVoicingCompleteness(incompleteDim7)).toMatchObject({ id: 'incomplete' });
+  });
+
   test('descreve os graus de C7(9) sem depender da cor', () => {
     expect(getChordToneDetail('C', '9', 64)).toMatchObject({
       note: 'E',

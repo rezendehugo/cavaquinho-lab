@@ -5,9 +5,9 @@ describe('biblioteca expandida de acordes', () => {
   test('consome o corpus publicado de Bm', () => {
     const chord = cavaquinhoChords.chords.B.find(item => item.suffix === 'minor');
     const analyses = chord.positions.map(position => analyzeChordVoicing({ key: 'B', suffix: 'minor' }, position));
-    expect(chord.positions).toHaveLength(8);
+    expect(chord.positions).toHaveLength(7);
     expect(analyses.filter(analysis => analysis.exact)).toHaveLength(7);
-    expect(analyses.filter(analysis => analysis.missingNotes.includes('D'))).toHaveLength(1);
+    expect(analyses.filter(analysis => analysis.missingNotes.includes('D'))).toHaveLength(0);
   });
 
   test.each(['m6', 'add9', '7sus4', '69'])('publica %s em todas as tonalidades', (suffix) => {
@@ -38,7 +38,7 @@ describe('biblioteca expandida de acordes', () => {
     });
   });
 
-  test.each([['Db', 11], ['Eb', 9], ['Gb', 10], ['Ab', 9], ['Bb', 10]])('expande %s7 com dominantes cromáticos validados', (key, count) => {
+  test.each([['Db', 11], ['Eb', 8], ['Gb', 10], ['Ab', 9], ['Bb', 10]])('expande %s7 com dominantes cromáticos validados', (key, count) => {
     const positions = cavaquinhoChords.chords[key].find(chord => chord.suffix === '7').positions;
     expect(positions).toHaveLength(count);
     expect(positions.filter(position => {
@@ -56,14 +56,18 @@ describe('biblioteca expandida de acordes', () => {
       aug: { symbol: '+' },
       '69': { symbol: '6/9' },
       maj9: { symbol: '7M(9)' },
-      madd9: { symbol: 'm(add9)' }
+      madd9: { symbol: 'm(add9)' },
+      mmaj7: { symbol: 'm(7M)' }
     });
   });
 
-  test('não oferece qualidades sem shapes conhecidos', () => {
-    expect(cavaquinhoChords.chords.G.find(chord => chord.suffix === 'aug')?.positions).toEqual([]);
+  test('oferece as novas qualidades validadas nos 12 tons', () => {
+    Object.values(cavaquinhoChords.chords).forEach(chords => {
+      ['aug', 'madd9', 'mmaj7'].forEach(suffix => {
+        expect(chords.find(chord => chord.suffix === suffix)?.positions).toHaveLength(6);
+      });
+    });
     expect(getAvailableSuffixes('G')).toContain('69');
-    expect(getAvailableSuffixes('G')).toEqual(expect.arrayContaining(['m9', 'maj9']));
-    expect(getAvailableSuffixes('G')).not.toContain('aug');
+    expect(getAvailableSuffixes('G')).toEqual(expect.arrayContaining(['aug', 'madd9', 'mmaj7', 'm9', 'maj9']));
   });
 });
