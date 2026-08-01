@@ -16,7 +16,7 @@ function PositionMarker({ position, state, interactive, onChoose }) {
   const content = <><strong>{position.note}</strong><small>{state.path || state.candidate || state.selectable ? position.octave : enharmonicNotes[position.note]}</small>{badge !== null ? <b>{badge}</b> : null}</>;
   const style = { '--string': position.stringIndex + 1, '--fret': position.fret };
   return interactive && (state.candidate || state.selectable)
-    ? <button type="button" className={classes} style={style} data-position={positionKey(position)} data-note={position.note} aria-label={'Adicionar ' + label} onClick={() => onChoose(position)} onKeyDown={event => {
+    ? <button type="button" className={classes} style={style} data-position={positionKey(position)} data-note={position.note} aria-label={'Adicionar ' + label} title={'Adicionar ' + label} onClick={() => onChoose(position)} onKeyDown={event => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
       onChoose(position);

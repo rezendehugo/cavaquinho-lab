@@ -83,7 +83,7 @@ function PomodoroTimer() {
           </div>
 
           <div className="pomodoro-footer-actions">
-            <button type="button" className="pomodoro-primary-action" onClick={isRunning ? timer.pause : timer.start}>
+            <button type="button" className="pomodoro-primary-action" aria-label={primaryLabel} title={primaryLabel} onClick={isRunning ? timer.pause : timer.start}>
               {isRunning ? <Pause aria-hidden="true" size={16} strokeWidth={2.2} /> : <Play aria-hidden="true" size={16} strokeWidth={2.2} />}
               {primaryLabel}
             </button>

@@ -43,7 +43,7 @@ function MetronomeControl({ metronome, bpmInputRef }) {
       <div className="metronome-beats" aria-label={'Batida ' + (metronome.currentBeat + 1) + ' de ' + metronome.beatsPerMeasure}>
         {Array.from({ length: metronome.beatsPerMeasure }, (_, index) => <span key={index} className={metronome.isRunning && index === metronome.currentBeat ? 'active' : ''} />)}
       </div>
-      <button type="button" className="pomodoro-primary-action metronome-primary-action" onClick={metronome.isRunning ? metronome.stop : metronome.start}>
+      <button type="button" className="pomodoro-primary-action metronome-primary-action" aria-label={metronome.isRunning ? 'Parar metrônomo' : 'Iniciar metrônomo'} title={metronome.isRunning ? 'Parar metrônomo' : 'Iniciar metrônomo'} onClick={metronome.isRunning ? metronome.stop : metronome.start}>
         {metronome.isRunning ? <Pause aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}{metronome.isRunning ? 'Parar' : 'Iniciar'}
       </button>
     </section>

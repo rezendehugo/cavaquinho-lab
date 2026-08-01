@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import rawCavaquinhoChords from '@tombatossals/chords-db/lib/cavaquinho.json';
 import App from './App.jsx';
-import { getRoutes } from './config';
+import { getRoutes, uiAuditScenarios } from './config';
 import { cavaquinhoChords } from './domain/chords';
 
 const renderAt = (route = '/sequences') => {
@@ -39,7 +39,7 @@ describe('Cavaquinho Lab', () => {
 
   test('mostra Formas, Sequências, Braço e Prática na navegação', () => {
     renderAt();
-    expect(getRoutes().map(route => route.label)).toEqual(['Formas', 'Sequências', 'Braço', 'Prática']);
+    expect(getRoutes().map(route => route.label)).toEqual(['Formas', 'Sequências', 'Braço', 'Prática', 'Importar']);
     expect(screen.getByRole('link', { name: 'Formas' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sequências' })).toHaveClass('active');
     expect(screen.getByRole('link', { name: 'Braço' })).toBeInTheDocument();
@@ -47,10 +47,22 @@ describe('Cavaquinho Lab', () => {
     expect(screen.queryByRole('link', { name: 'Cavaquinho' })).not.toBeInTheDocument();
   });
 
+  test('mantém toda rota em pelo menos um cenário de auditoria visual', () => {
+    const auditedPaths = new Set(uiAuditScenarios.map(scenario => scenario.path));
+    expect(getRoutes().every(route => auditedPaths.has(route.path))).toBe(true);
+  });
+
   test('redireciona a rota antiga de prática para a nova página', async () => {
     renderAt('/cavaquinho/practice');
     await waitFor(() => expect(window.location.pathname).toBe('/practice'));
     expect(screen.getByRole('link', { name: 'Prática' })).toHaveClass('active');
+  });
+
+  test('abre o workspace privado de importação sem acessar banco diretamente', () => {
+    renderAt('/imports');
+    expect(screen.getByRole('heading', { name: 'Partitura para prática' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Escolher PDF, MusicXML ou MXL')).toHaveAttribute('accept', expect.stringContaining('.pdf'));
+    expect(screen.getByText(/arquivo privado/i)).toBeInTheDocument();
   });
 
   test('normaliza hashes antigos para rotas reais', async () => {
@@ -103,7 +115,7 @@ describe('Cavaquinho Lab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Metrônomo' }));
     expect(screen.getByRole('heading', { name: 'Metrônomo' })).toBeInTheDocument();
     expect(screen.getByRole('spinbutton', { name: 'Batidas por minuto' })).toHaveValue('80');
-    expect(screen.getByRole('button', { name: 'Iniciar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Iniciar metrônomo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Selecionar compasso 4/4' })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -216,7 +228,7 @@ describe('Cavaquinho Lab', () => {
     delete window.AudioContext;
   });
 
-  test('limita o editor a cinquenta acordes', () => {
+  test('mantém o editor utilizável com cinquenta acordes e permite continuar até quinhentos', () => {
     window.localStorage.clear();
     window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
       id: 'sequence-1',
@@ -226,7 +238,7 @@ describe('Cavaquinho Lab', () => {
     window.history.pushState(null, '', '/sequences');
     render(<App />);
     expect(screen.getAllByRole('article')).toHaveLength(50);
-    expect(screen.getByRole('button', { name: 'Limite de 50 acordes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Adicionar acorde' })).toBeEnabled();
   });
 
   test('usa notas como padrão e não mostra alternância para dedos', () => {
@@ -596,7 +608,10 @@ describe('Cavaquinho Lab', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
     expect(screen.getByLabelText('Sequência para praticar')).toHaveValue('daily');
-    expect(screen.getByText('C → G')).toBeInTheDocument();
+    const navigator = screen.getByRole('list', { name: 'Acordes da sequência' });
+    expect(within(navigator).getByRole('button', { name: 'Acorde 1 de 2: C' })).toBeInTheDocument();
+    expect(within(navigator).getByRole('button', { name: 'Acorde 2 de 2: G' })).toBeInTheDocument();
+    expect(within(navigator).getByText('1/7')).toBeInTheDocument();
     expect(screen.getByLabelText('Batidas por acorde')).toHaveValue('4');
     expect(screen.getByRole('spinbutton', { name: 'BPM da prática de sequência' })).toHaveValue('80');
     expect(screen.getByRole('button', { name: 'Praticar sequência' })).toBeEnabled();

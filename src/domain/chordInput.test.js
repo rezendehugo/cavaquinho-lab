@@ -37,4 +37,14 @@ describe('entrada de acordes', () => {
     expect(parseRootInput('H7', 'major')).toBe(null);
     expect(parseQualityInput('desconhecido')).toBe(null);
   });
+
+  test('preserva o baixo de inversões sem confundir o sufixo 6/9', () => {
+    expect(parseRootInput('G/B', 'major')).toEqual({
+      key: 'G', displayKey: 'G', suffix: 'major', bassNote: 'B', displayBassNote: 'B'
+    });
+    expect(parseRootInput('E7/G#', 'major')).toEqual({
+      key: 'E', displayKey: 'E', suffix: '7', bassNote: 'Ab', displayBassNote: 'G#'
+    });
+    expect(parseRootInput('G6/9', 'major')).toEqual({ key: 'G', displayKey: 'G', suffix: '69' });
+  });
 });

@@ -6,9 +6,16 @@ services:
       target: dev
     ports:
       - "5173:5173"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://127.0.0.1:8080}
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}
+      CHOKIDAR_USEPOLLING: "true"
     volumes:
       - .:/app
       - /app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
   ci:
     profiles: ["ci"]
     build:
@@ -22,3 +29,77 @@ services:
       target: preview
     ports:
       - "4173:4173"
+  postgres:
+    profiles: ["backend"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cavaquinho_lab
+      POSTGRES_USER: cavaquinho
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - score_import_db:/var/lib/postgresql/data
+      - ./apps/api/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cavaquinho -d cavaquinho_lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  api:
+    profiles: ["backend"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATABASE_URL: postgres://cavaquinho:local-development-only@postgres:5432/cavaquinho_lab
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://127.0.0.1:5173,http://localhost:5173}
+      OMR_WORKER_URL: http://omr-worker:8090
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://127.0.0.1:8080}
+      DEVELOPMENT_STORAGE_DIR: /var/lib/cavaquinho-lab/uploads
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - score_import_files:/var/lib/cavaquinho-lab/uploads
+    command: npm run dev:api
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      omr-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  omr-worker:
+    profiles: ["backend"]
+    platform: linux/amd64
+    build:
+      context: workers/omr
+      target: dev
+      platforms:
+        - linux/amd64
+    environment:
+      WORKER_ALLOWED_HOSTS: api
+      AUDIVERIS_VERSION: 5.10.2
+      AUDIVERIS_TIMEOUT_SECONDS: 120
+    expose:
+      - "8090"
+    volumes:
+      - ./workers/omr:/app:ro
+    healthcheck:
+      test: ["CMD", "/opt/venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  score_import_db:
+  score_import_files:

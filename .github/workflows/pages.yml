@@ -35,6 +35,8 @@ jobs:
         run: npm test
       - name: Gerar site
         run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
       - name: Preparar fallback de rotas
         run: cp dist/index.html dist/404.html
       - name: Preparar Pages

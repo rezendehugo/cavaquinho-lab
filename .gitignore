@@ -9,6 +9,12 @@ test-results/
 cypress/screenshots/
 cypress/videos/
 *.log
+__pycache__/
+*.py[cod]
+
+# Private score corpus and generated OMR diagnostics
+private-corpus/
+omr-artifacts/
 
 # Local environment files; the public template is intentionally tracked.
 .env

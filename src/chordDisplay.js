@@ -14,7 +14,10 @@ export const formatQualityOption = (suffix) => formatSuffix(suffix) || qualityLa
 
 export const formatChordName = (key, suffix, displayKey) => (displayKey || key) + formatSuffix(suffix);
 
-export const formatSequenceChord = (step) => formatChordName(step.key, step.suffix, step.displayKey);
+export const formatSequenceChord = (step) => {
+  const chord = formatChordName(step.key, step.suffix, step.displayKey);
+  return step.bassNote ? `${chord}/${step.displayBassNote || step.bassNote}` : chord;
+};
 
 export const formatShapeIndex = (index, total) => (index + 1) + '/' + total;
 
