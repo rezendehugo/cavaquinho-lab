@@ -1,10 +1,19 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
+import rawBody from 'fastify-raw-body';
+import { trace } from '@opentelemetry/api';
 import type { Authenticate } from './auth.js';
 import type { PrivateStorage } from './storage.js';
 import { createImportSchema, createPracticeSchema, measurePatchSchema, uploadRequestSchema } from './score-imports/contracts.js';
 import { ScoreImportError, ScoreImportService } from './score-imports/service.js';
+import { DisabledBillingGateway, type BillingGateway } from './product/billing.js';
+import { InMemoryProductRepository, type ProductRepository } from './product/repository.js';
+import { registerProductRoutes } from './product/routes.js';
+import { ProductError, ProductService } from './product/service.js';
+import { ZodError } from 'zod';
+import * as Sentry from '@sentry/node';
 
 interface AppDependencies {
   authenticate: Authenticate;
@@ -13,6 +22,9 @@ interface AppDependencies {
   allowedOrigins: string[];
   allowDirectMusicXml?: boolean;
   omrImportsEnabled?: boolean;
+  productRepository?: ProductRepository;
+  billing?: BillingGateway;
+  deleteIdentity?: (ownerId: string) => Promise<void>;
 }
 
 function extensionFor(contentType: string): string {
@@ -20,7 +32,7 @@ function extensionFor(contentType: string): string {
 }
 
 export async function buildApp(dependencies: AppDependencies): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false, bodyLimit: 20 * 1024 * 1024 });
+  const app = Fastify({ logger: process.env.NODE_ENV !== 'test', bodyLimit: 20 * 1024 * 1024 });
   app.addContentTypeParser([
     'application/pdf',
     'application/vnd.recordare.musicxml+xml',
@@ -33,14 +45,24 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
     origin: (origin, callback) => callback(null, !origin || dependencies.allowedOrigins.includes(origin)),
     credentials: false,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['authorization', 'content-type']
+    allowedHeaders: ['authorization', 'content-type', 'traceparent', 'tracestate', 'baggage']
   });
+  await app.register(helmet, { contentSecurityPolicy: false });
+  await app.register(rawBody, { global: false, encoding: 'utf8', runFirst: true });
   await app.register(rateLimit, { max: 120, timeWindow: '1 minute' });
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.addHook('onRequest', async request => {
+    trace.getActiveSpan()?.setAttribute('http.request_id', request.id);
+  });
+
+  app.setErrorHandler((error, request, reply) => {
     const message = error instanceof Error ? error.message : 'invalid_request';
-    const statusCode = error instanceof ScoreImportError ? error.statusCode : message === 'unauthorized' ? 401 : 400;
-    reply.status(statusCode).send({ error: error instanceof ScoreImportError ? error.code : statusCode === 401 ? 'unauthorized' : 'invalid_request' });
+    const knownError = error instanceof ScoreImportError || error instanceof ProductError;
+    const statusCode = knownError ? error.statusCode : error instanceof ZodError ? 400 : message === 'unauthorized' ? 401 : message === 'billing_unavailable' ? 503 : 500;
+    const code = knownError ? error.code : statusCode === 401 ? 'unauthorized' : statusCode === 503 ? 'billing_unavailable' : statusCode === 400 ? 'invalid_request' : 'internal_error';
+    if (statusCode >= 500) Sentry.captureException(error, { tags: { requestId: request.id } });
+    request.log.warn({ requestId: request.id, code, statusCode }, 'request_failed');
+    reply.status(statusCode).send({ error: code, requestId: request.id });
   });
 
   async function ownerId(authorization: string | undefined): Promise<string> {
@@ -48,6 +70,16 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
   }
 
   app.get('/api/health', async () => ({ status: 'ok' }));
+  app.get('/api/ready', async () => ({ status: 'ready', version: process.env.APP_VERSION ?? 'development', omrEnabled: dependencies.omrImportsEnabled !== false }));
+
+  const productRepository = dependencies.productRepository ?? new InMemoryProductRepository();
+  await registerProductRoutes(app, {
+    authenticate: dependencies.authenticate,
+    repository: productRepository,
+    service: new ProductService(productRepository),
+    billing: dependencies.billing ?? new DisabledBillingGateway(),
+    deleteIdentity: dependencies.deleteIdentity
+  });
 
   app.put('/v1/development-uploads/:token', async (request, reply) => {
     if (!dependencies.storage.acceptDevelopmentUpload) throw new ScoreImportError('development_upload_disabled', 404);
