@@ -1,6 +1,7 @@
 import { defaultSequences, normalizeSequences } from './sequences';
 import { normalizeStoredScalePaths, scalePathStorageVersion } from './domain/scalePaths';
 import { freeSoloStorageVersion, normalizeStoredSolos } from './domain/freeSolos';
+import { sanitizeSequenceShapeIndexes } from './domain/chords';
 
 export const sequencesStorageKey = 'cavaquinhoLabSequences';
 export const activeSequenceStorageKey = 'cavaquinhoLabActiveSequenceId';
@@ -30,9 +31,9 @@ export const writeStorage = (key, value) => {
 export const loadSequences = () => {
   try {
     const saved = readStorage(sequencesStorageKey).value;
-    if (saved) return normalizeSequences(JSON.parse(saved));
+    if (saved) return sanitizeSequenceShapeIndexes(normalizeSequences(JSON.parse(saved)));
     const legacy = readStorage(legacySequenceStorageKey).value;
-    if (legacy) return normalizeSequences(JSON.parse(legacy));
+    if (legacy) return sanitizeSequenceShapeIndexes(normalizeSequences(JSON.parse(legacy)));
     return defaultSequences;
   } catch {
     return defaultSequences;

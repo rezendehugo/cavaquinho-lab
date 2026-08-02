@@ -1,5 +1,5 @@
 import { generateScalePath } from './domain/scalePaths';
-import { freeSolosStorageKey, loadFreeSolos, loadScalePaths, readStorage, saveFreeSolos, saveScalePaths, scalePathsStorageKey, storageErrorMessage, writeStorage } from './storage';
+import { freeSolosStorageKey, loadFreeSolos, loadScalePaths, loadSequences, readStorage, saveFreeSolos, saveScalePaths, scalePathsStorageKey, sequencesStorageKey, storageErrorMessage, writeStorage } from './storage';
 
 describe('armazenamento seguro', () => {
   test('retorna resultado explícito quando a leitura ou escrita falha', () => {
@@ -29,5 +29,18 @@ describe('armazenamento seguro', () => {
     expect(JSON.parse(window.localStorage.getItem(freeSolosStorageKey))).toMatchObject({ version: 1 });
     window.localStorage.setItem(freeSolosStorageKey, JSON.stringify({ version: 1, solos: [solo, { id: 'bad', name: 'Ruim', positions: [{ fret: 99 }] }] }));
     expect(loadFreeSolos()).toEqual([solo]);
+  });
+
+  test('limpa somente índices de shapes que deixaram de existir', () => {
+    window.localStorage.setItem(sequencesStorageKey, JSON.stringify([{
+      id: 'sequence-1',
+      title: 'Migração',
+      steps: [
+        { id: 'valid', key: 'G', suffix: 'aug', positionIndex: 2 },
+        { id: 'invalid', key: 'G', suffix: 'aug', positionIndex: 99 }
+      ]
+    }]));
+
+    expect(loadSequences()[0].steps.map(step => step.positionIndex)).toEqual([2, null]);
   });
 });

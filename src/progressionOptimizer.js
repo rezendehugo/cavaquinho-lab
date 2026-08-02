@@ -1,6 +1,11 @@
 import { noteNames } from './chordDisplay';
+import { analyzeChordVoicing, getVoicingPreferenceRank } from './domain/chordTheory';
 
 const DEFAULT_SHAPE_WEIGHT = 0.08;
+const VOICING_PREFERENCE_WEIGHT = 20;
+
+const getVoicingPreferencePenalty = (step, position) =>
+  getVoicingPreferenceRank(analyzeChordVoicing(step, position)) * VOICING_PREFERENCE_WEIGHT;
 
 export const getAbsoluteFrets = (position) => {
   const baseFret = position.baseFret || 1;
@@ -86,7 +91,7 @@ export const optimizeSequence = (sequence, chordDb, options = {}) => {
     return { totalScore: 0, steps: [], transitions: [], missing: chordSteps.filter(step => !step.chord || !step.chord.positions.length) };
   }
   let states = getAllowedPositions(chordSteps[0]).map(({ position, positionIndex }) => ({
-    score: getShapeComplexity(position) * shapeWeight,
+    score: getShapeComplexity(position) * shapeWeight + getVoicingPreferencePenalty(chordSteps[0], position),
     path: [{ ...chordSteps[0], position, positionIndex, movementScore: 0 }],
     transitions: []
   }));
@@ -96,7 +101,7 @@ export const optimizeSequence = (sequence, chordDb, options = {}) => {
         const previous = state.path[state.path.length - 1].position;
         const movementScore = getTransitionScore(previous, position);
         return {
-          score: state.score + movementScore + getShapeComplexity(position) * shapeWeight,
+          score: state.score + movementScore + getShapeComplexity(position) * shapeWeight + getVoicingPreferencePenalty(step, position),
           path: state.path.concat({ ...step, position, positionIndex, movementScore }),
           transitions: state.transitions.concat(movementScore)
         };

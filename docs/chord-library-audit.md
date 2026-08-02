@@ -11,14 +11,15 @@ npm run audit:chords
 | Métrica | Antes do ciclo | Depois do ciclo |
 | --- | ---: | ---: |
 | Raízes | 12 | 12 |
-| Definições de sufixo | 15 | 20 |
-| Acordes raiz + qualidade | 180 | 240 |
-| Referências de shapes | 1.498 | 2.033 |
+| Definições de sufixo | 20 | 21 |
+| Acordes raiz + qualidade | 240 | 252 |
+| Referências de shapes | 2.033 | 2.087 |
 | Duplicatas físicas no mesmo acorde | 12 | 0 |
 
-O total atual contém 1.094 voicings completos, 331 incompletos com raiz, 219
-voicings de nona sem raiz, 126 com notas adicionais e 263 que omitem ao menos
-um tom essencial.
+O total atual contém 1.283 voicings completos, 403 incompletos válidos e 401
+voicings sem raiz. Não há shapes publicados com notas adicionais ou ausência de
+tom característico. Dos voicings sem raiz, 312 pertencem às extensões `9`, `m9`
+e `maj9`; os outros 89 são formas de acompanhamento reclassificadas.
 O relatório mantém essas categorias separadas; uma contagem alta não significa
 automaticamente boa cobertura musical.
 
@@ -28,14 +29,15 @@ automaticamente boa cobertura musical.
 | --- | --- | ---: | --- |
 | `7sus4` | `7(4)` | 12/12 | Validado |
 | `69` | `6/9` | 12/12 | Validado pela política de tons essenciais |
-| `aug` | `+` | 0/12 | Aguarda shapes com fonte conhecida |
+| `aug` | `+` | 12/12 | 6 formas validadas por tom |
 | `m9` | `m9` | 12/12 | 8 voicings sem raiz por tom |
 | `maj9` | `7M(9)` | 12/12 | 10–11 voicings sem raiz por tom |
-| `madd9` | `m(add9)` | 0/12 | Aguarda shapes com fonte conhecida |
+| `madd9` | `m(add9)` | 12/12 | 6 formas validadas por tom |
+| `mmaj7` | `m(7M)` | 12/12 | 6 formas validadas por tom |
 
-As definições sem cobertura existem no domínio e aceitam aliases na entrada,
-mas o seletor não as oferece enquanto não houver uma digitação validada. Isso
-evita apresentar um acorde sem diagrama ou renomear um shape incompatível.
+As três novas qualidades foram geradas na afinação D–G–B–D e validadas por
+fórmula, abertura máxima de quatro casas, três ou quatro cordas tocadas e limite
+de quatro dedos. O seletor continua ocultando qualquer qualidade sem diagrama.
 
 ## Política musical
 
@@ -46,21 +48,24 @@ evita apresentar um acorde sem diagrama ou renomear um shape incompatível.
   A raiz e a quinta podem ser omitidas, com indicação explícita de que o shape
   é recomendado para acompanhamento com baixo ou outro instrumento harmônico.
 - Um shape com nota adicional nunca alimenta equivalências automáticas.
-- Shapes `dim` e `dim7` com notas adicionais continuam explicitamente ligados
-  ao acorde de origem, mas ficam na fila de revisão manual.
+- Shapes `dim` que continham a sétima diminuta foram movidos para `dim7`.
+- Um `dim7` com uma única omissão permanece disponível como incompleto.
+- Shapes sem terça ou outro tom característico ficam somente no relatório de
+  revisão e não aparecem nos seletores.
 - Shapes físicos idênticos são contados uma vez por acorde.
-- Novas digitações exigem fonte conhecida; a aplicação não as inventa.
+- Formas geradas são identificadas na origem e passam pelos mesmos contratos
+  determinísticos antes de serem publicadas.
 
 ## Dominantes cromáticos
 
 `sus2` agora oferece entre 6 e 7 shapes por raiz, e `m7` oferece entre 9 e 13.
-`Db7`, `Eb7`, `Gb7`, `Ab7` e `Bb7` passam a oferecer 11, 9, 10, 9 e 10 formas.
+`Db7`, `Eb7`, `Gb7`, `Ab7` e `Bb7` oferecem 11, 8, 10, 9 e 10 formas.
 Esses shapes derivam de transposição cromática validada de posições inteiramente
 pressionadas; não há cordas soltas convertidas em digitação sem dedo.
 
-Não restam acordes publicados abaixo do limiar de três formas. As famílias
-`aug` e `madd9` ainda não possuem shapes compatíveis no corpus conhecido e são
-a principal pendência de pesquisa musical.
+As tríades `dim` agora possuem uma forma exata por tom; expandir sua cobertura
+ergonômica é a principal pendência residual, sem reaproveitar shapes `dim7` como
+se fossem tríades diminutas.
 
 ## Responsabilidade entre repositórios
 

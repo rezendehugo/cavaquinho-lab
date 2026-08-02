@@ -1,6 +1,7 @@
 import rawCavaquinhoChords from '@tombatossals/chords-db/lib/cavaquinho.json';
 import { findChord } from '../progressionOptimizer';
 import { suffixCycle } from '../sequences';
+import { analyzeChordVoicing, getVoicingPreferenceRank } from './chordTheory';
 
 const getAbsoluteFrets = (position) => {
   const baseFret = position.baseFret || 1;
@@ -19,9 +20,14 @@ const clonePosition = (position) => ({
   barres: Array.isArray(position.barres) ? [...position.barres] : position.barres
 });
 
-const sortPositionsByFirstFret = (positions) => positions
-  .map((position, index) => ({ position: clonePosition(position), index, firstFret: getFirstPlayedFret(position) }))
-  .sort((a, b) => a.firstFret - b.firstFret || a.index - b.index)
+const sortPositions = (key, suffix, positions) => positions
+  .map((position, index) => ({
+    position: clonePosition(position),
+    index,
+    firstFret: getFirstPlayedFret(position),
+    voicingRank: getVoicingPreferenceRank(analyzeChordVoicing({ key, suffix }, position))
+  }))
+  .sort((a, b) => a.voicingRank - b.voicingRank || a.firstFret - b.firstFret || a.index - b.index)
   .map(entry => entry.position);
 
 const sortChordLibrary = (library) => ({
@@ -30,7 +36,7 @@ const sortChordLibrary = (library) => ({
     key,
     chords.map(chord => ({
       ...chord,
-      positions: sortPositionsByFirstFret(chord.positions || [])
+      positions: sortPositions(key, chord.suffix, chord.positions || [])
     }))
   ]))
 });
@@ -40,3 +46,12 @@ export const cavaquinhoChords = sortChordLibrary(rawCavaquinhoChords);
 export const cavaquinhoTuning = ['D', 'G', 'B', 'D'];
 
 export const getAvailableSuffixes = (key) => suffixCycle.filter(suffix => findChord(cavaquinhoChords, key, suffix)?.positions.length > 0);
+
+export const sanitizeSequenceShapeIndexes = (sequences) => sequences.map(sequence => ({
+  ...sequence,
+  steps: sequence.steps.map(step => {
+    const chord = findChord(cavaquinhoChords, step.key, step.suffix);
+    const validIndex = Number.isInteger(step.positionIndex) && step.positionIndex >= 0 && step.positionIndex < (chord?.positions.length || 0);
+    return validIndex ? step : { ...step, positionIndex: null };
+  })
+}));

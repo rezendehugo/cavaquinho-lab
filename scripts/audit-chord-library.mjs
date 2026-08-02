@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import process from 'node:process';
 import { URL } from 'node:url';
-import { chordQualities, getChordPitchClasses } from '../src/domain/chordTheory.js';
+import { analyzeChordVoicing, getVoicingCompleteness } from '../src/domain/chordTheory.js';
 import { suffixCycle } from '../src/sequences.js';
 
 const databasePath = new URL('../node_modules/@tombatossals/chords-db/lib/cavaquinho.json', import.meta.url);
@@ -9,58 +9,37 @@ const database = JSON.parse(fs.readFileSync(databasePath, 'utf8'));
 const pitchNames = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const openStringMidi = [50, 55, 59, 62];
 
-function unique(values) {
-  return [...new Set(values)];
-}
-
 function positionIdentity(position) {
   return [position.baseFret || 1, ...position.frets].join(':');
 }
 
 function classifyPosition(key, suffix, position) {
-  const expected = getChordPitchClasses(key, suffix);
-  const played = unique(position.midi.map(note => note % 12));
-  const quality = chordQualities[suffix];
-  const root = pitchNames.indexOf(key);
-  const essential = (quality?.required || []).map(interval => (root + interval) % 12);
-  const missing = expected.filter(note => !played.includes(note));
-  const additional = played.filter(note => !expected.includes(note));
-  const missingEssential = essential.filter(note => !played.includes(note));
-  const rootMissing = !played.includes(root);
-  const kind = additional.length
-    ? 'additional'
-    : missingEssential.length
-      ? 'invalid'
-      : rootMissing && missing.length
-        ? 'rootless'
-        : missing.length
-          ? 'incomplete'
-          : 'complete';
-
-  return {
-    kind,
-    missing: missing.map(note => pitchNames[note]),
-    additional: additional.map(note => pitchNames[note]),
-    missingEssential: missingEssential.map(note => pitchNames[note]),
-    rootMissing
-  };
+  const analysis = analyzeChordVoicing({ key, suffix }, position);
+  const state = getVoicingCompleteness(analysis);
+  return { kind: state?.id === 'blocked' ? 'invalid' : state?.id || 'invalid' };
 }
 
 function inspectStructure(key, suffix, position, shapeIndex) {
   const location = `${key}:${suffix} forma ${shapeIndex + 1}`;
   const issues = [];
-  for (const field of ['frets', 'fingers', 'midi']) {
+  for (const field of ['frets', 'fingers']) {
     if (!Array.isArray(position[field]) || position[field].length !== 4) {
       issues.push(`${location}: ${field} deve ter quatro valores`);
     }
   }
+  const soundedStrings = position.frets.filter(fret => fret >= 0).length;
+  if (!Array.isArray(position.midi) || position.midi.length !== soundedStrings) {
+    issues.push(`${location}: midi deve corresponder às cordas tocadas`);
+  }
   if (issues.length) return issues;
+  let playedIndex = 0;
   position.frets.forEach((fret, stringIndex) => {
     if (fret < 0) return;
     const absoluteFret = fret === 0 ? 0 : (position.baseFret || 1) + fret - 1;
-    if (position.midi[stringIndex] !== openStringMidi[stringIndex] + absoluteFret) {
+    if (position.midi[playedIndex] !== openStringMidi[stringIndex] + absoluteFret) {
       issues.push(`${location}: MIDI incorreto na corda ${stringIndex + 1}`);
     }
+    playedIndex += 1;
   });
   return issues;
 }

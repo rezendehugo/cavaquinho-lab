@@ -466,6 +466,7 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .voicing-status-dot--incomplete { --voicing-color: #d99020; }
 .voicing-status-dot--rootless { --voicing-color: #6f63c2; }
 .voicing-status-dot--additional { --voicing-color: #d95d39; }
+.voicing-status-dot--blocked { --voicing-color: #b53b34; }
 .voicing-status-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: calc(var(--space-2) * -1) 0 var(--space-3); color: var(--color-muted); font-size: .74rem; font-weight: 700; }
 .voicing-status-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .voicing-status-legend .voicing-status-dot { width: 8px; height: 8px; border-width: 1px; }
