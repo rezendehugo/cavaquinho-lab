@@ -1,4 +1,7 @@
 FROM node:22-alpine
+ARG APP_VERSION=development
+ENV APP_VERSION=$APP_VERSION
+ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts

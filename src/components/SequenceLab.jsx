@@ -127,7 +127,7 @@ function LabSummary({ analysis, exercises, sequence, colorMode }) {
   );
 }
 
-function SequenceLab() {
+function SequenceLab({ cloud = null }) {
   const metronome = useSharedMetronome();
   const [sequences, setSequences] = useState(loadSequences);
   const [activeSequenceId, setActiveSequenceId] = useState(() => loadActiveSequenceId(loadSequences()));
@@ -144,6 +144,16 @@ function SequenceLab() {
   const cardRowRef = useRef(null);
   const practiceStartRef = useRef(null);
   const lastPulseRef = useRef(0);
+  const cloudReadyRef = useRef(false);
+  const cloudSaveTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!cloud?.sequences) return;
+    cloudReadyRef.current = false;
+    setSequences(cloud.sequences.length ? cloud.sequences : defaultSequences);
+    setActiveSequenceId(current => cloud.sequences.some(sequence => sequence.id === current) ? current : cloud.sequences[0]?.id || defaultSequences[0].id);
+    requestAnimationFrame(() => { cloudReadyRef.current = true; });
+  }, [cloud?.sequences]);
 
   const activeSequence = sequences.find(sequence => sequence.id === activeSequenceId) || sequences[0] || defaultSequences[0];
   const optimized = useMemo(() => optimizeSequence(activeSequence.steps, cavaquinhoChords), [activeSequence.steps]);
@@ -158,9 +168,17 @@ function SequenceLab() {
   const practiceDurations = useMemo(() => activeSequence.steps.map(step => normalizePracticeBeats(step.practiceBeats)), [activeSequence.steps]);
   const countIn = metronome.beatsPerMeasure;
   const practicePulse = Math.max(0, metronome.pulseIndex - countIn);
+  const sequenceLimitReached = Number.isInteger(cloud?.entitlements?.sequenceLimit) && sequences.length >= cloud.entitlements.sequenceLimit;
+  const effectiveStepLimit = Math.min(MAX_SEQUENCE_STEPS, cloud?.entitlements?.stepLimit || MAX_SEQUENCE_STEPS);
 
   useEffect(() => {
     setStorageError(writeStorage(sequencesStorageKey, JSON.stringify(sequences)).ok ? '' : storageErrorMessage);
+    if (!cloud || !cloudReadyRef.current) return;
+    window.clearTimeout(cloudSaveTimerRef.current);
+    cloudSaveTimerRef.current = window.setTimeout(async () => {
+      if (!await cloud.save(sequences)) setStorageError('Não foi possível sincronizar. Suas alterações continuam neste navegador.');
+    }, 700);
+    return () => window.clearTimeout(cloudSaveTimerRef.current);
   }, [sequences]);
 
   useEffect(() => {
@@ -248,7 +266,7 @@ function SequenceLab() {
     moveStep(fromIndex, toIndex);
   };
   const addStep = () => {
-    if (activeSequence.steps.length >= MAX_SEQUENCE_STEPS) return;
+    if (activeSequence.steps.length >= effectiveStepLimit) { setStorageError('Seu plano atingiu o limite desta sequência.'); return; }
     stopPractice();
     updateActiveSequence(sequence => ({ ...sequence, steps: sequence.steps.concat(createSequenceStep()) }));
   };
@@ -313,8 +331,9 @@ function SequenceLab() {
   }));
 
   const createNewSequence = () => {
+    if (sequenceLimitReached) { setStorageError('Seu plano atingiu o limite de sequências.'); return; }
     stopPractice();
-    const sequence = createSequence(Date.now());
+    const sequence = createSequence(undefined);
     setSequences(current => current.concat(sequence));
     setActiveSequenceId(sequence.id);
   };
@@ -362,6 +381,9 @@ function SequenceLab() {
   return (
     <>
       <section className="sequence-lab">
+        {cloud?.profile && !cloud.profile.localMigrationCompletedAt ? <div className="cloud-migration"><p>Encontramos sequências salvas neste navegador.</p><button type="button" data-ui-text-reason="workflow" onClick={cloud.migrate}>Importar para a conta</button></div> : null}
+        {cloud?.entitlements?.plan === 'free' ? <p className="plan-status">Plano Free · {cloud.entitlements.sequenceLimit} sequências · {cloud.entitlements.stepLimit} acordes cada</p> : null}
+        {cloud?.error ? <p className="storage-status" role="status">Sincronização pendente · {cloud.error}</p> : null}
         <SequenceManager sequences={sequences} activeSequenceId={activeSequence.id} setActiveSequenceId={selectActiveSequence} createNewSequence={createNewSequence} openPresets={() => setPresetDialogOpen(true)} deleteSequence={deleteSequence} />
         <SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} />
         <p className="chord-editing-hint">Edite o acorde diretamente. Use ↑ e ↓ para navegar, Enter para confirmar e Esc para cancelar.</p>
@@ -402,7 +424,7 @@ function SequenceLab() {
                 />
                 );
               })}
-              <AddChordSlot onClick={addStep} disabled={activeSequence.steps.length >= MAX_SEQUENCE_STEPS} title={activeSequence.steps.length >= MAX_SEQUENCE_STEPS ? 'Limite de 500 acordes' : 'Adicionar acorde'} />
+              <AddChordSlot onClick={addStep} disabled={activeSequence.steps.length >= effectiveStepLimit} title={activeSequence.steps.length >= effectiveStepLimit ? 'Limite do plano' : 'Adicionar acorde'} />
             </div>
           )
         )}

@@ -42,6 +42,57 @@
   --card-line: var(--color-border);
 }
 
+/* Public product and account surfaces */
+.public-shell { max-width: 1180px; margin: 0 auto; padding: 24px; }
+.public-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.public-header nav { display: flex; align-items: center; gap: 12px; }
+.public-header nav a, .brand-link { color: var(--text); text-decoration: none; }
+.public-header nav a { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px 14px; }
+.brand-link { display: grid; font-weight: 800; }
+.brand-link small { color: var(--muted); font-weight: 600; }
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr); align-items: center; gap: clamp(32px, 7vw, 96px); min-height: 520px; }
+.landing-hero h1 { max-width: 760px; font-size: clamp(2.4rem, 6vw, 5rem); line-height: .98; letter-spacing: -.055em; }
+.landing-hero p { max-width: 650px; font-size: 1.15rem; color: var(--muted); }
+.landing-actions { display: flex; align-items: center; gap: 18px; margin-top: 28px; }
+.landing-actions button { display: inline-flex; align-items: center; gap: 8px; }
+.landing-shape { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 18px; padding: 24px; box-shadow: var(--shadow-card); text-align: center; }
+.landing-steps, .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
+.landing-steps article, .landing-proof, .pricing-grid article, .auth-panel, .account-page { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 14px; padding: 24px; }
+.landing-steps svg { color: var(--accent); }
+.landing-proof { margin: 48px 0; }
+.public-footer { display: flex; flex-wrap: wrap; gap: 18px; padding: 24px 0; border-top: 1px solid var(--panel-border); }
+.public-footer a { color: var(--muted); }
+.legal-page { max-width: 760px; margin: 72px auto; line-height: 1.7; }
+.auth-panel, .account-page, .pricing-page { max-width: 760px; margin: 72px auto; }
+.auth-panel form { display: grid; gap: 16px; margin: 24px 0 12px; }
+.auth-panel label { display: grid; gap: 6px; }
+.auth-panel button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
+.pricing-page { max-width: 980px; }
+.pricing-grid { grid-template-columns: repeat(2, 1fr); }
+.pricing-grid ul { display: grid; gap: 10px; padding: 0; list-style: none; }
+.pricing-grid li { display: flex; align-items: center; gap: 8px; }
+.pricing-grid svg { width: 18px; color: var(--accent); }
+.pricing-featured { outline: 2px solid var(--accent); }
+.price { font-size: 1.8rem; font-weight: 800; }
+.pricing-actions { display: flex; gap: 8px; }
+.account-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: var(--text); border: 1px solid var(--panel-border); border-radius: 8px; }
+.cloud-migration { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1px solid var(--accent); border-radius: 10px; margin-bottom: 12px; }
+.cloud-migration p, .plan-status { margin: 0; }
+.plan-status { color: var(--muted); margin-bottom: 10px; }
+
+@media (max-width: 720px) {
+  .public-shell { padding: 16px; }
+  .public-header { align-items: flex-start; }
+  .public-header nav a:first-child { display: none; }
+  .landing-hero { grid-template-columns: 1fr; min-height: auto; }
+  .landing-hero h1 { font-size: 2.7rem; }
+  .landing-shape { max-width: 340px; width: 100%; margin: auto; }
+  .landing-steps, .pricing-grid { grid-template-columns: 1fr; }
+  .landing-actions { align-items: flex-start; flex-direction: column; }
+  .cloud-migration { align-items: flex-start; flex-direction: column; }
+  .metronome-popover { position: fixed; top: 72px; right: 16px; left: 16px; width: auto; max-height: calc(100dvh - 88px); overflow-y: auto; }
+}
+
 .score-import-page { display: grid; gap: var(--space-5); }
 .score-import-heading h2 { display: flex; align-items: center; gap: var(--space-2); }
 .score-import-heading p:last-child { margin: 0; color: var(--color-muted); }

@@ -117,16 +117,16 @@ tailscale serve reset
 
 ## Configuração de ambiente
 
-O editor principal continua local. A importação de partituras exige a API e as variáveis documentadas em `.env.example`.
+Sem Supabase configurado, o desenvolvimento usa uma conta local e mantém o editor no navegador. O modo de produção exige as variáveis documentadas em `.env.example` para Auth, API, Stripe e observabilidade.
 
 Variáveis com prefixo `VITE_` são incorporadas ao bundle e ficam públicas no navegador. Nunca armazene tokens, senhas ou outras credenciais nelas.
 
 ## Arquitetura e persistência
 
-- React e Vite compõem a interface; a importação usa uma API Fastify separada.
+- React e Vite compõem a interface; contas, sequências e cobrança usam uma API Fastify separada.
 - Componentes visuais ficam em `src/components` e páginas em `src/pages`.
 - Regras determinísticas de acordes e braço ficam em `src/domain` e módulos de domínio relacionados em `src/`.
-- Sequências existentes continuam no `localStorage`. Rascunhos de partitura usam PostgreSQL e storage privado, sempre atrás da API autenticada.
+- PostgreSQL é a fonte de verdade para sequências autenticadas. O `localStorage` permanece como cópia recuperável e é migrado uma única vez após o primeiro login.
 - A base de acordes vem de uma dependência fixada por commit.
 
 ## Testes e acessibilidade
@@ -160,6 +160,23 @@ A interface usa controles semânticos, rótulos acessíveis e fluxos de teclado.
 
 ## Publicação
 
+### SaaS de produção
+
+A topologia recomendada usa Cloudflare Pages para o frontend, Fly.io para a API e Supabase para Auth/PostgreSQL. Stripe fornece Checkout, Portal e webhooks. O worker Audiveris fica desabilitado no primeiro lançamento para não afetar custo e confiabilidade do fluxo Formas → Sequências → Prática.
+
+1. Crie projetos Supabase separados para staging e produção e aplique `apps/api/migrations`.
+2. Configure magic link, Google OAuth e os redirects oficiais.
+3. Crie os preços mensal e anual no Stripe e configure o webhook `/v1/webhooks/stripe`.
+4. Configure no Fly os secrets de banco, Supabase, Stripe, Sentry e OTLP.
+5. Configure os environments `staging` e `production` no GitHub, com aprovação obrigatória para produção.
+6. Execute manualmente o workflow `Production`, valide staging e promova o mesmo commit.
+
+O deploy público usa `VITE_ENABLE_SCORE_IMPORTS=false`. O healthcheck da API é `/api/ready`; rollback, SLOs e resposta a incidentes estão em [arquitetura de produção](docs/production-architecture.md).
+
+Variáveis `VITE_` são públicas. `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` e tokens de observabilidade pertencem somente à API ou ao GitHub Actions.
+
+### GitHub Pages legado
+
 O workflow de GitHub Pages valida lint, tipos, testes e build antes de publicar `dist/` em:
 
 https://rezendehugo.github.io/cavaquinho-lab/
@@ -177,8 +194,8 @@ para topologia, comandos, healthchecks e requisitos de segurança.
 
 ## Limitações e roadmap
 
-- Os dados ficam restritos ao navegador e podem ser apagados pelo usuário.
-- O backend de importação está em fase inicial: MusicXML funciona localmente; Supabase, OMR e publicação da API ainda exigem configuração de infraestrutura.
+- Sem Supabase configurado, os dados continuam restritos ao navegador.
+- PDF/OMR permanece beta e fora do SLO do produto principal; produção começa com essa interface desabilitada.
 - O typecheck é uma baseline incremental para JS/JSX; `checkJs` estrito será habilitado por módulo.
 - Persistência versionada, reordenação acessível por teclado, testes axe e Playwright estão planejados.
 

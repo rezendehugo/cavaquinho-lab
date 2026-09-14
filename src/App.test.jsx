@@ -31,16 +31,16 @@ const createDataTransfer = () => {
 };
 
 describe('Cavaquinho Lab', () => {
-  test('abre Formas como experiência principal', async () => {
+  test('abre a apresentação pública como experiência principal', async () => {
     renderAt('/');
-    await waitFor(() => expect(window.location.pathname).toBe('/shapes'));
-    expect(screen.getByRole('link', { name: 'Formas' })).toHaveClass('active');
-    expect(screen.getByRole('heading', { name: 'Formas de acorde' })).toBeInTheDocument();
+    await waitFor(() => expect(window.location.pathname).toBe('/'));
+    expect(screen.getByRole('heading', { name: /formas que estavam no PDF/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'C maior no cavaquinho' })).toBeInTheDocument();
   });
 
   test('mostra Formas, Sequências, Braço e Prática na navegação', () => {
     renderAt();
-    expect(getRoutes().map(route => route.label)).toEqual(['Formas', 'Sequências', 'Braço', 'Prática', 'Importar']);
+    expect(getRoutes().filter(route => route.primary !== false).map(route => route.label)).toEqual(['Formas', 'Sequências', 'Braço', 'Prática']);
     expect(screen.getByRole('link', { name: 'Formas' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sequências' })).toHaveClass('active');
     expect(screen.getByRole('link', { name: 'Braço' })).toBeInTheDocument();

@@ -7,7 +7,7 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS || '')
   .filter(Boolean);
 
 export default defineConfig({
-  base: '/cavaquinho-lab/',
+  base: process.env.VITE_BASE_PATH || '/cavaquinho-lab/',
   plugins: [react()],
   server: {
     allowedHosts

@@ -4,6 +4,7 @@ import SequencePracticePanel from '../components/SequencePracticePanel';
 import FreeSoloPracticePanel from '../components/FreeSoloPracticePanel';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import ScoreImportPage from './ScoreImportPage';
+import { scoreImportsEnabled } from '../config';
 
 export default function PracticePage({ initialMode = 'scale' }) {
   const metronome = useSharedMetronome();
@@ -23,8 +24,8 @@ export default function PracticePage({ initialMode = 'scale' }) {
       <button type="button" role="tab" aria-selected={mode === 'scale'} onClick={() => selectMode('scale')}>Escala</button>
       <button type="button" role="tab" aria-selected={mode === 'solo'} onClick={() => selectMode('solo')}>Solo livre</button>
       <button type="button" role="tab" aria-selected={mode === 'sequence'} onClick={() => selectMode('sequence')}>Sequência</button>
-      <button type="button" role="tab" aria-selected={mode === 'score'} onClick={() => selectMode('score')}>Partitura</button>
+      {scoreImportsEnabled ? <button type="button" role="tab" aria-selected={mode === 'score'} onClick={() => selectMode('score')}>Partitura</button> : null}
     </div>
-    {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' ? <SequencePracticePanel key="sequence" /> : <ScoreImportPage embedded onOpenPractice={openCreatedPractice} />}
+    {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' || !scoreImportsEnabled ? <SequencePracticePanel key="sequence" /> : <ScoreImportPage embedded onOpenPractice={openCreatedPractice} />}
   </section>;
 }

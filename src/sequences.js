@@ -11,15 +11,15 @@ export const defaultSequences = [
 const createId = (prefix) => prefix + '-' + (globalThis.crypto?.randomUUID?.() || Date.now() + '-' + Math.random().toString(36).slice(2));
 
 export const createSequenceStep = (index) => ({
-  id: index === undefined ? createId('step') : 'step-' + index,
+  id: index === undefined && globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : index === undefined ? createId('step') : 'step-' + index,
   key: 'C',
   suffix: 'major',
   positionIndex: null,
   practiceBeats: 4
 });
 
-export const createSequence = (index = Date.now()) => ({
-  id: 'sequence-' + index,
+export const createSequence = (index) => ({
+  id: index === undefined && globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : 'sequence-' + index,
   title: 'Sequência',
   steps: [],
   practiceBpm: 60,
