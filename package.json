@@ -62,7 +62,7 @@
     "fastify-raw-body": "^5.0.0",
     "jose": "^6.2.12",
     "jspdf": "^4.2.1",
-    "lucide-react": "^1.45.0",
+    "lucide-react": "^1.46.0",
     "opensheetmusicdisplay": "^2.1.2",
     "postgres": "^3.4.9",
     "prop-types": "^15.8.1",
@@ -70,7 +70,7 @@
     "react-dom": "^19.3.0",
     "stripe": "^22.6.2",
     "svg2pdf.js": "^2.8.1",
-    "zod": "^4.6.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
