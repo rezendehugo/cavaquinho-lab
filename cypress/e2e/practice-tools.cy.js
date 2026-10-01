@@ -180,7 +180,7 @@ describe('ferramentas da sessão de prática', () => {
 
   it('explica campo harmônico, função, substituições e movimento das formas', () => {
     cy.get('[aria-label="Adicionar acorde"]').click();
-    cy.contains('summary', 'Entender e praticar esta sequência').click();
+    cy.contains('summary', 'Aprofundar a leitura harmônica').click();
     cy.get('[aria-label="Estudo da sequência"]')
       .should('contain.text', 'Campo harmônico:')
       .and('contain.text', 'Função provável:')

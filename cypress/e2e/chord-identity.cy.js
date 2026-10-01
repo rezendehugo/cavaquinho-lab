@@ -25,19 +25,25 @@ describe('nome e sufixo dos acordes', () => {
       const card = control.closest('.lab-card');
       const root = control.querySelector('.chord-identity-root input');
       const suffix = control.querySelector('.chord-identity-suffix input');
+      const suffixPart = control.querySelector('.chord-identity-suffix');
+      const previousSuffix = suffixPart.querySelector('.chord-identity-arrow--previous');
+      const nextSuffix = suffixPart.querySelector('.chord-identity-arrow--next');
       const controlBox = control.getBoundingClientRect();
       const cardBox = card.getBoundingClientRect();
       const rootBox = root.getBoundingClientRect();
       const suffixBox = suffix.getBoundingClientRect();
 
       expect(Math.abs((controlBox.left + controlBox.right) / 2 - (cardBox.left + cardBox.right) / 2), 'símbolo centralizado').to.be.lessThan(1);
-      expect(suffixBox.left - rootBox.right, 'espaço entre nota e sufixo').to.be.within(-1, 2);
+      expect(suffixPart.getBoundingClientRect().left - rootBox.right, 'controles de nota e sufixo próximos').to.be.within(0, 8);
+      expect(previousSuffix.getBoundingClientRect().right, 'seta anterior não cobre o sufixo').to.be.at.most(suffixBox.left);
+      expect(nextSuffix.getBoundingClientRect().left, 'seta seguinte não cobre o sufixo').to.be.at.least(suffixBox.right);
+      expect(suffixBox.width, 'sufixo editável legível').to.be.at.least(42);
       expect(root.scrollWidth, 'nota sem recorte').to.be.at.most(root.clientWidth + 1);
       expect(suffix.scrollWidth, 'sufixo sem recorte').to.be.at.most(suffix.clientWidth + 1);
     });
   }
 
-  it('mantém nota e sufixo unidos e centralizados no desktop', () => {
+  it('mantém os controles de nota e sufixo próximos e centralizados no desktop', () => {
     verifyChordAlignment();
 
     cy.screenshot('chord-name-alignment');
@@ -49,8 +55,9 @@ describe('nome e sufixo dos acordes', () => {
     cy.screenshot('chord-name-alignment-mobile');
   });
 
-  it('mantém as setas ocultas até o campo receber foco', () => {
-    cy.get('.chord-identity-arrow').should('have.css', 'pointer-events', 'none');
+  it('revela as setas da nota ao focar e mantém as do sufixo acessíveis', () => {
+    cy.get('.chord-identity-root .chord-identity-arrow').should('have.css', 'pointer-events', 'none');
+    cy.get('.chord-identity-suffix .chord-identity-arrow').should('be.visible').and('have.css', 'pointer-events', 'auto');
     cy.get('[aria-label="Nota do acorde 1"]').focus();
     cy.get('.chord-identity-root .chord-identity-arrow').should('have.css', 'pointer-events', 'auto');
   });
