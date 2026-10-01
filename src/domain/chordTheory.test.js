@@ -1,4 +1,4 @@
-import { analyzeChordVoicing, getChordFormulaLegend, getChordPitchClasses, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
+import { analyzeChordVoicing, compareChordShapes, getChordFormulaLegend, getChordPitchClasses, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
 
 describe('teoria aplicada às formas', () => {
   test('reconhece equivalências exatas entre tétrades', () => {
@@ -89,4 +89,34 @@ describe('teoria aplicada às formas', () => {
       expect.objectContaining({ note: 'Bb', degreeLabel: '♭7', description: 'sétima menor' })
     ]);
   });
+
+  test('soletra os graus pelo contexto do acorde, inclusive sus2 e dim7', () => {
+    expect(getChordToneDetail('E', '7', 68)).toMatchObject({ note: 'G#', degreeLabel: '3' });
+    expect(getChordToneDetail('D', '7', 66)).toMatchObject({ note: 'F#', degreeLabel: '3' });
+    expect(getChordToneDetail('C', 'sus2', 62)).toMatchObject({ note: 'D', degreeLabel: '2', description: 'segunda maior' });
+    expect(getChordToneDetail('C', 'dim7', 69)).toMatchObject({ note: 'Bbb', degreeLabel: '♭♭7', description: 'sétima diminuta' });
+  });
+
+  test('compara a distância real de cada corda usando a pestana de referência', () => {
+    const comparison = compareChordShapes(
+      { key: 'C', suffix: 'major' },
+      { frets: [0, 1, 2, -1], baseFret: 1, midi: [60, 64, 67] },
+      { frets: [0, 2, 1, 3], baseFret: 5, midi: [60, 67, 64, 72] }
+    );
+    expect(comparison.added).toEqual([]);
+    expect(comparison.removed).toEqual([]);
+    expect(comparison.strings.map(item => item.description)).toEqual([
+      'Corda 1: permanece no traste 0.',
+      'Corda 2: sobe 5 trastes (1 → 6).',
+      'Corda 3: sobe 3 trastes (2 → 5).',
+      'Corda 4: entra no traste 7.'
+    ]);
+  });
+});
+
+ test('preserva os acidentes da fundamental ao soletrar notas do acorde', () => {
+  expect(getChordToneDetail('Eb', 'major', 67).note).toBe('G');
+  expect(getChordToneDetail('Bb', '7', 68).note).toBe('Ab');
+  expect(getChordToneDetail('E', '7', 68).note).toBe('G#');
+  expect(getChordToneDetail('Db', 'major', 65).note).toBe('F');
 });

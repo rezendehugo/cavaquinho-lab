@@ -1,9 +1,10 @@
-import { Download, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatSequenceChord } from '../chordDisplay';
 import { cavaquinhoChords } from '../domain/chords';
 import { buildSequencePractice, getSequenceBeatState } from '../domain/sequencePractice';
-import { buildChordMarkdown, downloadMarkdown } from '../domain/practiceExports';
+import SequencePdfExport from './SequencePdfExport';
+import { loadSequenceStudy } from '../hooks/useSequenceStudy';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import BpmInput from '../features/metronome/BpmInput';
 import { loadActiveSequenceId, loadSequences, sequencesStorageKey, writeStorage } from '../storage';
@@ -129,7 +130,7 @@ export default function SequencePracticePanel() {
         <p className="path-progress">{instruction}</p>
         <p className="visually-hidden" aria-live="polite">{instruction}</p>
         {current ? <p className="sequence-next-chord">Próximo: {formatSequenceChord(next)}</p> : null}
-        {sequence?.steps.length ? <button type="button" data-ui-text-reason="workflow" className="practice-export-button" onClick={() => downloadMarkdown(buildChordMarkdown(sequence))}><Download size={15} /> Exportar acordes</button> : null}
+        {sequence?.steps.length ? <SequencePdfExport key={sequence.id} sequence={{ ...sequence, loopStartIndex: 0, steps: sequence.steps.map(step => ({ ...step, practiceBeats: beatsPerChord })) }} study={loadSequenceStudy(sequence.id)} resolvedSteps={resolved.steps} bpm={metronome.bpm} /> : null}
       </div>
     </div>
     <div className="scale-visual-legend" aria-label="Legenda da sequência"><span className="legend-current">Acorde atual</span><span className="legend-next">Próximo acorde</span><span className="legend-played">Acorde anterior</span></div>

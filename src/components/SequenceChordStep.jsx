@@ -12,9 +12,8 @@ const interactiveSelector = 'button, input, select, textarea, a, [role="button"]
 
 const isInteractiveDragSource = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
 
-function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, setShape, availableSuffixes, setChordIdentity, setChordSuffix }) {
+function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, setShape, availableSuffixes, setChordIdentity, setChordSuffix, selected, onSelect, onSelectAdjacent, shapePickerOpen, onShapePickerChange }) {
   const [dragState, setDragState] = useState('idle');
-  const [shapePickerOpen, setShapePickerOpen] = useState(false);
   const chordName = formatSequenceChord(step);
   const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
 
@@ -50,11 +49,28 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
   };
 
   const handleDragEnd = () => setDragState('idle');
+  const handleCardKeyDown = event => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      onSelectAdjacent(index, event.key === 'ArrowLeft' ? -1 : 1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      event.currentTarget.querySelector('.chord-identity-root input')?.focus();
+    } else if (event.key === 'f' || event.key === 'F') {
+      event.preventDefault();
+      onShapePickerChange(index);
+    } else if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      removeStep(index);
+    }
+  };
 
   return (
     <article
       className={cardClasses}
       data-step-index={index}
+      tabIndex={selected ? 0 : -1}
       style={{ '--swatch': color }}
       draggable
       onDragStart={handleDragStart}
@@ -62,6 +78,8 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onDragEnd={handleDragEnd}
+      onFocusCapture={() => onSelect(index)}
+      onKeyDown={handleCardKeyDown}
     >
       <header className="lab-card-header">
         <div>
@@ -117,7 +135,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
               onPrevious: () => cycleShape(index, -1),
               onNext: () => cycleShape(index, 1)
             }}
-          /><div className="shape-selection-summary"><button type="button" data-ui-text-reason="domain-choice" onClick={() => setShapePickerOpen(true)}>Escolher forma</button><span>{Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} selectedIndex={step.positionIndex} onSelect={positionIndex => setShape(index, positionIndex)} onClose={() => setShapePickerOpen(false)} /></>
+          /><div className="shape-selection-summary"><button type="button" data-ui-text-reason="domain-choice" onClick={() => onShapePickerChange(index)}>Escolher forma</button><span>{Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} selectedIndex={step.positionIndex} onSelect={positionIndex => setShape(index, positionIndex)} onClose={() => onShapePickerChange(null)} /></>
         ) : null}
       </div>
     </article>

@@ -10,11 +10,20 @@ function installFakeAudioContext(window) {
 }
 
 describe('Braço de referência e prática regional', () => {
-  it('mantém o Braço simples com apenas o filtro de nota', () => {
+  it('destaca notas e escalas sem abrir prática', () => {
     cy.visit('/fretboard');
+    cy.contains('button', 'Notas').should('have.attr', 'aria-pressed', 'true');
     cy.get('[aria-label="Destacar nota"]').select('C');
     cy.get('.fretboard-note.highlighted').its('length').should('be.greaterThan', 0);
-    cy.get('[aria-label="Tônica da escala"]').should('not.exist');
+    cy.contains('button', 'Escalas').click();
+    cy.get('[aria-label="Tônica da escala no braço"]').should('have.value', 'C');
+    cy.get('[aria-label="Tipo de escala no braço"]').should('have.value', 'major');
+    cy.contains('C maior · C D E F G A B').should('be.visible');
+    cy.get('.fretboard-note.in-scale').its('length').should('be.greaterThan', 20);
+    cy.get('.fretboard-note.scale-root').its('length').should('be.greaterThan', 0);
+    cy.get('[aria-label="Tônica da escala no braço"]').select('D');
+    cy.get('[aria-label="Tipo de escala no braço"]').select('Pentatônica menor');
+    cy.contains('D pentatônica menor · D F G A C').should('be.visible');
     cy.contains('button', 'Praticar escala').should('not.exist');
     cy.get('.fretboard-neck').then(($neck) => {
       const box = $neck[0].getBoundingClientRect();

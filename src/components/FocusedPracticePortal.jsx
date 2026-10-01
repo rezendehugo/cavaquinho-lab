@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export default function FocusedPracticePortal({ ariaLabel, className, onEscape, children }) {
+export default function FocusedPracticePortal({ ariaLabel, className, onEscape, onKeyDown, children }) {
   useEffect(() => {
     const root = document.getElementById('root') || document.body.firstElementChild;
     root?.setAttribute('inert', '');
@@ -24,5 +24,5 @@ export default function FocusedPracticePortal({ ariaLabel, className, onEscape, 
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onEscape]);
 
-  return createPortal(<div className={className} role="dialog" aria-modal="true" aria-label={ariaLabel}>{children}</div>, document.body);
+  return createPortal(<div className={className} role="dialog" aria-modal="true" aria-label={ariaLabel} tabIndex={-1} onKeyDown={onKeyDown}>{children}</div>, document.body);
 }

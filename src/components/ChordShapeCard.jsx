@@ -66,18 +66,16 @@ function ChordShapeCard({
         </>
       ) : null}
       <div className="chord-shape-diagram-area">
-        {navigation ? (
-          <ShapeNavigationControls
-            previousLabel={navigation.previousLabel}
-            nextLabel={navigation.nextLabel}
-            onPrevious={navigation.onPrevious}
-            onNext={navigation.onNext}
-            previousDisabled={navigation.previousDisabled}
-            nextDisabled={navigation.nextDisabled}
-          />
-        ) : null}
         <ChordDiagram position={position} name={chordName} chordKey={chordKey} chordSuffix={chordSuffix} mode={mode} />
       </div>
+      {navigation ? <div className="shape-card-navigation"><ShapeNavigationControls
+        previousLabel={navigation.previousLabel}
+        nextLabel={navigation.nextLabel}
+        onPrevious={navigation.onPrevious}
+        onNext={navigation.onNext}
+        previousDisabled={navigation.previousDisabled}
+        nextDisabled={navigation.nextDisabled}
+      /></div> : null}
       {showBottomIndex ? (
         <div className="chord-shape-footer">
           <ShapeIndexBadge index={shapeIndex} total={shapeTotal} />

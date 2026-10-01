@@ -31,7 +31,15 @@ export default function SequencePracticeOverlay({ sequence, resolvedSteps, filmS
   const currentStep = sequence.steps[filmState.cardIndex];
   const progress = currentStep ? ((filmState.cardIndex + 1) / sequence.steps.length) * 100 : 0;
 
-  return <FocusedPracticePortal className="sequence-practice-overlay" ariaLabel="Prática imersiva de sequência" onEscape={() => durationsOpen ? onToggleDurations(false) : onExit()}>
+  const handleKeyboardControl = event => {
+    if (event.target instanceof Element && event.target.closest('input, select, textarea')) return;
+    if (event.key === ' ' && event.target instanceof Element && event.target.closest('button, a')) return;
+    if (event.key === ' ') { event.preventDefault(); onTogglePlay(); }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); onPrevious(); }
+    if (event.key === 'ArrowRight') { event.preventDefault(); onNext(); }
+  };
+
+  return <FocusedPracticePortal className="sequence-practice-overlay" ariaLabel="Prática imersiva de sequência" onEscape={() => durationsOpen ? onToggleDurations(false) : onExit()} onKeyDown={handleKeyboardControl}>
     <header className="sequence-practice-overlay-header">
       <div>
         <p className="eyebrow">Filme de acordes</p>

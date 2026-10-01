@@ -16,6 +16,7 @@ import LegalPage from './pages/LegalPage';
 import { useAuth } from './auth/AuthContext';
 import { useCloudSequences } from './hooks/useCloudSequences';
 import { LogIn, UserRound } from 'lucide-react';
+import KeyboardHelpDialog from './components/KeyboardHelpDialog';
 
 const normalizeBasePath = (basePath) => {
   if (!basePath || basePath === '/') return '';
@@ -72,6 +73,9 @@ function NavTabs({ route, routes }) {
   );
 }
 
+const marketingRoutes = ['/', '/login', '/pricing', '/terms', '/privacy', '/cancellation', '/contact'];
+const publicWorkspaceRoutes = ['/shapes', '/sequences', '/fretboard', '/practice', '/imports'];
+
 function CloudSequenceLab() {
   const cloud = useCloudSequences();
   if (cloud.status === 'loading') return <section className="panel"><p>Carregando suas sequências…</p></section>;
@@ -86,6 +90,7 @@ function App() {
   const routes = useMemo(() => getRoutes(), []);
   const auth = useAuth();
   const [route, setRoute] = useState(() => normalizeRoute(getRouteFromLocation(), routes));
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   useEffect(() => {
     const syncRoute = () => {
@@ -98,8 +103,29 @@ function App() {
     return () => window.removeEventListener('popstate', syncRoute);
   }, [routes]);
 
-  const publicRoute = ['/', '/login', '/pricing', '/terms', '/privacy', '/cancellation', '/contact'].includes(route);
-  const protectedRoute = !publicRoute;
+  useEffect(() => {
+    const isEditable = target => target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
+    const sendCommand = command => window.dispatchEvent(new CustomEvent('cavaquinho:command', { detail: { command } }));
+    const handleKeyDown = event => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || isEditable(event.target)) return;
+      if (!publicWorkspaceRoutes.includes(route)) return;
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      if (event.key === '?') { event.preventDefault(); setShortcutsOpen(true); return; }
+      const key = event.key.toLowerCase();
+      const routesByKey = { s: '/shapes', q: '/sequences', b: '/fretboard', p: '/practice' };
+      if (routesByKey[key]) { event.preventDefault(); pushBrowserRoute(routesByKey[key]); return; }
+      if (event.key === ' ' && event.target instanceof Element && event.target.closest('button, a, [role="button"]')) return;
+      if (route === '/sequences' && key === 'n') { event.preventDefault(); sendCommand('new-chord'); }
+      if (route === '/sequences' && key === 'f') { event.preventDefault(); sendCommand('choose-shape'); }
+      if ((route === '/sequences' || route === '/practice') && event.key === ' ') { event.preventDefault(); sendCommand('toggle-practice'); }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [route]);
+
+  const publicRoute = marketingRoutes.includes(route);
+  const publicWorkspaceRoute = publicWorkspaceRoutes.includes(route);
+  const protectedRoute = !publicRoute && !publicWorkspaceRoute;
 
   useEffect(() => {
     if (!auth.loading && protectedRoute && !auth.user) pushBrowserRoute('/login');
@@ -116,7 +142,7 @@ function App() {
     : route === '/fretboard' ? <FretboardPage />
       : route === '/practice' ? <PracticePage />
         : route === '/imports' ? <PracticePage initialMode="score" />
-      : auth.cloudEnabled ? <CloudSequenceLab /> : <SequenceLab />;
+      : auth.cloudEnabled && auth.user ? <CloudSequenceLab /> : <SequenceLab />;
 
   if (protectedRoute && !auth.user) return <main className="public-shell"><PublicHeader authenticated={false} /><LoginPage /></main>;
 
@@ -139,6 +165,7 @@ function App() {
         <NavTabs route={route} routes={routes} />
       </header>
       <ErrorBoundary>{page}</ErrorBoundary>
+      <KeyboardHelpDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </main></MetronomeProvider>
   );
 }

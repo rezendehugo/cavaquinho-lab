@@ -59,9 +59,9 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByRole('link', { name: 'Prática' })).toHaveClass('active');
   });
 
-  test('abre o workspace privado de importação sem acessar banco diretamente', () => {
+  test('abre o workspace privado de importação sem acessar banco diretamente', async () => {
     renderAt('/imports');
-    expect(screen.getByRole('heading', { name: 'Partitura para prática' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Partitura para prática' })).toBeInTheDocument();
     expect(screen.getByLabelText('Escolher PDF, MusicXML ou MXL')).toHaveAttribute('accept', expect.stringContaining('.pdf'));
     expect(screen.getByText(/arquivo privado/i)).toBeInTheDocument();
   });
@@ -80,7 +80,7 @@ describe('Cavaquinho Lab', () => {
   test('abre o Lab sem áudio, movimento ou títulos separados por painel', () => {
     renderAt();
     expect(screen.getByText('Teoria')).toBeInTheDocument();
-    expect(screen.getByText('Exercícios')).toBeInTheDocument();
+    expect(screen.getByText('Escute antes de conferir')).toBeInTheDocument();
     expect(screen.getByText('Harmonia em Cores')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sessão de prática' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Metrônomo' })).toBeInTheDocument();
@@ -489,14 +489,13 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Função provável:');
     expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Substituições pela função:');
     expect(screen.getByLabelText('Estudo da sequência')).toHaveTextContent('Movimento da forma:');
-    expect(screen.getByText('Entender e praticar esta sequência').closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByText('Aprofundar a leitura harmônica').closest('details')).not.toHaveAttribute('open');
   });
 
   test('renderiza a página Braço com afinação e primeiras casas', () => {
     renderAt('/fretboard');
     expect(screen.getByRole('link', { name: 'Braço' })).toHaveClass('active');
     expect(screen.getByRole('heading', { name: 'Braço e notas no cavaquinho' })).toBeInTheDocument();
-    expect(screen.getByText('Localize uma nota em todas as suas posições no braço.')).toBeInTheDocument();
     expect(screen.getByLabelText('Afinação do cavaquinho: D G B D')).toHaveTextContent('DGBD');
     expect(screen.queryByText('soltas')).not.toBeInTheDocument();
     expect(document.querySelector('.fretboard-open-notes')).toBe(null);
@@ -504,8 +503,24 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Mapa de notas do braço do cavaquinho em D G B D')).toHaveTextContent('DGBD');
     expect(screen.getByLabelText('Mapa de notas do braço do cavaquinho em D G B D')).toHaveTextContent('Eb');
     expect(document.querySelectorAll('.fretboard-note[tabindex]')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Notas' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Escalas' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.change(screen.getByLabelText('Destacar nota'), { target: { value: 'C' } });
     expect(document.querySelectorAll('.fretboard-note.highlighted').length).toBeGreaterThan(0);
+  });
+
+  test('destaca escalas na página Braço sem ativar prática', () => {
+    renderAt('/fretboard');
+    fireEvent.click(screen.getByRole('button', { name: 'Escalas' }));
+    expect(screen.getByLabelText('Tônica da escala no braço')).toHaveValue('C');
+    expect(screen.getByLabelText('Tipo de escala no braço')).toHaveValue('major');
+    expect(screen.getByText('C maior · C D E F G A B')).toBeInTheDocument();
+    expect(document.querySelectorAll('.fretboard-note.in-scale').length).toBeGreaterThan(20);
+    expect(document.querySelectorAll('.fretboard-note.scale-root').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Praticar escala' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Tônica da escala no braço'), { target: { value: 'D' } });
+    fireEvent.change(screen.getByLabelText('Tipo de escala no braço'), { target: { value: 'minorPentatonic' } });
+    expect(screen.getByText('D pentatônica menor · D F G A C')).toBeInTheDocument();
   });
 
   test('abre a escala sem rota automática e deixa os graus selecionáveis', () => {

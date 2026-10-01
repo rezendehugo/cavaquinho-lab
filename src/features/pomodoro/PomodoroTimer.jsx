@@ -32,17 +32,20 @@ function PomodoroTimer() {
   const timer = usePomodoroTimer();
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
+  const triggerRef = useRef(null);
+  const closeRef = useRef(null);
   const isRunning = timer.status === 'running';
   const primaryLabel = isRunning ? 'Pausar' : timer.status === 'paused' ? 'Retomar' : 'Iniciar';
   const isActive = timer.status !== 'idle';
 
   useEffect(() => {
     if (!isOpen) return undefined;
+    closeRef.current?.focus();
     const handlePointer = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false);
     };
     const handleKey = (event) => {
-      if (event.key === 'Escape') setIsOpen(false);
+      if (event.key === 'Escape') close();
     };
     document.addEventListener('mousedown', handlePointer);
     document.addEventListener('keydown', handleKey);
@@ -51,22 +54,26 @@ function PomodoroTimer() {
       document.removeEventListener('keydown', handleKey);
     };
   }, [isOpen]);
+  const close = ({ returnFocus = true } = {}) => {
+    setIsOpen(false);
+    if (returnFocus) requestAnimationFrame(() => triggerRef.current?.focus());
+  };
 
   return (
     <div className="pomodoro-global" ref={wrapperRef}>
-      <button type="button" className={isActive ? 'pomodoro-trigger active' : 'pomodoro-trigger'} onClick={() => setIsOpen(current => !current)} aria-label="Sessão de prática" aria-expanded={isOpen} title="Sessão de prática">
+      <button ref={triggerRef} type="button" className={isActive ? 'pomodoro-trigger active' : 'pomodoro-trigger'} onClick={() => setIsOpen(current => !current)} aria-label="Sessão de prática" aria-controls="pomodoro-popover" aria-expanded={isOpen} title="Sessão de prática">
         <TomatoIcon />
         {isActive ? <span>{timer.timerText}</span> : null}
       </button>
 
       {isOpen ? (
-        <section className="pomodoro-popover" aria-label="Ciclos de prática">
+        <section id="pomodoro-popover" className="pomodoro-popover" aria-label="Ciclos de prática">
           <header className="pomodoro-popover-header">
             <div>
               <h2>Ciclos de prática</h2>
               <p>{phaseLabels[timer.phase]} · {timer.timerText}</p>
             </div>
-            <button type="button" className="icon-control-button" onClick={() => setIsOpen(false)} aria-label="Fechar temporizador" title="Fechar temporizador">
+            <button ref={closeRef} type="button" className="icon-control-button" onClick={() => close()} aria-label="Fechar temporizador" title="Fechar temporizador">
               <X aria-hidden="true" size={16} strokeWidth={2.1} />
             </button>
           </header>

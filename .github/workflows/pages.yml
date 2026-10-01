@@ -37,6 +37,8 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_ENABLE_SCORE_IMPORTS: 'false'
+          VITE_BASE_PATH: /cavaquinho-lab/
       - name: Preparar fallback de rotas
         run: cp dist/index.html dist/404.html
       - name: Preparar Pages

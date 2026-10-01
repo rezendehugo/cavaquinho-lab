@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatChordName, formatQualityOption, qualityLabels } from '../chordDisplay';
 import ChordLegendStrip from '../components/ChordLegendStrip';
 import ChordShapeCard from '../components/ChordShapeCard';
+import ShapeStudyPanel from '../components/ShapeStudyPanel';
 import { getAvailableSuffixes, cavaquinhoChords } from '../domain/chords';
 import { analyzeChordVoicing, getVoicingCompleteness } from '../domain/chordTheory';
 import { findChord } from '../progressionOptimizer';
@@ -20,6 +21,9 @@ function getVisibleStatuses(chord, key) {
 function ShapesPage() {
   const [key, setKey] = useState('C');
   const [suffix, setSuffix] = useState('major');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [comparisonIndex, setComparisonIndex] = useState(0);
+  const shapeGridRef = useRef(null);
   const suffixes = getAvailableSuffixes(key);
   const chord = findChord(cavaquinhoChords, key, suffix) || findChord(cavaquinhoChords, key, suffixes[0]);
   const visibleStatuses = getVisibleStatuses(chord, key);
@@ -27,6 +31,25 @@ function ShapesPage() {
   useEffect(() => {
     if (!suffixes.includes(suffix)) setSuffix(suffixes[0] || 'major');
   }, [key, suffix, suffixes]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+    setComparisonIndex(0);
+  }, [key, suffix]);
+
+  const selectShape = index => {
+    const nextIndex = (index + (chord?.positions.length || 1)) % (chord?.positions.length || 1);
+    setSelectedIndex(nextIndex);
+    setComparisonIndex(nextIndex);
+    requestAnimationFrame(() => shapeGridRef.current?.querySelector(`[data-shape-index="${nextIndex}"]`)?.focus());
+  };
+
+  const moveShapeFocus = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || !chord?.positions.length) return;
+    event.preventDefault();
+    const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? chord.positions.length - 1 : selectedIndex + (event.key === 'ArrowRight' ? 1 : -1);
+    selectShape(nextIndex);
+  };
 
   return (
     <section className="panel">
@@ -44,7 +67,7 @@ function ShapesPage() {
         <h3>{formatChordName(key, chord?.suffix || suffix)} · {chord?.positions.length || 0} formas</h3>
       </div>
       <ChordLegendStrip chordKey={key} chordSuffix={chord?.suffix || suffix} statuses={visibleStatuses} />
-      <div className="shape-grid wide">
+      <div ref={shapeGridRef} className="shape-grid wide" role="group" aria-label="Formas disponíveis" onKeyDown={moveShapeFocus}>
         {(chord?.positions || []).map((position, index) => (
           <ChordShapeCard
             key={index}
@@ -55,9 +78,21 @@ function ShapesPage() {
             shapeIndex={index}
             shapeTotal={chord.positions.length}
             voicingStatus={getVoicingCompleteness(analyzeChordVoicing({ key, suffix: chord.suffix }, position))}
+            className={selectedIndex === index ? 'is-selected' : ''}
+            actions={<button type="button" data-shape-index={index} tabIndex={selectedIndex === index ? 0 : -1} className="shape-study-button" aria-pressed={selectedIndex === index} onClick={() => { setSelectedIndex(index); setComparisonIndex(index); }}>Estudar</button>}
           />
         ))}
       </div>
+      <ShapeStudyPanel
+        chordKey={key}
+        chordSuffix={chord?.suffix || suffix}
+        reference={chord?.positions?.[selectedIndex]}
+        candidate={chord?.positions?.[comparisonIndex]}
+        referenceIndex={selectedIndex}
+        candidateIndex={comparisonIndex}
+        onCandidateChange={setComparisonIndex}
+        positions={chord?.positions || []}
+      />
     </section>
   );
 }

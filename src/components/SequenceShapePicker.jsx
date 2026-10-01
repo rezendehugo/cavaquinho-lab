@@ -1,12 +1,17 @@
+import { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { analyzeChordVoicing, getVoicingCompleteness } from '../domain/chordTheory';
 import ChordShapeCard from './ChordShapeCard';
+import useDialogFocus from '../hooks/useDialogFocus';
 
 export default function SequenceShapePicker({ open, step, chord, selectedIndex, onSelect, onClose }) {
+  const closeRef = useRef(null);
+  const dialogRef = useDialogFocus({ open, onClose, initialFocusRef: closeRef });
   if (!open || !chord) return null;
-  return <div className="shape-picker-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="shape-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={'shape-picker-title-' + step.id}>
-      <header><div><p className="eyebrow">Escolha da forma</p><h3 id={'shape-picker-title-' + step.id}>Formas de {step.displayKey || step.key}</h3></div><button type="button" className="icon-button" aria-label="Fechar formas" title="Fechar formas" onClick={onClose}><X size={18} aria-hidden="true" /></button></header>
+  return createPortal(<div className="shape-picker-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+    <section ref={dialogRef} tabIndex={-1} className="shape-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={'shape-picker-title-' + step.id}>
+      <header><div><p className="eyebrow">Escolha da forma</p><h3 id={'shape-picker-title-' + step.id}>Formas de {step.displayKey || step.key}</h3></div><button ref={closeRef} type="button" className="icon-button" aria-label="Fechar formas" title="Fechar formas" onClick={onClose}><X size={18} aria-hidden="true" /></button></header>
       <button type="button" data-ui-text-reason="domain-choice" className={'shape-auto-option ' + (selectedIndex === null ? 'selected' : '')} aria-pressed={selectedIndex === null} onClick={() => { onSelect(null); onClose(); }}><strong>Automática</strong><span>O sistema escolhe a menor movimentação entre acordes.</span></button>
       <div className="shape-picker-grid">
         {chord.positions.map((position, index) => {
@@ -17,5 +22,5 @@ export default function SequenceShapePicker({ open, step, chord, selectedIndex, 
         })}
       </div>
     </section>
-  </div>;
+  </div>, document.body);
 }

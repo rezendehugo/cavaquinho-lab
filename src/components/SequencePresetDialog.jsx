@@ -7,6 +7,7 @@ import { createPresetSequence, sequencePresetDefinitions, transposePreset } from
 import { findChord } from '../progressionOptimizer';
 import { chromaticKeys } from '../sequences';
 import BpmInput from '../features/metronome/BpmInput';
+import useDialogFocus from '../hooks/useDialogFocus';
 
 export default function SequencePresetDialog({ open, initialBpm, onClose, onCreate }) {
   const [presetId, setPresetId] = useState('majorSquare');
@@ -14,6 +15,7 @@ export default function SequencePresetDialog({ open, initialBpm, onClose, onCrea
   const [bpm, setBpm] = useState(initialBpm);
   const [beats, setBeats] = useState(4);
   const closeRef = useRef(null);
+  const dialogRef = useDialogFocus({ open, onClose, initialFocusRef: closeRef });
   const definition = sequencePresetDefinitions.find(item => item.id === presetId);
   const chords = useMemo(() => transposePreset(presetId, tonic), [presetId, tonic]);
   const missing = useMemo(() => chords.filter(step => !findChord(cavaquinhoChords, step.key, step.suffix)), [chords]);
@@ -21,11 +23,7 @@ export default function SequencePresetDialog({ open, initialBpm, onClose, onCrea
   useEffect(() => {
     if (!open) return;
     setBpm(initialBpm);
-    requestAnimationFrame(() => closeRef.current?.focus());
-    const handleEscape = (event) => event.key === 'Escape' && onClose();
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [initialBpm, onClose, open]);
+  }, [initialBpm, open]);
 
   if (!open) return null;
   const create = () => onCreate(createPresetSequence({
@@ -37,7 +35,7 @@ export default function SequencePresetDialog({ open, initialBpm, onClose, onCrea
   }));
 
   return createPortal(<div className="sequence-preset-backdrop" onMouseDown={event => event.target === event.currentTarget && onClose()}>
-    <section className="sequence-preset-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-dialog-title">
+    <section ref={dialogRef} tabIndex={-1} className="sequence-preset-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-dialog-title">
       <header>
         <div><p className="eyebrow">Biblioteca local</p><h2 id="preset-dialog-title">Exercícios prontos</h2></div>
         <button ref={closeRef} type="button" className="icon-button" onClick={onClose} aria-label="Fechar exercícios prontos" title="Fechar exercícios prontos"><X aria-hidden="true" size={18} /></button>
