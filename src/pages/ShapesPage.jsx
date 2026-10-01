@@ -65,6 +65,7 @@ function ShapesPage() {
       </div>
       <div className="shape-results-heading" aria-live="polite">
         <h3>{formatChordName(key, chord?.suffix || suffix)} · {chord?.positions.length || 0} formas</h3>
+        <p className="shape-study-context">Em estudo: forma {selectedIndex + 1}. Compare as demais apenas quando quiser outra região do braço ou uma troca mais confortável.</p>
       </div>
       <ChordLegendStrip chordKey={key} chordSuffix={chord?.suffix || suffix} statuses={visibleStatuses} />
       <div ref={shapeGridRef} className="shape-grid wide" role="group" aria-label="Formas disponíveis" onKeyDown={moveShapeFocus}>

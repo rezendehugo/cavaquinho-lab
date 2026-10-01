@@ -71,7 +71,7 @@ function SequenceHeader({ sequence, setTitle, colorMode, setColorMode }) {
 
 function EmptySequence({ addStep }) {
   return (
-    <div className="empty-sequence">
+    <div className="empty-sequence"><p>Comece com o primeiro acorde. Depois você poderá escolher formas, praticar e levar seu mapa em PDF.</p>
       <AddChordSlot onClick={addStep} />
     </div>
   );
@@ -411,17 +411,17 @@ function SequenceLab({ cloud = null }) {
         {cloud?.error ? <p className="storage-status" role="status">Sincronização pendente · {cloud.error}</p> : null}
         <SequenceManager sequences={sequences} activeSequenceId={activeSequence.id} setActiveSequenceId={selectActiveSequence} createNewSequence={createNewSequence} openPresets={() => setPresetDialogOpen(true)} deleteSequence={deleteSequence} />
         <StudyIntention study={journal.study} onChange={journal.update} />
-        <div className="sequence-map-heading"><SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} /><SequencePdfExport key={activeSequence.id} sequence={activeSequence} study={journal.study} resolvedSteps={sequenceShapes} bpm={metronome.bpm} /></div>
-        <p className="chord-editing-hint">Edite o acorde diretamente. Use ↑ e ↓ para navegar, Enter para confirmar, Esc para cancelar e ? para ver os atalhos.</p>
+        <div className="sequence-map-heading"><SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} />{activeSequence.steps.length ? <SequencePdfExport key={activeSequence.id} sequence={activeSequence} study={journal.study} resolvedSteps={sequenceShapes} bpm={metronome.bpm} /> : null}</div>
+        {activeSequence.steps.length ? <><p className="chord-editing-hint">Edite o acorde diretamente. Use ↑ e ↓ para navegar, Enter para confirmar, Esc para cancelar e ? para ver os atalhos.</p>
         <div className="voicing-status-legend" aria-label="Legenda dos voicings">
           <span><i className="voicing-status-dot voicing-status-dot--complete" />Completo</span>
           <span><i className="voicing-status-dot voicing-status-dot--incomplete" />Omite notas</span>
           <span><i className="voicing-status-dot voicing-status-dot--rootless" />Sem raiz</span>
           <span><i className="voicing-status-dot voicing-status-dot--additional" />Notas adicionais</span>
-        </div>
+        </div></> : null}
         {activeSequence.steps.length ? <button type="button" data-ui-text-reason="domain-choice" className="automatic-shapes-button" onClick={useAutomaticShapes}>Usar formas automáticas</button> : null}
         <p className="storage-status" aria-live="polite">{storageError}</p>
-        <SequencePracticeBar sequence={activeSequence} metronome={metronome} canStart={activeSequence.steps.length > 0 && missingShapes.length === 0} status={practiceStatus} onBpmChange={changeSequenceBpm} onStart={startPractice} onOpenDurations={() => setDurationsOpen(true)} startButtonRef={practiceStartRef} />
+        {activeSequence.steps.length ? <SequencePracticeBar sequence={activeSequence} metronome={metronome} canStart={missingShapes.length === 0} status={practiceStatus} onBpmChange={changeSequenceBpm} onStart={startPractice} onOpenDurations={() => setDurationsOpen(true)} startButtonRef={practiceStartRef} /> : null}
         {missingShapes.length > 0 ? <p className="missing">Dados ausentes para {missingShapes.map(step => formatChordName(step.key, step.suffix)).join(', ')}.</p> : (
           activeSequence.steps.length === 0 ? <EmptySequence addStep={addStep} /> : (
             <div ref={cardRowRef} className="lab-card-row" aria-label="Acordes da sequência" onScroll={trackVisibleCard}>
@@ -462,7 +462,7 @@ function SequenceLab({ cloud = null }) {
         {pageCount > 1 ? <nav className="sequence-card-pagination" aria-label="Páginas de acordes"><button type="button" disabled={cardPage === 0} onClick={() => setCardPage(page => Math.max(0, page - 1))}>Anterior</button><span>Página {cardPage + 1} de {pageCount}</span><button type="button" disabled={cardPage >= pageCount - 1} onClick={() => setCardPage(page => Math.min(pageCount - 1, page + 1))}>Próxima</button></nav> : null}
         {activeSequence.steps.length > 1 ? <p className="mobile-card-position" aria-live="polite">{visibleCard + 1} de {activeSequence.steps.length}</p> : null}
       </section>
-      <StudyReflection study={journal.study} onChange={journal.update} onRecord={() => journal.record(metronome.bpm)} status={journal.status} exercises={exercises} disabled={!activeSequence.steps.length} />
+      {activeSequence.steps.length ? <StudyReflection study={journal.study} onChange={journal.update} onRecord={() => journal.record(metronome.bpm)} status={journal.status} exercises={exercises} disabled={false} /> : null}
       <LabSummary analysis={analysis} sequence={activeSequence} colorMode={colorMode} />
       <SequenceDurationPanel sequence={activeSequence} open={durationsOpen && !practiceOpen} onClose={() => setDurationsOpen(false)} onChange={changePracticeBeats} />
       {practiceOpen ? <SequencePracticeOverlay

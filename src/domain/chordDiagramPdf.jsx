@@ -10,6 +10,8 @@ export function createChordDiagramSvg(step) {
   host.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;--color-border:#bdc9c2;--color-text:#1f2933;--color-muted:#596672';
   host.innerHTML = renderToStaticMarkup(createElement(ChordDiagram, {
     position: step.position, name: step.name, chordKey: step.key,
+    // A PDF is a note map, never a fingering chart. Keep this explicit so a
+    // future default in ChordDiagram cannot silently change exported labels.
     chordSuffix: step.suffix, mode: 'notes'
   }));
   document.body.append(host);
@@ -36,6 +38,7 @@ export function createChordDiagramSvg(step) {
     svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     svg.setAttribute('width', '154');
     svg.setAttribute('height', '190');
+    svg.setAttribute('data-content-mode', 'notes');
     return svg;
   } finally { host.remove(); }
 }

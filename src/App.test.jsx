@@ -80,7 +80,7 @@ describe('Cavaquinho Lab', () => {
   test('abre o Lab sem áudio, movimento ou títulos separados por painel', () => {
     renderAt();
     expect(screen.getByText('Teoria')).toBeInTheDocument();
-    expect(screen.getByText('Escute antes de conferir')).toBeInTheDocument();
+    expect(screen.queryByText('Escute antes de conferir')).not.toBeInTheDocument();
     expect(screen.getByText('Harmonia em Cores')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sessão de prática' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Metrônomo' })).toBeInTheDocument();
@@ -150,13 +150,15 @@ describe('Cavaquinho Lab', () => {
 
   test('inicia com sequência vazia e cria o primeiro acorde', () => {
     renderAt();
-    expect(screen.getByRole('button', { name: 'Iniciar prática' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Iniciar prática' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Escute antes de conferir')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('Nenhum acorde ainda');
     expect(screen.queryByRole('heading', { name: 'Nenhum acorde ainda' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
     expect(screen.getByLabelText('Sequência atual')).toHaveTextContent('C');
     expect(screen.getAllByRole('article')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Iniciar prática' })).toBeEnabled();
+    expect(screen.getByText('Escute antes de conferir')).toBeInTheDocument();
   });
 
   test('cria um exercício pronto sem substituir as sequências existentes', async () => {
@@ -530,7 +532,8 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByText('C maior · C D E F G A B')).toBeInTheDocument();
     expect(document.querySelectorAll('.fretboard-note.path-note')).toHaveLength(0);
     expect(document.querySelectorAll('.fretboard-note.in-scale').length).toBeGreaterThan(20);
-    expect(screen.getByRole('button', { name: 'Praticar escala' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Praticar escala' })).not.toBeInTheDocument();
+    expect(screen.getByText('Escolha o início e o fim no braço para liberar as opções de prática.')).toBeInTheDocument();
     expect(screen.getByText('Escolha a nota inicial.')).toBeInTheDocument();
     expect(document.querySelector('.fretboard-open-strings')).not.toBe(null);
     expect([...document.querySelectorAll('.fretboard-matrix .matrix-fret-label')].map(item => item.textContent)).not.toContain('0');
