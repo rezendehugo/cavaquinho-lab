@@ -34,3 +34,17 @@ describe('harmonia', () => {
     expect(analysis.chords[2].movementAdvice).toContain('Troca ampla');
   });
 });
+
+
+test('as pistas convidam à escuta sem transformar o último acorde em resolução garantida', () => {
+  const sequence = [{ id: 'a', key: 'E', suffix: '7' }, { id: 'b', key: 'D', suffix: '7' }];
+  const shapes = [
+    { ...sequence[0], position: { midi: [64, 68, 71, 74] } },
+    { ...sequence[1], position: { midi: [62, 66, 69, 72] } }
+  ];
+  const exercises = buildExercises(sequence, analyzeSequence(sequence, shapes), shapes);
+  expect(exercises[0].answer).toContain('E7, D7');
+  expect(exercises[1].answer).toContain('não define, sozinho');
+  expect(exercises[2].answer).toContain('E7 para D7: D');
+  expect(exercises[3].answer).toBe('E, G#, B, D');
+});

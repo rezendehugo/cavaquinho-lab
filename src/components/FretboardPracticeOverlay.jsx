@@ -3,7 +3,12 @@ import BpmInput from '../features/metronome/BpmInput';
 import FocusedPracticePortal from './FocusedPracticePortal';
 
 export default function FretboardPracticeOverlay({ title, eyebrow, progress, instruction, playing, metronome, onTogglePlay, onExit, legend, preview, children }) {
-  return <FocusedPracticePortal ariaLabel={'Prática focada: ' + title} className="sequence-practice-overlay focused-fretboard-practice" onEscape={onExit}>
+  const handleKeyboardControl = event => {
+    if (event.target instanceof Element && event.target.closest('input, select, textarea')) return;
+    if (event.key === ' ' && event.target instanceof Element && event.target.closest('button, a')) return;
+    if (event.key === ' ') { event.preventDefault(); onTogglePlay(); }
+  };
+  return <FocusedPracticePortal ariaLabel={'Prática focada: ' + title} className="sequence-practice-overlay focused-fretboard-practice" onEscape={onExit} onKeyDown={handleKeyboardControl}>
     <header className="sequence-practice-overlay-header">
       <div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{progress}</p></div>
       <div className="sequence-practice-overlay-tools">

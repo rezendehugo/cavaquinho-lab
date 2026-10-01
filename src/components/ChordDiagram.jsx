@@ -33,6 +33,7 @@ const getStringMidi = (position, stringIndex) => {
 
 const getLabel = (position, stringIndex, mode, tone) => {
   if (mode === 'fingers') return position.fingers?.[stringIndex] || '';
+  if (mode === 'degrees') return tone?.degreeLabel || '';
   return tone?.note || getPlayedNotes(position)[stringIndex] || '';
 };
 

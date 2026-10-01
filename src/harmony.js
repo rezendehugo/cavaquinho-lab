@@ -1,6 +1,6 @@
 import { formatChordName, getPlayedNotes, qualityLabels } from './chordDisplay';
 import { chromaticKeys } from './sequences';
-import { analyzeChordVoicing } from './domain/chordTheory';
+import { analyzeChordVoicing, getChordToneDetail } from './domain/chordTheory';
 import { analyzeHarmonicFunction, buildHarmonicField, getFunctionalSubstitutions } from './domain/appliedHarmony';
 
 const minorContext = {
@@ -98,15 +98,15 @@ export const getColorForChord = (step, analysisChord, mode, keyCenter) => {
 };
 
 export const buildExercises = (sequence, analysis, optimizedSteps = []) => {
-  const dominant = analysis.chords.find(chord => chord.functionName.includes('dominante'));
-  const resolution = analysis.chords.find(chord => chord.functionName.includes('repouso')) || analysis.chords[analysis.chords.length - 1];
-  const firstWithCommon = analysis.chords.find(chord => chord.commonTones.length > 0);
+  const dominants = [...new Set(analysis.chords.filter(chord => chord.theory?.family.includes('dominante')).map(chord => chord.name))];
+  const commonIndex = analysis.chords.findIndex(chord => chord.commonTones.length > 0);
+  const firstWithCommon = analysis.chords[commonIndex];
   const firstShape = optimizedSteps[0];
   return [
-    { title: 'Dominante', prompt: dominant ? 'Qual acorde cria a tensão dominante nesta sequência?' : 'Existe uma dominante clara nesta sequência?', answer: dominant ? dominant.name : 'Não há dominante clara.' },
-    { title: 'Resolução', prompt: 'Qual acorde soa como ponto de chegada?', answer: resolution?.name || 'A chegada ainda está aberta.' },
-    { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se há notas comuns entre acordes vizinhos.', answer: firstWithCommon ? firstWithCommon.commonTones.join(', ') : 'Nenhuma nota comum forte foi detectada nas formas atuais.' },
-    { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? getPlayedNotes(firstShape.position).join(', ') : 'Sem forma selecionada.' },
+    { title: 'Dominante', prompt: 'Onde você ouve tensão e vontade de resolver?', answer: dominants.length ? `Experimente ${dominants.join(', ')}: têm qualidade dominante; a função depende do contexto.` : 'Compare as trocas: a tensão também pode surgir do movimento entre as vozes.' },
+    { title: 'Resolução', prompt: 'Qual acorde soa como ponto de chegada?', answer: 'Compare finais em acordes diferentes. O último acorde de um trecho não define, sozinho, a chegada.' },
+    { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se há notas comuns entre acordes vizinhos.', answer: firstWithCommon ? `${firstWithCommon.name} para ${analysis.chords[commonIndex + 1].name}: ${firstWithCommon.commonTones.join(', ')}. Ouça essas notas durante a troca.` : 'Não foram encontradas notas comuns entre as formas vizinhas deste trecho.' },
+    { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? firstShape.position.midi.map(midi => getChordToneDetail(firstShape.key || sequence[0].key, firstShape.suffix || sequence[0].suffix, midi)?.note || getPlayedNotes({ midi: [midi] })[0]).join(', ') : 'Sem forma selecionada.' },
     { title: 'Transposição', prompt: 'Transponha a sequência para outro tom e compare a região do braço.', answer: 'Mantenha a mesma função harmônica e procure formas próximas.' },
     { title: 'Qualidade e cor', prompt: 'Associe cada qualidade de acorde a uma sensação de cor.', answer: sequence.map(step => formatChordName(step.key, step.suffix) + ': ' + (qualityLabels[step.suffix] || step.suffix)).join(' | ') || 'Adicione acordes para comparar qualidades.' },
     { title: 'Grau e cor', prompt: 'Use as cores por grau para perceber repouso, preparação e tensão.', answer: analysis.summary }

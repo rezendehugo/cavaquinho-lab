@@ -42,6 +42,28 @@ const degreeDetails = {
   11: { degreeId: 'seventh', degreeLabel: '7M', description: 'sétima maior', colorGroup: 'seventh' }
 };
 
+const letterSemitones = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const letters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const degreeLetterOffsets = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: 5, 10: 6, 11: 6 };
+
+const detailForInterval = (interval, suffix) => {
+  if (suffix === 'sus2' && interval === 2) return { degreeId: 'second', degreeLabel: '2', description: 'segunda maior', colorGroup: 'ninth' };
+  if (suffix === 'dim7' && interval === 9) return { degreeId: 'seventh', degreeLabel: '♭♭7', description: 'sétima diminuta', colorGroup: 'seventh' };
+  return degreeDetails[interval];
+};
+
+const spellChordTone = (key, interval, suffix) => {
+  const rootLetter = key?.[0];
+  const rootPitch = letterSemitones[rootLetter];
+  if (rootPitch === undefined) return pitchNames[(pitchNames.indexOf(key) + interval + 12) % 12];
+  const letterOffset = suffix === 'dim7' && interval === 9 ? 6 : degreeLetterOffsets[interval];
+  const targetLetter = letters[(letters.indexOf(rootLetter) + letterOffset) % letters.length];
+  const targetPitch = (pitchNames.indexOf(key) + interval) % 12;
+  let delta = (targetPitch - letterSemitones[targetLetter] + 12) % 12;
+  if (delta > 6) delta -= 12;
+  return `${targetLetter}${delta === -2 ? 'bb' : delta === -1 ? 'b' : delta === 1 ? '#' : delta === 2 ? '##' : ''}`;
+};
+
 export function getChordToneDetail(key, suffix, midi) {
   const root = pitchNames.indexOf(key);
   const quality = chordQualities[suffix];
@@ -49,10 +71,10 @@ export function getChordToneDetail(key, suffix, midi) {
   const pitchClass = ((midi % 12) + 12) % 12;
   const interval = (pitchClass - root + 12) % 12;
   if (!quality.intervals.includes(interval)) return null;
-  const detail = degreeDetails[interval];
+  const detail = detailForInterval(interval, suffix);
   return {
     pitchClass,
-    note: pitchNames[pitchClass],
+    note: spellChordTone(key, interval, suffix),
     spokenNote: spokenPitchNames[pitchClass],
     interval,
     ...detail,
@@ -67,6 +89,34 @@ export function getChordFormulaLegend(key, suffix) {
   return quality.intervals.map((interval) =>
     getChordToneDetail(key, suffix, root + interval)
   );
+}
+
+export function compareChordShapes(step, reference, candidate) {
+  const referenceDetails = getChordDegreeLegend(step.key, step.suffix, reference);
+  const candidateDetails = getChordDegreeLegend(step.key, step.suffix, candidate);
+  const referenceIntervals = new Set(referenceDetails.map(detail => detail.interval));
+  const candidateIntervals = new Set(candidateDetails.map(detail => detail.interval));
+  const detailByInterval = new Map([...referenceDetails, ...candidateDetails].map(detail => [detail.interval, detail]));
+  const absoluteFret = (position, index) => {
+    const fret = position?.frets?.[index] ?? -1;
+    if (fret < 0) return null;
+    return fret === 0 ? 0 : (position.baseFret || 1) + fret - 1;
+  };
+  return {
+    added: [...candidateIntervals].filter(interval => !referenceIntervals.has(interval)).map(interval => detailByInterval.get(interval)),
+    removed: [...referenceIntervals].filter(interval => !candidateIntervals.has(interval)).map(interval => detailByInterval.get(interval)),
+    strings: Array.from({ length: 4 }, (_item, stringIndex) => {
+      const from = absoluteFret(reference, stringIndex);
+      const to = absoluteFret(candidate, stringIndex);
+      const label = `Corda ${stringIndex + 1}`;
+      if (from === null && to === null) return { stringIndex, description: `${label} permanece abafada.` };
+      if (from === null) return { stringIndex, description: `${label}: entra no traste ${to}.` };
+      if (to === null) return { stringIndex, description: `${label}: sai do traste ${from}.` };
+      if (from === to) return { stringIndex, description: `${label}: permanece no traste ${to}.` };
+      const distance = to - from;
+      return { stringIndex, description: `${label}: ${distance > 0 ? 'sobe' : 'desce'} ${Math.abs(distance)} ${Math.abs(distance) === 1 ? 'traste' : 'trastes'} (${from} → ${to}).` };
+    })
+  };
 }
 
 export function getChordDegreeLegend(key, suffix, position) {

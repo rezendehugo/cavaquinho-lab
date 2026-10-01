@@ -13,6 +13,9 @@ import SequencePracticeBar from './SequencePracticeBar';
 import SequenceDurationPanel from './SequenceDurationPanel';
 import SequencePracticeOverlay from './SequencePracticeOverlay';
 import SequencePresetDialog from './SequencePresetDialog';
+import SequencePdfExport from './SequencePdfExport';
+import { StudyIntention, StudyReflection } from './SequenceStudy';
+import useSequenceStudy from '../hooks/useSequenceStudy';
 import { BookOpen, Trash2 } from 'lucide-react';
 
 const colorModes = [
@@ -55,7 +58,7 @@ function SequenceHeader({ sequence, setTitle, colorMode, setColorMode }) {
   return (
     <header className="lab-header">
       <div>
-        <p className="eyebrow">Prática interativa</p>
+        <p className="eyebrow">02 · Construir e praticar</p>
         <input className="sequence-title-input" aria-label="Nome da sequência" value={sequence.title} onChange={(event) => setTitle(event.target.value)} />
         <div className="sequence-path" aria-label="Sequência atual">{getSequenceText(sequence.steps)}</div>
       </div>
@@ -74,10 +77,10 @@ function EmptySequence({ addStep }) {
   );
 }
 
-function LabSummary({ analysis, exercises, sequence, colorMode }) {
+function LabSummary({ analysis, sequence, colorMode }) {
   return (
     <details className="study-disclosure">
-      <summary>Entender e praticar esta sequência</summary>
+      <summary>Aprofundar a leitura harmônica</summary>
       <div className="study-sections" aria-label="Estudo da sequência">
       <section>
         <h2>Teoria</h2>
@@ -111,17 +114,6 @@ function LabSummary({ analysis, exercises, sequence, colorMode }) {
           {sequence.steps.length ? sequence.steps.map((step, index) => <span key={step.id} style={{ '--swatch': getColorForChord(step, analysis.chords[index], colorMode, analysis.keyCenter) }}>{formatChordName(step.key, step.suffix)}</span>) : <span style={{ '--swatch': '#d7dde5' }}>Sem acordes</span>}
         </div>
       </section>
-      <section>
-        <h2>Exercícios</h2>
-        <div className="exercise-list">
-          {exercises.slice(0, 4).map(exercise => (
-            <details key={exercise.title}>
-              <summary>{exercise.prompt}</summary>
-              <p>{exercise.answer}</p>
-            </details>
-          ))}
-        </div>
-      </section>
       </div>
     </details>
   );
@@ -136,6 +128,8 @@ function SequenceLab({ cloud = null }) {
   const [visibleCard, setVisibleCard] = useState(0);
   const [cardPage, setCardPage] = useState(0);
   const [focusAfterUpdate, setFocusAfterUpdate] = useState(null);
+  const [selectedCardIndex, setSelectedCardIndex] = useState(0);
+  const [shapePickerIndex, setShapePickerIndex] = useState(null);
   const [isPracticing, setIsPracticing] = useState(false);
   const [practiceOpen, setPracticeOpen] = useState(false);
   const [durationsOpen, setDurationsOpen] = useState(false);
@@ -156,6 +150,7 @@ function SequenceLab({ cloud = null }) {
   }, [cloud?.sequences]);
 
   const activeSequence = sequences.find(sequence => sequence.id === activeSequenceId) || sequences[0] || defaultSequences[0];
+  const journal = useSequenceStudy(activeSequence.id);
   const optimized = useMemo(() => optimizeSequence(activeSequence.steps, cavaquinhoChords), [activeSequence.steps]);
   const sequenceShapes = optimized.missing.length ? activeSequence.steps.map(() => null) : optimized.steps;
   const pageSize = 50;
@@ -269,6 +264,8 @@ function SequenceLab({ cloud = null }) {
     if (activeSequence.steps.length >= effectiveStepLimit) { setStorageError('Seu plano atingiu o limite desta sequência.'); return; }
     stopPractice();
     updateActiveSequence(sequence => ({ ...sequence, steps: sequence.steps.concat(createSequenceStep()) }));
+    setSelectedCardIndex(activeSequence.steps.length);
+    setFocusAfterUpdate(activeSequence.steps.length);
   };
   const removeStep = (index) => {
     stopPractice();
@@ -325,6 +322,33 @@ function SequenceLab({ cloud = null }) {
     steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, positionIndex } : item)
   }));
 
+  const selectAdjacentCard = (fromIndex, direction) => {
+    if (!activeSequence.steps.length) return;
+    const nextIndex = wrapIndex(fromIndex + direction, activeSequence.steps.length);
+    setSelectedCardIndex(nextIndex);
+    setCardPage(Math.floor(nextIndex / pageSize));
+    requestAnimationFrame(() => cardRowRef.current?.querySelector(`[data-step-index="${nextIndex}"]`)?.focus());
+  };
+
+  useEffect(() => {
+    setSelectedCardIndex(current => Math.min(Math.max(0, current), Math.max(0, activeSequence.steps.length - 1)));
+    setShapePickerIndex(current => current !== null && current >= activeSequence.steps.length ? null : current);
+  }, [activeSequence.steps.length]);
+
+  useEffect(() => {
+    const handleCommand = event => {
+      const command = event.detail?.command;
+      if (command === 'new-chord') addStep();
+      if (command === 'choose-shape' && sequenceShapes[selectedCardIndex]) setShapePickerIndex(selectedCardIndex);
+      if (command === 'toggle-practice') {
+        if (practiceOpen) togglePracticePlayback();
+        else startPractice();
+      }
+    };
+    window.addEventListener('cavaquinho:command', handleCommand);
+    return () => window.removeEventListener('cavaquinho:command', handleCommand);
+  }, [practiceOpen, selectedCardIndex, sequenceShapes]);
+
   const useAutomaticShapes = () => updateActiveSequence(sequence => ({
     ...sequence,
     steps: sequence.steps.map(step => ({ ...step, positionIndex: null }))
@@ -380,13 +404,15 @@ function SequenceLab({ cloud = null }) {
 
   return (
     <>
+      <header className="sequence-learning-header"><div><p className="eyebrow">Meu laboratório de estudo</p><h2>Pequenas descobertas. Mais música.</h2><p>Defina um foco, experimente no instrumento e use o que percebeu para orientar a próxima prática.</p></div><ol aria-label="Ciclo de prática"><li>01 · Intenção</li><li>02 · Prática</li><li>03 · Reflexão</li></ol></header>
       <section className="sequence-lab">
         {cloud?.profile && !cloud.profile.localMigrationCompletedAt ? <div className="cloud-migration"><p>Encontramos sequências salvas neste navegador.</p><button type="button" data-ui-text-reason="workflow" onClick={cloud.migrate}>Importar para a conta</button></div> : null}
         {cloud?.entitlements?.plan === 'free' ? <p className="plan-status">Plano Free · {cloud.entitlements.sequenceLimit} sequências · {cloud.entitlements.stepLimit} acordes cada</p> : null}
         {cloud?.error ? <p className="storage-status" role="status">Sincronização pendente · {cloud.error}</p> : null}
         <SequenceManager sequences={sequences} activeSequenceId={activeSequence.id} setActiveSequenceId={selectActiveSequence} createNewSequence={createNewSequence} openPresets={() => setPresetDialogOpen(true)} deleteSequence={deleteSequence} />
-        <SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} />
-        <p className="chord-editing-hint">Edite o acorde diretamente. Use ↑ e ↓ para navegar, Enter para confirmar e Esc para cancelar.</p>
+        <StudyIntention study={journal.study} onChange={journal.update} />
+        <div className="sequence-map-heading"><SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} /><SequencePdfExport key={activeSequence.id} sequence={activeSequence} study={journal.study} resolvedSteps={sequenceShapes} bpm={metronome.bpm} /></div>
+        <p className="chord-editing-hint">Edite o acorde diretamente. Use ↑ e ↓ para navegar, Enter para confirmar, Esc para cancelar e ? para ver os atalhos.</p>
         <div className="voicing-status-legend" aria-label="Legenda dos voicings">
           <span><i className="voicing-status-dot voicing-status-dot--complete" />Completo</span>
           <span><i className="voicing-status-dot voicing-status-dot--incomplete" />Omite notas</span>
@@ -421,6 +447,11 @@ function SequenceLab({ cloud = null }) {
                   availableSuffixes={getAvailableSuffixes}
                   setChordIdentity={setChordIdentity}
                   setChordSuffix={setChordSuffix}
+                  selected={selectedCardIndex === index}
+                  onSelect={setSelectedCardIndex}
+                  onSelectAdjacent={selectAdjacentCard}
+                  shapePickerOpen={shapePickerIndex === index}
+                  onShapePickerChange={setShapePickerIndex}
                 />
                 );
               })}
@@ -431,7 +462,8 @@ function SequenceLab({ cloud = null }) {
         {pageCount > 1 ? <nav className="sequence-card-pagination" aria-label="Páginas de acordes"><button type="button" disabled={cardPage === 0} onClick={() => setCardPage(page => Math.max(0, page - 1))}>Anterior</button><span>Página {cardPage + 1} de {pageCount}</span><button type="button" disabled={cardPage >= pageCount - 1} onClick={() => setCardPage(page => Math.min(pageCount - 1, page + 1))}>Próxima</button></nav> : null}
         {activeSequence.steps.length > 1 ? <p className="mobile-card-position" aria-live="polite">{visibleCard + 1} de {activeSequence.steps.length}</p> : null}
       </section>
-      <LabSummary analysis={analysis} exercises={exercises} sequence={activeSequence} colorMode={colorMode} />
+      <StudyReflection study={journal.study} onChange={journal.update} onRecord={() => journal.record(metronome.bpm)} status={journal.status} exercises={exercises} disabled={!activeSequence.steps.length} />
+      <LabSummary analysis={analysis} sequence={activeSequence} colorMode={colorMode} />
       <SequenceDurationPanel sequence={activeSequence} open={durationsOpen && !practiceOpen} onClose={() => setDurationsOpen(false)} onChange={changePracticeBeats} />
       {practiceOpen ? <SequencePracticeOverlay
         sequence={activeSequence}

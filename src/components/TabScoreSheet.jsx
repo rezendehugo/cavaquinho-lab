@@ -24,6 +24,13 @@ export default function TabScoreSheet({ score, compact = false }) {
   const systemCount = Math.max(1, ...score.measures.map(measure => measure.system || 1));
   const declaredPages = Math.max(1, ...score.measures.map(measure => measure.page || 1));
   const onRendered = useCallback(({ pageCount }) => setRenderedPages(pageCount), []);
+  const moveTabFocus = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const nextMode = event.key === 'Home' ? 'combined' : event.key === 'End' ? 'tab' : mode === 'combined' ? 'tab' : 'combined';
+    setMode(nextMode);
+    requestAnimationFrame(() => document.querySelector(`[data-score-tab="${nextMode}"]`)?.focus());
+  };
 
   const downloadPdf = async (format) => {
     setExporting(format);
@@ -51,9 +58,9 @@ export default function TabScoreSheet({ score, compact = false }) {
     </header> : null}
     {!score.hasOriginalLayout ? <p className="tab-layout-warning">Layout aproximado: as quebras originais não foram reconhecidas.</p> : null}
     <div className="tab-export-toolbar">
-      <div className="tab-score-mode" role="tablist" aria-label="Formato da folha TAB">
-        <button type="button" role="tab" aria-selected={mode === 'combined'} onClick={() => setMode('combined')}>Partitura + TAB</button>
-        <button type="button" role="tab" aria-selected={mode === 'tab'} onClick={() => setMode('tab')}>Somente TAB</button>
+      <div className="tab-score-mode" role="tablist" aria-label="Formato da folha TAB" onKeyDown={moveTabFocus}>
+        <button type="button" id="score-tab-combined" data-score-tab="combined" role="tab" aria-selected={mode === 'combined'} aria-controls="score-preview-panel" tabIndex={mode === 'combined' ? 0 : -1} onClick={() => setMode('combined')}>Partitura + TAB</button>
+        <button type="button" id="score-tab-tab" data-score-tab="tab" role="tab" aria-selected={mode === 'tab'} aria-controls="score-preview-panel" tabIndex={mode === 'tab' ? 0 : -1} onClick={() => setMode('tab')}>Somente TAB</button>
       </div>
       <div className="tab-score-actions">
         <button type="button" className="secondary-button tab-markdown-download" disabled={blocked} onClick={() => downloadMarkdown(buildSystemTablatureMarkdown(score))}><Download size={15} /> Markdown</button>
@@ -62,7 +69,7 @@ export default function TabScoreSheet({ score, compact = false }) {
     </div>
     {blocked ? <div className="tab-position-issues" role="alert"><TriangleAlert size={18} /><div><strong>Revise {score.issues.length} notas antes de baixar</strong><span>Os downloads serão liberados quando todas as notas tiverem uma posição tocável.</span>{score.issues.slice(0, 6).map(issue => <span key={issue.eventId}>Medida {issue.measure}: {issue.message}</span>)}</div></div> : null}
     {exportError ? <p className="validation-error" role="alert">{exportError}</p> : null}
-    <div className="tab-score-preview">
+    <div id="score-preview-panel" className="tab-score-preview" role="tabpanel" aria-labelledby={`score-tab-${mode}`} tabIndex="0">
       <ScorePreview
         musicXml={activeMusicXml}
         ariaLabel={mode === 'combined' ? 'Prévia da partitura com tablatura' : 'Prévia somente da tablatura'}
