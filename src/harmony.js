@@ -47,13 +47,17 @@ export const analyzeSequence = (sequence, optimizedSteps = [], options = {}) => 
     const contextInfo = context?.[step.key];
     const harmonicFunction = analyzeHarmonicFunction(step, keyCenter);
     const position = optimizedSteps[index]?.position;
-    const currentNotes = position ? getPlayedNotes(position) : [];
-    const nextNotes = optimizedSteps[index + 1]?.position ? getPlayedNotes(optimizedSteps[index + 1].position) : [];
+    const spellPlayedNotes = (candidateStep, candidatePosition) => (candidatePosition?.midi || []).map(midi =>
+      getChordToneDetail(candidateStep.displayKey || candidateStep.key, candidateStep.suffix, midi)?.note || getPlayedNotes({ midi: [midi] })[0]
+    );
+    const currentNotes = position ? spellPlayedNotes(step, position) : [];
+    const nextStep = sequence[index + 1];
+    const nextNotes = nextStep && optimizedSteps[index + 1]?.position ? spellPlayedNotes(nextStep, optimizedSteps[index + 1].position) : [];
     const commonTones = currentNotes.filter((note, noteIndex) => currentNotes.indexOf(note) === noteIndex && nextNotes.includes(note));
     const theory = analyzeChordVoicing(step, position);
     return {
       ...step,
-      name: formatChordName(step.key, step.suffix),
+      name: formatChordName(step.key, step.suffix, step.displayKey),
       numeral: contextInfo?.numeral || harmonicFunction?.numeral || 'análise aberta',
       functionName: contextInfo?.functionName || harmonicFunction?.functionName || (step.suffix === '7' ? 'dominante possível' : 'cor harmônica'),
       substitutions: getFunctionalSubstitutions(step, keyCenter),
@@ -106,7 +110,7 @@ export const buildExercises = (sequence, analysis, optimizedSteps = []) => {
     { title: 'Dominante', prompt: 'Onde você ouve tensão e vontade de resolver?', answer: dominants.length ? `Experimente ${dominants.join(', ')}: têm qualidade dominante; a função depende do contexto.` : 'Compare as trocas: a tensão também pode surgir do movimento entre as vozes.' },
     { title: 'Resolução', prompt: 'Qual acorde soa como ponto de chegada?', answer: 'Compare finais em acordes diferentes. O último acorde de um trecho não define, sozinho, a chegada.' },
     { title: 'Notas comuns', prompt: firstWithCommon ? 'Quais notas podem ligar dois acordes vizinhos?' : 'Procure se há notas comuns entre acordes vizinhos.', answer: firstWithCommon ? `${firstWithCommon.name} para ${analysis.chords[commonIndex + 1].name}: ${firstWithCommon.commonTones.join(', ')}. Ouça essas notas durante a troca.` : 'Não foram encontradas notas comuns entre as formas vizinhas deste trecho.' },
-    { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? firstShape.position.midi.map(midi => getChordToneDetail(firstShape.key || sequence[0].key, firstShape.suffix || sequence[0].suffix, midi)?.note || getPlayedNotes({ midi: [midi] })[0]).join(', ') : 'Sem forma selecionada.' },
+    { title: 'Notas da forma', prompt: firstShape ? 'Quais notas aparecem na primeira forma selecionada?' : 'Escolha uma forma para identificar suas notas.', answer: firstShape ? firstShape.position.midi.map(midi => getChordToneDetail(sequence[0].displayKey || firstShape.key || sequence[0].key, firstShape.suffix || sequence[0].suffix, midi)?.note || getPlayedNotes({ midi: [midi] })[0]).join(', ') : 'Sem forma selecionada.' },
     { title: 'Transposição', prompt: 'Transponha a sequência para outro tom e compare a região do braço.', answer: 'Mantenha a mesma função harmônica e procure formas próximas.' },
     { title: 'Qualidade e cor', prompt: 'Associe cada qualidade de acorde a uma sensação de cor.', answer: sequence.map(step => formatChordName(step.key, step.suffix) + ': ' + (qualityLabels[step.suffix] || step.suffix)).join(' | ') || 'Adicione acordes para comparar qualidades.' },
     { title: 'Grau e cor', prompt: 'Use as cores por grau para perceber repouso, preparação e tensão.', answer: analysis.summary }

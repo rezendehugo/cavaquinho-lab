@@ -120,7 +120,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
             className="sequence-shape-card"
             variant="focus"
             chordName={chordName}
-            chordKey={step.key}
+            chordKey={step.displayKey || step.key}
             chordSuffix={step.suffix}
             showName={false}
             showShapeCode={false}

@@ -17,7 +17,7 @@ export function buildSequencePdfModel(sequence, options = {}) {
   const resolved = options.resolvedSteps ? { steps: options.resolvedSteps, missing: [] } : optimizeSequence(sequence.steps, cavaquinhoChords);
   if (resolved.steps.length !== sequence.steps.length || resolved.steps.some((step, index) => !step?.position || step.id !== sequence.steps[index].id)) throw new Error('As formas da sequência mudaram. Tente novamente.');
   if (resolved.missing.length) throw new Error('Há acordes sem forma disponível.');
-  const spell = (step, midi) => getChordToneDetail(step.key, step.suffix, midi)?.note || noteNames[midi % 12];
+  const spell = (step, midi) => getChordToneDetail(step.displayKey || step.key, step.suffix, midi)?.note || noteNames[midi % 12];
   const analysis = analyzeSequence(sequence.steps, resolved.steps, { tonic: sequence.tonic });
   return {
     title: sequence.title || 'Minha sequência', bpm: normalizePracticeBpm(sequence.practiceBpm),

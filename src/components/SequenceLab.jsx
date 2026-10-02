@@ -413,6 +413,7 @@ function SequenceLab({ cloud = null }) {
         <StudyIntention study={journal.study} onChange={journal.update} />
         <div className="sequence-map-heading"><SequenceHeader sequence={activeSequence} setTitle={setTitle} colorMode={colorMode} setColorMode={setColorMode} />{activeSequence.steps.length ? <SequencePdfExport key={activeSequence.id} sequence={activeSequence} study={journal.study} resolvedSteps={sequenceShapes} bpm={metronome.bpm} /> : null}</div>
         {activeSequence.steps.length ? <><p className="chord-editing-hint">Edite o acorde diretamente. Use ↑ e ↓ para navegar, Enter para confirmar, Esc para cancelar e ? para ver os atalhos.</p>
+        <p className="enharmonic-hint">Enarmonia: <strong>C#</strong> e <strong>Db</strong> soam igual. Digite a grafia que representa sua sequência; ela é preservada na análise.</p>
         <div className="voicing-status-legend" aria-label="Legenda dos voicings">
           <span><i className="voicing-status-dot voicing-status-dot--complete" />Completo</span>
           <span><i className="voicing-status-dot voicing-status-dot--incomplete" />Omite notas</span>

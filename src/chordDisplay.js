@@ -25,4 +25,10 @@ export const formatShapeCode = (position) => (position?.frets || []).map(fret =>
 
 export const noteNames = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
+// A biblioteca de formas usa bemóis como chave canônica. A busca mostra os dois
+// nomes para que o estudante não precise decorar essa convenção interna.
+const enharmonicRootNames = { Db: 'C#/Db', Eb: 'D#/Eb', Gb: 'F#/Gb', Ab: 'G#/Ab', Bb: 'A#/Bb' };
+
+export const formatRootOption = (key) => enharmonicRootNames[key] || key;
+
 export const getPlayedNotes = (position) => (position.midi || []).map(midi => noteNames[midi % 12]);
