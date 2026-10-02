@@ -16,22 +16,20 @@ Relacionada à issue #70.
 3. Tornar `Completo` verde semântico, reservado ao estado da forma, e manter o grau 5 cinza. A legenda textual continua disponível para que a cor não seja a única pista.
 4. Cobrir a entrada `C#`, a grafia da tríade e o rótulo `C#/Db` em testes unitários e de navegador.
 
-## HML e CI/CD — configuração pendente de identidade
+## HML e CI/CD — fluxo de branches
 
-O repositório já tem um workflow manual `Production` que pede `staging` ou `production`, mas não existem projetos/variáveis de HML verificáveis. Para não apontar um deploy a produção por engano, o workflow de HML e a proteção de `main` só devem ser aplicados após confirmar estes destinos:
+HML é um estágio de código, não uma infraestrutura separada. O GitHub Pages público serve a release candidate (RC) construída da branch `hml`.
 
-| Item | Valor a confirmar |
-| --- | --- |
-| GitHub Environment | nome final (`hml` ou `staging`) e aprovadores/regras de proteção |
-| Frontend | projeto Cloudflare Pages, branch de preview e URL de HML |
-| API | app Fly.io de HML e URL de readiness |
-| Dados e autenticação | projetos Supabase/Stripe/Sentry de HML, redirects e retenção de dados |
-| Segredos | onde serão cadastrados `FLY_API_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` e variáveis públicas; nenhum valor será versionado |
+```text
+branch de trabalho ──PR + CI──> hml ──Pages RC + validação humana──> PR de hml para main ──> produção
+```
 
-Depois da confirmação, a mudança será feita em duas etapas reversíveis:
+1. A branch `hml` nasce de `main` e recebe somente PRs com o check `validate` aprovado.
+2. Todo push em `hml` executa o workflow de Pages e publica a RC no endereço público do projeto, identificada por `VITE_APP_VERSION=hml-<sha>`.
+3. A pessoa responsável valida a RC pública e abre ou aprova o PR `hml → main` para pedir a promoção.
+4. O check obrigatório `HML release candidate / hml-gate` reprova qualquer PR para `main` cuja origem não seja `hml`. `main` também continua exigindo `validate` e resolução de conversas.
 
-1. Criar o environment GitHub `hml`, com acesso apenas ao ramo `codex/enharmonic-hml-delivery` inicialmente, e adicionar o workflow que roda CI, publica preview de frontend, implanta a API de HML e consulta `/api/ready`.
-2. Exigir o check de deploy/smoke de HML para PRs e merges em `main`. O rollback é remover esse check da proteção de `main` e promover o deployment anterior no Cloudflare/Fly; nenhuma migration destrutiva será incluída.
+O rollback é reverter ou corrigir em `hml`, o que gera uma nova RC no mesmo Pages; a promoção para `main` permanece bloqueada até que os checks passem. Não há novas credenciais, serviços, segredos ou migrations neste fluxo.
 
 ## Critérios de aceite
 
@@ -39,4 +37,4 @@ Depois da confirmação, a mudança será feita em duas etapas reversíveis:
 - Ao registrar `C#`, a sequência, os diagramas, a acessibilidade e o PDF mantêm `C#` (incluindo `E#` como terça maior), enquanto a seleção de formas segue funcionando.
 - “Completo” não tem a mesma cor do grau 5, e ambos têm texto acessível.
 - Os checks de unidade, lint, tipos e navegador passam antes de abrir merge.
-- Após a identidade da HML ser confirmada, cada PR para `main` recebe uma implantação verificável de HML e só pode ser mesclado quando o check correspondente passar.
+- Cada push em `hml` publica uma RC verificável; `main` só aceita o PR de promoção vindo de `hml`, com todos os checks aprovados.
