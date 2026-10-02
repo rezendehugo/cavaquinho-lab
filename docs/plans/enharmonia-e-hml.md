@@ -28,6 +28,7 @@ branch de trabalho ──PR + CI──> hml ──Pages RC + validação humana�
 2. Todo push em `hml` executa o workflow de Pages e publica a RC no endereço público do projeto, identificada por `VITE_APP_VERSION=hml-<sha>`.
 3. A pessoa responsável valida a RC pública e abre ou aprova o PR `hml → main` para pedir a promoção.
 4. O check obrigatório `HML release candidate / hml-gate` reprova qualquer PR para `main` cuja origem não seja `hml`. `main` também continua exigindo `validate` e resolução de conversas.
+5. Todo PR para `hml` ou `main` passa por `PR evidence gate`: issue vinculada, plano, resultado esperado, evidências de teste e teste alterado quando há código de produto. Promoções para `main` também exigem evidências da RC de HML.
 
 O rollback é reverter ou corrigir em `hml`, o que gera uma nova RC no mesmo Pages; a promoção para `main` permanece bloqueada até que os checks passem. Não há novas credenciais, serviços, segredos ou migrations neste fluxo.
 

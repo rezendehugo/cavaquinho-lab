@@ -1,0 +1,42 @@
+name: PR evidence gate
+
+on:
+  pull_request:
+    branches: [hml, main]
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Confirmar plano, issue, resultado e testes no diff
+        env:
+          EVENT_PATH: ${{ github.event_path }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/validate-pr-evidence.mjs "$EVENT_PATH" $(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+  test-suite-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run test suite with machine-readable evidence
+        run: npm test -- --reporter=json --outputFile=vitest-results.json
+      - name: Confirm test-suite floor
+        run: node scripts/assert-test-suite.mjs vitest-results.json
+      - name: Test the PR evidence validator
+        run: node --test scripts/validate-pr-evidence.node.mjs
