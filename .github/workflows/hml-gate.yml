@@ -2,7 +2,6 @@ name: HML release candidate
 
 on:
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -14,7 +13,12 @@ jobs:
       - name: Confirmar candidata de release
         env:
           SOURCE_BRANCH: ${{ github.head_ref }}
+          TARGET_BRANCH: ${{ github.base_ref }}
         run: |
+          if [ "$TARGET_BRANCH" != "main" ]; then
+            echo "Este gate só se aplica a promoções para main."
+            exit 0
+          fi
           test "$SOURCE_BRANCH" = "hml" || {
             echo "A promoção para main deve partir da branch hml."
             exit 1
