@@ -17,6 +17,7 @@ export const getRoutes = () => [
 const viteEnvironment = import.meta.env ?? {};
 export const apiBaseUrl = (viteEnvironment.VITE_API_URL || 'http://127.0.0.1:8080').replace(/\/$/, '');
 export const scoreImportsEnabled = viteEnvironment.VITE_ENABLE_SCORE_IMPORTS !== 'false';
+export const commerceEnabled = viteEnvironment.VITE_COMMERCE_ENABLED === 'true';
 
 export const uiAuditScenarios = [
   { id: 'landing', path: '/' },
