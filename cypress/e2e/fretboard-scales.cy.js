@@ -57,7 +57,8 @@ describe('Braço de referência e prática regional', () => {
       cy.get('.fretboard-note.path-note').should('not.exist');
       cy.get('.fretboard-open-strings').should('exist');
       cy.get('.fretboard-matrix .matrix-fret-label').should('have.length', 12).each($label => expect($label.text()).not.to.equal('0'));
-      cy.contains('button', 'Praticar escala').should('be.disabled');
+      cy.contains('button', 'Praticar escala').should('not.exist');
+      cy.contains('Escolha o início e o fim no braço para liberar as opções de prática.').should('be.visible');
     });
 
     it('escolhe início e fim arbitrários usando teclado e toque', () => {

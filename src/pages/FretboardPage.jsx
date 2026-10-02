@@ -58,6 +58,7 @@ export default function FretboardPage() {
   const summary = mode === modes.notes
     ? highlightedNote || 'Mapa completo'
     : scaleRoot + ' ' + scaleDefinitions[scaleId].label.toLowerCase() + ' · ' + scaleNotes.join(' ');
+  const positions = mode === modes.notes && highlightedNote ? rows.flatMap(row => row.notes).filter(item => item.note === highlightedNote || enharmonicNotes[item.note] === highlightedNote).length : 0;
 
   return <section className="panel fretboard-page" aria-labelledby="fretboard-title">
     <div className="fretboard-reference-workspace">
@@ -70,12 +71,7 @@ export default function FretboardPage() {
         {mode === modes.notes
           ? <div className="fretboard-tools"><label><span>Destacar nota</span><select aria-label="Destacar nota" value={highlightedNote} onChange={event => setHighlightedNote(event.target.value)}><option value="">Todas as notas</option>{chromaticKeys.map(note => <option key={note}>{note}</option>)}</select></label></div>
           : <div className="fretboard-tools scale-controls"><label><span>Tônica</span><select aria-label="Tônica da escala no braço" value={scaleRoot} onChange={event => setScaleRoot(event.target.value)}>{chromaticKeys.map(note => <option key={note}>{note}</option>)}</select></label><label><span>Escala</span><select aria-label="Tipo de escala no braço" value={scaleId} onChange={event => setScaleId(event.target.value)}>{Object.entries(scaleDefinitions).map(([id, scale]) => <option key={id} value={id}>{scale.label}</option>)}</select></label></div>}
-        <div className="fretboard-selection-summary" aria-live="polite">
-          <span>{mode === modes.notes ? 'Notas' : 'Escala'}</span>
-          <strong>{summary}</strong>
-        </div>
-        <button type="button" className="secondary-button" onClick={clearSelection}>Limpar</button>
-        <p className="fretboard-legend"><strong>{mode === modes.notes ? 'Nota' : 'Tônica'}</strong><small>{mode === modes.notes ? 'Enarmônico' : 'Grau por foco'}</small></p>
+        <div className="fretboard-context" aria-live="polite"><strong>Explorando:</strong><span>{summary}</span>{positions ? <span>{positions} posições no braço</span> : null}<button type="button" className="text-button" onClick={clearSelection} disabled={mode === modes.notes ? !highlightedNote : scaleRoot === 'C' && scaleId === 'major'}>Limpar</button></div>
       </aside>
       <div className={'fretboard-stage ' + (mode === modes.scales ? 'scale-mode' : '')} aria-label="Mapa de notas do braço do cavaquinho em D G B D">
         <div className="tuning-row" aria-label="Afinação do cavaquinho: D G B D">{cavaquinhoTuning.map((note, index) => <span key={note + index}>{note}</span>)}</div>

@@ -28,7 +28,7 @@ function LoginPage() {
     setSubmitting(false);
   };
   return <section className="auth-panel"><p className="eyebrow">Sua prática</p><h1>Entre no Cavaquinho Lab</h1><p>Salve sequências e continue em qualquer dispositivo.</p>
-    {!auth.configured ? <p className="error-banner">Autenticação ainda não foi configurada neste ambiente.</p> : <>
+    {!auth.configured ? <div className="preview-note"><strong>Prévia aberta</strong><p>Você já pode explorar as ferramentas neste ambiente. Salvar e sincronizar entre dispositivos será liberado quando o acesso estiver disponível.</p><a href="shapes">Explorar formas</a></div> : <>
       <form onSubmit={submit}><label><span>Email</span><input type="email" required value={email} onChange={event => setEmail(event.target.value)} /></label><button type="submit" data-ui-text-reason="workflow" aria-label="Enviar acesso por email" title="Enviar acesso por email" disabled={submitting}><Mail aria-hidden="true" />{submitting ? 'Enviando…' : 'Enviar acesso'}</button></form>
       <button type="button" data-ui-text-reason="workflow" className="secondary" aria-label="Continuar com Google" title="Continuar com Google" disabled={submitting} onClick={signInWithGoogle}><LogIn aria-hidden="true" />Continuar com Google</button><p aria-live="polite">{status}</p>
     </>}

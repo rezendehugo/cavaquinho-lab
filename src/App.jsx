@@ -13,9 +13,11 @@ import LoginPage from './pages/LoginPage';
 import PricingPage from './pages/PricingPage';
 import AccountPage from './pages/AccountPage';
 import LegalPage from './pages/LegalPage';
+import FeatureUnavailablePage from './pages/FeatureUnavailablePage';
 import { useAuth } from './auth/AuthContext';
 import { useCloudSequences } from './hooks/useCloudSequences';
 import { LogIn, UserRound } from 'lucide-react';
+import { scoreImportsEnabled } from './config';
 import KeyboardHelpDialog from './components/KeyboardHelpDialog';
 
 const normalizeBasePath = (basePath) => {
@@ -141,7 +143,7 @@ function App() {
           : route === '/shapes' ? <ShapesPage />
     : route === '/fretboard' ? <FretboardPage />
       : route === '/practice' ? <PracticePage />
-        : route === '/imports' ? <PracticePage initialMode="score" />
+        : route === '/imports' ? (scoreImportsEnabled ? <PracticePage initialMode="score" /> : <FeatureUnavailablePage />)
       : auth.cloudEnabled && auth.user ? <CloudSequenceLab /> : <SequenceLab />;
 
   if (protectedRoute && !auth.user) return <main className="public-shell"><PublicHeader authenticated={false} /><LoginPage /></main>;

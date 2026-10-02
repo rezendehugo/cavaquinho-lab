@@ -13,6 +13,7 @@ it('exports the identical SVG geometry and note labels for every library shape',
       const expected = document.createElement('div');
       expected.innerHTML = renderToStaticMarkup(createElement(ChordDiagram, { position, name: step.name, chordKey: key, chordSuffix: chord.suffix }));
       const exported = createChordDiagramSvg(step);
+      expect(exported.getAttribute('data-content-mode')).toBe('notes');
       // Presentation is frozen for PDF; all musical marks must be identical.
       exported.querySelectorAll('[style]').forEach(node => node.removeAttribute('style'));
       exported.querySelectorAll('[font-family]').forEach(node => node.removeAttribute('font-family'));

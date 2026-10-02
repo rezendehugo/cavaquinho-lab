@@ -97,6 +97,14 @@ describe('teoria aplicada às formas', () => {
     expect(getChordToneDetail('C', 'dim7', 69)).toMatchObject({ note: 'Bbb', degreeLabel: '♭♭7', description: 'sétima diminuta' });
   });
 
+  test('preserva a grafia com sustenido para uma sequência, embora a biblioteca use Db', () => {
+    expect(getChordFormulaLegend('C#', 'major').map(item => item.note)).toEqual(['C#', 'E#', 'G#']);
+    expect(analyzeChordVoicing({ key: 'Db', displayKey: 'C#', suffix: 'major' }, { midi: [61, 65, 68] })).toMatchObject({
+      notes: ['C#', 'E#', 'G#'],
+      missingNotes: []
+    });
+  });
+
   test('compara a distância real de cada corda usando a pestana de referência', () => {
     const comparison = compareChordShapes(
       { key: 'C', suffix: 'major' },

@@ -1,4 +1,9 @@
 const pitchNames = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const enharmonicPitchClasses = { 'C#': 1, 'D#': 3, 'F#': 6, 'G#': 8, 'A#': 10, Cb: 11, Fb: 4, 'E#': 5, 'B#': 0 };
+const spokenNamesByPitch = {
+  C: 'Dó', Db: 'Ré bemol', 'C#': 'Dó sustenido', D: 'Ré', Eb: 'Mi bemol', 'D#': 'Ré sustenido', E: 'Mi', F: 'Fá',
+  Gb: 'Sol bemol', 'F#': 'Fá sustenido', G: 'Sol', Ab: 'Lá bemol', 'G#': 'Sol sustenido', A: 'Lá', Bb: 'Si bemol', 'A#': 'Lá sustenido', B: 'Si'
+};
 
 export const chordQualities = {
   major: { intervals: [0, 4, 7], family: 'tríade maior', required: [0, 4] },
@@ -52,20 +57,24 @@ const detailForInterval = (interval, suffix) => {
   return degreeDetails[interval];
 };
 
+const getPitchClass = (key) => pitchNames.indexOf(key) >= 0 ? pitchNames.indexOf(key) : enharmonicPitchClasses[key] ?? -1;
+const getSpokenName = (key, pitchClass) => spokenNamesByPitch[key] || spokenPitchNames[pitchClass];
+
 const spellChordTone = (key, interval, suffix) => {
   const rootLetter = key?.[0];
   const rootPitch = letterSemitones[rootLetter];
-  if (rootPitch === undefined) return pitchNames[(pitchNames.indexOf(key) + interval + 12) % 12];
+  const root = getPitchClass(key);
+  if (rootPitch === undefined || root < 0) return pitchNames[(root + interval + 12) % 12];
   const letterOffset = suffix === 'dim7' && interval === 9 ? 6 : degreeLetterOffsets[interval];
   const targetLetter = letters[(letters.indexOf(rootLetter) + letterOffset) % letters.length];
-  const targetPitch = (pitchNames.indexOf(key) + interval) % 12;
+  const targetPitch = (root + interval) % 12;
   let delta = (targetPitch - letterSemitones[targetLetter] + 12) % 12;
   if (delta > 6) delta -= 12;
   return `${targetLetter}${delta === -2 ? 'bb' : delta === -1 ? 'b' : delta === 1 ? '#' : delta === 2 ? '##' : ''}`;
 };
 
 export function getChordToneDetail(key, suffix, midi) {
-  const root = pitchNames.indexOf(key);
+  const root = getPitchClass(key);
   const quality = chordQualities[suffix];
   if (root < 0 || !quality || !Number.isFinite(midi)) return null;
   const pitchClass = ((midi % 12) + 12) % 12;
@@ -75,15 +84,15 @@ export function getChordToneDetail(key, suffix, midi) {
   return {
     pitchClass,
     note: spellChordTone(key, interval, suffix),
-    spokenNote: spokenPitchNames[pitchClass],
+    spokenNote: getSpokenName(spellChordTone(key, interval, suffix), pitchClass),
     interval,
     ...detail,
-    accessibleName: `${spokenPitchNames[pitchClass]}, ${detail.description} de ${spokenPitchNames[root]}`
+    accessibleName: `${getSpokenName(spellChordTone(key, interval, suffix), pitchClass)}, ${detail.description} de ${getSpokenName(key, root)}`
   };
 }
 
 export function getChordFormulaLegend(key, suffix) {
-  const root = pitchNames.indexOf(key);
+  const root = getPitchClass(key);
   const quality = chordQualities[suffix];
   if (root < 0 || !quality) return [];
   return quality.intervals.map((interval) =>
@@ -133,7 +142,7 @@ export function getChordDegreeLegend(key, suffix, position) {
 }
 
 export const getChordPitchClasses = (key, suffix) => {
-  const root = pitchNames.indexOf(key);
+  const root = getPitchClass(key);
   const quality = chordQualities[suffix];
   if (root < 0 || !quality) return [];
   return uniqueSorted(quality.intervals.map(interval => (root + interval) % 12));
@@ -187,30 +196,31 @@ export const getEquivalentChords = (key, suffix) => {
 export const analyzeChordVoicing = (step, position) => {
   const quality = chordQualities[step.suffix];
   if (!quality) return null;
-  const expected = getChordPitchClasses(step.key, step.suffix);
+  const spellingKey = step.displayKey || step.key;
+  const expected = getChordPitchClasses(spellingKey, step.suffix);
   const played = getPositionPitchClasses(position);
   const missing = expected.filter(note => !played.includes(note));
   const extra = played.filter(note => !expected.includes(note));
-  const equivalents = getEquivalentChords(step.key, step.suffix);
-  const root = pitchNames.indexOf(step.key);
+  const equivalents = getEquivalentChords(spellingKey, step.suffix);
+  const root = getPitchClass(spellingKey);
   const essentialPitchClasses = quality.required.map(interval => (root + interval) % 12);
   const missingEssential = essentialPitchClasses.filter(note => !played.includes(note));
   const characteristicIntervals = quality.required.filter(interval => interval !== 0);
   const characteristicPitchClasses = characteristicIntervals.map(interval => (root + interval) % 12);
   const missingCharacteristic = characteristicPitchClasses.filter(note => !played.includes(note));
   const acceptedDim7Omission = step.suffix === 'dim7' && missingEssential.length === 1 && extra.length === 0;
-  const notes = quality.intervals.map(interval => pitchNames[(root + interval) % 12]);
+  const notes = quality.intervals.map(interval => spellChordTone(spellingKey, interval, step.suffix));
   const playedInStringOrder = [...new Set((position?.midi || []).map(note => note % 12))];
   const lowestMidi = position?.midi?.length ? Math.min(...position.midi) : null;
-  const bassNote = lowestMidi === null ? null : pitchNames[lowestMidi % 12];
+  const bassNote = lowestMidi === null ? null : getChordToneDetail(spellingKey, step.suffix, lowestMidi)?.note || pitchNames[lowestMidi % 12];
   return {
     suffix: step.suffix,
     family: quality.family,
     notes,
-    playedNotes: playedInStringOrder.map(note => pitchNames[note]),
-    missingNotes: missing.map(note => pitchNames[note]),
-    missingEssentialNotes: missingEssential.map(note => pitchNames[note]),
-    missingCharacteristicNotes: missingCharacteristic.map(note => pitchNames[note]),
+    playedNotes: playedInStringOrder.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
+    missingNotes: missing.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
+    missingEssentialNotes: missingEssential.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
+    missingCharacteristicNotes: missingCharacteristic.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
     extraNotes: extra.map(note => pitchNames[note]),
     rootMissing: !played.includes(root),
     rootRequired: Boolean(quality.rootRequired),
@@ -221,9 +231,9 @@ export const analyzeChordVoicing = (step, position) => {
       (Boolean(quality.rootRequired) && !played.includes(root)),
     exact: missing.length === 0 && extra.length === 0,
     equivalents,
-    aliases: (quality.aliases || []).map(alias => `${step.key}${alias}`),
+    aliases: (quality.aliases || []).map(alias => `${spellingKey}${alias}`),
     bassNote,
-    inversion: Boolean(bassNote && bassNote !== step.key),
+    inversion: Boolean(bassNote && bassNote !== spellingKey),
     symmetry: quality.symmetry || null
   };
 };
