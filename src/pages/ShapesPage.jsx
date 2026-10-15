@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { formatChordName, formatQualityOption, qualityLabels } from '../chordDisplay';
+import { formatChordName, formatQualityOption, formatRootOption, qualityLabels } from '../chordDisplay';
 import ChordLegendStrip from '../components/ChordLegendStrip';
 import ChordShapeCard from '../components/ChordShapeCard';
 import ShapeStudyPanel from '../components/ShapeStudyPanel';
@@ -60,11 +60,11 @@ function ShapesPage() {
         </div>
       </div>
       <div className="compact-controls">
-        <label><span>Raiz</span><select aria-label="Escolher raiz" value={key} onChange={(event) => setKey(event.target.value)}>{chromaticKeys.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label><span>Raiz</span><select aria-label="Escolher raiz" value={key} onChange={(event) => setKey(event.target.value)}>{chromaticKeys.map(item => <option key={item} value={item}>{formatRootOption(item)}</option>)}</select></label>
         <label><span>Qualidade</span><select aria-label="Escolher qualidade" value={suffix} onChange={(event) => setSuffix(event.target.value)}>{suffixes.map(item => <option key={item} value={item} aria-label={qualityLabels[item] || item}>{formatQualityOption(item)}</option>)}</select></label>
       </div>
       <div className="shape-results-heading" aria-live="polite">
-        <h3>{formatChordName(key, chord?.suffix || suffix)} · {chord?.positions.length || 0} formas</h3>
+        <h3>{formatRootOption(key)}{formatQualityOption(chord?.suffix || suffix)} · {chord?.positions.length || 0} formas</h3>
         <p className="shape-study-context">Em estudo: forma {selectedIndex + 1}. Compare as demais apenas quando quiser outra região do braço ou uma troca mais confortável.</p>
       </div>
       <ChordLegendStrip chordKey={key} chordSuffix={chord?.suffix || suffix} statuses={visibleStatuses} />

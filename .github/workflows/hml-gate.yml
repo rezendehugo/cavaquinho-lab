@@ -1,0 +1,27 @@
+name: HML release candidate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  hml-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirmar candidata de release
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref }}
+          TARGET_BRANCH: ${{ github.base_ref }}
+        run: |
+          if [ "$TARGET_BRANCH" != "main" ]; then
+            echo "Este gate só se aplica a promoções para main."
+            exit 0
+          fi
+          test "$SOURCE_BRANCH" = "hml" || {
+            echo "A promoção para main deve partir da branch hml."
+            exit 1
+          }
+      - name: Registrar promoção aguardando validação humana
+        run: echo "A RC já foi publicada no GitHub Pages a partir de hml. A mesclagem deste PR é a promoção manual para produção."
