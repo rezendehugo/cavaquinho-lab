@@ -2,7 +2,7 @@ name: Publicar GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [hml]
   workflow_dispatch:
 
 permissions:
@@ -39,6 +39,7 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_ENABLE_SCORE_IMPORTS: 'false'
           VITE_BASE_PATH: /cavaquinho-lab/
+          VITE_APP_VERSION: hml-${{ github.sha }}
       - name: Preparar fallback de rotas
         run: cp dist/index.html dist/404.html
       - name: Preparar Pages

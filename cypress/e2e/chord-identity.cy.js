@@ -116,10 +116,18 @@ describe('nome e sufixo dos acordes', () => {
 
   it('oferece a cobertura expandida dos dominantes acidentais', () => {
     cy.visit('/shapes');
+    cy.get('[aria-label="Escolher raiz"] option[value="Db"]').should('have.text', 'C#/Db');
     cy.get('[aria-label="Escolher raiz"]').select('Db');
     cy.get('[aria-label="Escolher qualidade"]').select('7');
     cy.get('.shape-grid .chord-shape-card').should('have.length', 11);
-    cy.contains('h3', 'Db7').should('contain.text', '11 formas');
+    cy.contains('h3', 'C#/Db7').should('contain.text', '11 formas');
+  });
+
+  it('preserva C# digitado e usa sua grafia na leitura do shape', () => {
+    cy.get('[aria-label="Nota do acorde 1"]').clear().type('C#{enter}');
+    cy.get('[aria-label="Sequência atual"]').should('contain.text', 'C#');
+    cy.get('.lab-card').first().find('[aria-label*="terça maior de Dó sustenido"]').should('exist');
+    cy.contains('.enharmonic-hint', 'C# e Db soam igual').should('be.visible');
   });
 
   it('distingue C7(9) e apresenta cores e texto para os graus', () => {
