@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import ScalePracticePanel from '../components/ScalePracticePanel';
 import SequencePracticePanel from '../components/SequencePracticePanel';
 import FreeSoloPracticePanel from '../components/FreeSoloPracticePanel';
+import EarTrainingPanel from '../components/EarTrainingPanel';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import { scoreImportsEnabled } from '../config';
 
@@ -19,7 +20,7 @@ export default function PracticePage({ initialMode = 'scale' }) {
     if (type === 'solo') setCreatedSoloId(id);
     selectMode(type);
   };
-  const modes = scoreImportsEnabled ? ['scale', 'solo', 'sequence', 'score'] : ['scale', 'solo', 'sequence'];
+  const modes = scoreImportsEnabled ? ['scale', 'solo', 'sequence', 'ear', 'score'] : ['scale', 'solo', 'sequence', 'ear'];
   const moveTabFocus = event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
@@ -31,14 +32,15 @@ export default function PracticePage({ initialMode = 'scale' }) {
   };
   return <section className="panel practice-page fretboard-page" aria-labelledby="practice-title">
     <header className="fretboard-hero"><div><p className="eyebrow">Treino guiado</p><h2 id="practice-title">Prática no cavaquinho</h2><p>Escolha um foco, pratique com atenção e escute o que mudou. Clareza, conforto e continuidade vêm antes da velocidade.</p></div></header>
-    <div className="practice-mode-tabs" role="tablist" aria-label="Modo de prática" onKeyDown={moveTabFocus}>
+    <div className="practice-mode-tabs" role="tablist" aria-label="Modo de prática" style={{ gridTemplateColumns: `repeat(${modes.length}, minmax(0, 1fr))` }} onKeyDown={moveTabFocus}>
       <button type="button" id="practice-tab-scale" data-practice-tab="scale" role="tab" aria-selected={mode === 'scale'} aria-controls="practice-panel-scale" tabIndex={mode === 'scale' ? 0 : -1} onClick={() => selectMode('scale')}>Escala</button>
       <button type="button" id="practice-tab-solo" data-practice-tab="solo" role="tab" aria-selected={mode === 'solo'} aria-controls="practice-panel-solo" tabIndex={mode === 'solo' ? 0 : -1} onClick={() => selectMode('solo')}>Solo livre</button>
       <button type="button" id="practice-tab-sequence" data-practice-tab="sequence" role="tab" aria-selected={mode === 'sequence'} aria-controls="practice-panel-sequence" tabIndex={mode === 'sequence' ? 0 : -1} onClick={() => selectMode('sequence')}>Sequência</button>
+      <button type="button" id="practice-tab-ear" data-practice-tab="ear" role="tab" aria-selected={mode === 'ear'} aria-controls="practice-panel-ear" tabIndex={mode === 'ear' ? 0 : -1} onClick={() => selectMode('ear')}>Ouvido</button>
       {scoreImportsEnabled ? <button type="button" id="practice-tab-score" data-practice-tab="score" role="tab" aria-selected={mode === 'score'} aria-controls="practice-panel-score" tabIndex={mode === 'score' ? 0 : -1} onClick={() => selectMode('score')}>Partitura</button> : null}
     </div>
     <div id={`practice-panel-${mode}`} role="tabpanel" aria-labelledby={`practice-tab-${mode}`} tabIndex="0">
-      {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' || !scoreImportsEnabled ? <SequencePracticePanel key="sequence" /> : <Suspense fallback={<p className="panel-loading" role="status">Preparando importação de partitura…</p>}><ScoreImportPage embedded onOpenPractice={openCreatedPractice} /></Suspense>}
+      {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' ? <SequencePracticePanel key="sequence" /> : mode === 'ear' ? <EarTrainingPanel key="ear" /> : <Suspense fallback={<p className="panel-loading" role="status">Preparando importação de partitura…</p>}><ScoreImportPage embedded onOpenPractice={openCreatedPractice} /></Suspense>}
     </div>
   </section>;
 }

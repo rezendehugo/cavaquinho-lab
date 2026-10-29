@@ -48,6 +48,20 @@ describe('Cavaquinho Lab', () => {
     expect(screen.queryByRole('link', { name: 'Cavaquinho' })).not.toBeInTheDocument();
   });
 
+  test('oferece trilha auditiva em etapas e guarda o progresso localmente', () => {
+    renderAt('/practice');
+    fireEvent.click(screen.getByRole('tab', { name: 'Ouvido' }));
+    expect(screen.getByRole('heading', { name: 'Treino de ouvido' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sinta o modo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ouvir trecho' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Maior' }));
+    expect(screen.getByRole('heading', { name: /escuta|ouvir essa relação/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próximo desafio' })).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabEarTraining:v1')).mode.attempts).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo desafio' }));
+    expect(screen.getByRole('heading', { name: 'Sinta o modo' })).toBeInTheDocument();
+  });
+
   test('mantém toda rota em pelo menos um cenário de auditoria visual', () => {
     const auditedPaths = new Set(uiAuditScenarios.map(scenario => scenario.path));
     expect(getRoutes().every(route => auditedPaths.has(route.path))).toBe(true);
@@ -232,6 +246,86 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByLabelText('Acordes da sequência')).toBeInTheDocument();
     await waitFor(() => expect(start).toHaveFocus());
     delete window.AudioContext;
+  });
+
+  test('pratica sem olhar, oferece pistas em etapas e revela sequência e reflexão ao final', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'sequence-1', title: 'Minha sequência', steps: [
+        { id: 'one', key: 'C', suffix: 'major' },
+        { id: 'two', key: 'D', suffix: 'minor' }
+      ]
+    }]));
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Praticar sem olhar' }));
+    const dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Minha sequência' });
+    expect(dialog).toHaveTextContent('Toque o que você lembra');
+    expect(dialog).not.toHaveTextContent('Dm');
+    expect(dialog).not.toHaveTextContent('C maior');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Pedir pista de qualidade' }));
+    expect(dialog).toHaveTextContent('Pista 1: qualidade maior.');
+    expect(dialog).not.toHaveTextContent('C maior');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Pedir pista da nota' }));
+    expect(dialog).toHaveTextContent('Pista 2: a nota fundamental é C.');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Marcar acorde tocado' }));
+    expect(dialog).toHaveTextContent('Acorde 2 de 2');
+    expect(dialog).not.toHaveTextContent('Dm');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Terminar e conferir sequência' }));
+    expect(dialog).toHaveTextContent('Agora confira');
+    expect(within(dialog).getByLabelText('Sequência revelada')).toHaveTextContent('C');
+    expect(within(dialog).getByLabelText('Sequência revelada')).toHaveTextContent('Dm');
+
+    fireEvent.change(within(dialog).getByLabelText('O que você lembrou, ouviu ou sentiu ao tocar?'), { target: { value: 'Lembrei a troca pelo som.' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Registrar esta sessão' }));
+    expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabStudy:sequence-1'))).toMatchObject({
+      observation: 'Lembrei a troca pelo som.', sessions: [expect.objectContaining({ observation: 'Lembrei a troca pelo som.' })]
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Sair' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Praticar sem olhar' })).toHaveFocus());
+  });
+
+  test('permite conferir a resposta atual ou a sequência inteira antes de terminar', () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'sequence-1', title: 'Sequência curta', steps: [{ id: 'one', key: 'Db', displayKey: 'C#', suffix: 'major' }, { id: 'two', key: 'G', suffix: '7' }]
+    }]));
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Praticar sem olhar' }));
+    let dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Sequência curta' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Conferir este acorde' }));
+    expect(dialog).toHaveTextContent('Resposta: C#.');
+    expect(dialog).not.toHaveTextContent('G7');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Conferir sequência agora' }));
+    dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Sequência curta' });
+    expect(within(dialog).getByLabelText('Sequência revelada')).toHaveTextContent('C#');
+    expect(within(dialog).getByLabelText('Sequência revelada')).toHaveTextContent('G7');
+  });
+
+  test('bloqueia a prática sem olhar para uma sequência vazia', () => {
+    renderAt('/practice');
+    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    expect(screen.getByRole('button', { name: 'Praticar sem olhar' })).toBeDisabled();
+  });
+
+  test('conclui e revela uma tentativa de um acorde', () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'sequence-1', title: 'Um acorde', steps: [{ id: 'one', key: 'G', suffix: '7' }]
+    }]));
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Praticar sem olhar' }));
+    const dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Um acorde' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Terminar e conferir sequência' }));
+    expect(within(dialog).getByLabelText('Sequência revelada')).toHaveTextContent('G7');
+    expect(within(dialog).getByRole('button', { name: 'Registrar esta sessão' })).toBeDisabled();
   });
 
   test('mantém o editor utilizável com cinquenta acordes e permite continuar até quinhentos', () => {
