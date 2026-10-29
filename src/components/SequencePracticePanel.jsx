@@ -11,6 +11,7 @@ import { loadActiveSequenceId, loadSequences, sequencesStorageKey, writeStorage 
 import FretboardGrid from './FretboardGrid';
 import FretboardPracticeOverlay from './FretboardPracticeOverlay';
 import SequenceChordNavigator from './SequenceChordNavigator';
+import NoLookPracticeOverlay from './NoLookPracticeOverlay';
 
 const positionKey = (position) => position.stringIndex + ':' + position.fret;
 
@@ -21,12 +22,15 @@ export default function SequencePracticePanel() {
   const [beatsPerChord, setBeatsPerChord] = useState(4);
   const [practicing, setPracticing] = useState(false);
   const [focusedOpen, setFocusedOpen] = useState(false);
+  const [noLookOpen, setNoLookOpen] = useState(false);
+  const [noLookPlaying, setNoLookPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [beatsRemaining, setBeatsRemaining] = useState(4);
   const [playbackStartIndex, setPlaybackStartIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
   const [playbackOriginPulse, setPlaybackOriginPulse] = useState(0);
   const practiceButtonRef = useRef(null);
+  const noLookButtonRef = useRef(null);
   const sequence = sequences.find(item => item.id === sequenceId) || sequences[0];
   const resolved = useMemo(() => buildSequencePractice(sequence?.steps || [], cavaquinhoChords), [sequence]);
   const countIn = metronome.beatsPerMeasure;
@@ -62,6 +66,29 @@ export default function SequencePracticePanel() {
     setFocusedOpen(true);
     if (await metronome.start().catch(() => false)) setPracticing(true);
     else setFocusedOpen(false);
+  };
+
+  const startNoLookPractice = () => {
+    if (!canPractice) return;
+    stopPractice();
+    setNoLookPlaying(false);
+    setNoLookOpen(true);
+  };
+
+  const toggleNoLookMetronome = async () => {
+    if (noLookPlaying) {
+      metronome.stop();
+      setNoLookPlaying(false);
+      return;
+    }
+    if (await metronome.start().catch(() => false)) setNoLookPlaying(true);
+  };
+
+  const exitNoLookPractice = () => {
+    if (noLookPlaying) metronome.stop();
+    setNoLookPlaying(false);
+    setNoLookOpen(false);
+    requestAnimationFrame(() => noLookButtonRef.current?.focus());
   };
 
   const togglePractice = async () => {
@@ -127,6 +154,7 @@ export default function SequencePracticePanel() {
         {resolved.missing.length ? <p className="validation-error" role="status">Há acordes sem forma disponível nesta sequência.</p> : null}
         {!sequence?.steps.length ? <a className="practice-sequence-link" href={import.meta.env.BASE_URL + 'sequences'}>Adicionar acordes em Sequências</a> : null}
         <div className="scale-practice"><div><BpmInput value={metronome.bpm} onChange={metronome.setBpm} ariaLabel="BPM da prática de sequência" variant="practice" /><small>{beatsPerChord} {beatsPerChord === 1 ? 'batida' : 'batidas'} por acorde · contagem de {countIn} tempos</small></div><button ref={practiceButtonRef} type="button" data-ui-text-reason="workflow" className="scale-practice-button" onClick={startPractice} disabled={!canPractice}><Play aria-hidden="true" size={16} />Praticar sequência</button></div>
+        <div className="no-look-entry"><p>Toque de memória e confira a sequência depois. Os acordes e diagramas ficam ocultos durante a tentativa.</p><button ref={noLookButtonRef} type="button" data-ui-text-reason="workflow" onClick={startNoLookPractice} disabled={!canPractice}>Praticar sem olhar</button></div>
         <p className="path-progress">{instruction}</p>
         <p className="visually-hidden" aria-live="polite">{instruction}</p>
         {current ? <p className="sequence-next-chord">Próximo: {formatSequenceChord(next)}</p> : null}
@@ -146,5 +174,6 @@ export default function SequencePracticePanel() {
       };
     }} />
     {focusedOpen ? <FretboardPracticeOverlay title={sequence?.title || 'Sequência'} eyebrow="Prática de sequência" progress={(currentIndex + 1) + ' de ' + resolved.steps.length + ' · ' + beatsRemaining + (beatsRemaining === 1 ? ' batida restante' : ' batidas restantes')} instruction={instruction} playing={practicing} metronome={metronome} onTogglePlay={togglePractice} onExit={exitPractice} legend={<div className="scale-visual-legend" aria-label="Legenda da sequência focada"><span className="legend-current">Acorde atual</span><span className="legend-next">Próximo acorde</span><span className="legend-played">Acorde anterior</span></div>}><FretboardGrid ariaLabel="Notas pressionadas da sequência em prática focada" mutedStrings={current?.mutedStrings || []} getPositionState={position => { const key = positionKey(position); return { highlighted: currentKeys.has(key), path: currentKeys.has(key), current: hasStarted && currentKeys.has(key), next: hasStarted && nextKeys.has(key), played: hasStarted && previousKeys.has(key) }; }} /></FretboardPracticeOverlay> : null}
+    {noLookOpen && sequence ? <NoLookPracticeOverlay sequence={sequence} metronome={metronome} playing={noLookPlaying} onToggleMetronome={toggleNoLookMetronome} onExit={exitNoLookPractice} /> : null}
   </div>;
 }
