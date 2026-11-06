@@ -61,7 +61,8 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
     const statusCode = knownError ? error.statusCode : error instanceof ZodError ? 400 : message === 'unauthorized' ? 401 : message === 'billing_unavailable' ? 503 : 500;
     const code = knownError ? error.code : statusCode === 401 ? 'unauthorized' : statusCode === 503 ? 'billing_unavailable' : statusCode === 400 ? 'invalid_request' : 'internal_error';
     if (statusCode >= 500) Sentry.captureException(error, { tags: { requestId: request.id } });
-    request.log.warn({ requestId: request.id, code, statusCode }, 'request_failed');
+    if (statusCode >= 500) request.log.error({ err: error, requestId: request.id, code, statusCode }, 'request_failed');
+    else request.log.warn({ requestId: request.id, code, statusCode }, 'request_failed');
     reply.status(statusCode).send({ error: code, requestId: request.id });
   });
 

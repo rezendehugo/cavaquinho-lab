@@ -87,7 +87,7 @@ function addPdfChordCandidates(draft: ScoreDraft, candidates: PdfChordCandidate[
 export class ScoreImportService {
   constructor(private readonly repository: ScoreImportRepository, private readonly pipelineVersion = 'omr-v3') {}
 
-  async create(ownerId: string, input: { sourceType: 'musicxml' | 'pdf'; originalName: string; storageKey: string; sha256: string }): Promise<ScoreImport> {
+  private async createImport(ownerId: string, input: { sourceType: 'musicxml' | 'pdf'; originalName: string; storageKey: string; sha256: string }, queueForOmr: boolean): Promise<ScoreImport> {
     const existing = await this.repository.findImportByOwnerAndSha(ownerId, input.sha256, this.pipelineVersion);
     if (existing) return existing;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -100,8 +100,14 @@ export class ScoreImportService {
       attemptCount: 0, lastErrorCode: null, createdAt: timestamp, updatedAt: timestamp
     };
     await this.repository.createImport(item);
-    await this.repository.createJob({ id: randomUUID(), importId: item.id, status: 'queued', availableAt: timestamp, lockedAt: null, attemptCount: 0, createdAt: timestamp });
+    if (queueForOmr) {
+      await this.repository.createJob({ id: randomUUID(), importId: item.id, status: 'queued', availableAt: timestamp, lockedAt: null, attemptCount: 0, createdAt: timestamp });
+    }
     return item;
+  }
+
+  async create(ownerId: string, input: { sourceType: 'musicxml' | 'pdf'; originalName: string; storageKey: string; sha256: string }): Promise<ScoreImport> {
+    return this.createImport(ownerId, input, true);
   }
 
   async list(ownerId: string, limit = 20, before?: string) {
@@ -122,7 +128,7 @@ export class ScoreImportService {
   }
 
   async importMusicXml(ownerId: string, originalName: string, content: string): Promise<{ item: ScoreImport; draft: ScoreDraft }> {
-    const item = await this.create(ownerId, { sourceType: 'musicxml', originalName, storageKey: `private/${ownerId}/${randomUUID()}.musicxml`, sha256: checksum(content) });
+    const item = await this.createImport(ownerId, { sourceType: 'musicxml', originalName, storageKey: `private/${ownerId}/${randomUUID()}.musicxml`, sha256: checksum(content) }, false);
     item.status = 'processing';
     item.updatedAt = now();
     await this.repository.updateImport(item);

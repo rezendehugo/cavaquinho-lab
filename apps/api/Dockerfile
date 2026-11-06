@@ -4,7 +4,7 @@ ENV APP_VERSION=$APP_VERSION
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts --include=dev
 COPY apps/api ./apps/api
 COPY tsconfig.json ./tsconfig.json
 EXPOSE 8080

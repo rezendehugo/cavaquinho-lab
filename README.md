@@ -39,6 +39,7 @@ npm run test:e2e   # abre o app e executa os testes Cypress
 npm run test:e2e:open # abre o Cypress interativo para aprender e depurar
 npm run dev:api      # API local de importação em 127.0.0.1:8080
 npm run test:api     # contratos, ownership e normalização MusicXML
+npm run test:omr     # testes unitários do worker de reconhecimento
 ```
 
 ## Docker
@@ -55,12 +56,18 @@ API TypeScript e os arquivos de produção do worker Python usam hot reload.
 Alterações em dependências, Dockerfiles, Audiveris ou tessdata ainda exigem
 rebuild.
 
+`npm run dev` inicia apenas a interface. Use `npm run stack:up` quando for
+testar **Partitura**, pois esse fluxo também precisa da API, PostgreSQL e do
+worker OMR. O início completo confirma frontend, API, banco, worker, CORS e
+uma importação MusicXML que cria práticas de sequência e melodia.
+
 Comandos operacionais:
 
 ```bash
 npm run stack:status # estado e healthchecks
 npm run stack:logs   # logs do frontend, API e worker
 npm run stack:rebuild # reconstrói imagens e dependências
+npm run stack:verify # confere saúde e o fluxo de importação já em execução
 npm run stack:down   # encerra a pilha; o banco local é preservado
 ```
 
@@ -71,8 +78,10 @@ docker compose --profile ci up --build --abort-on-container-exit
 docker compose --profile preview up --build
 ```
 
-Se a tela mostrar `api_unavailable`, confirme que `api`, `omr-worker` e
-`postgres` aparecem como saudáveis em `npm run stack:status`.
+Se a tela mostrar `api_unavailable`, execute `npm run stack:verify`. O comando
+informa qual serviço falhou. A API permite por padrão os frontends locais em
+`127.0.0.1:5173` e `127.0.0.1:4180`; para outra origem, defina
+`CORS_ALLOWED_ORIGINS` antes de iniciar ou recriar a API.
 
 ### Publicar na rede privada Tailscale
 
@@ -156,6 +165,10 @@ Antes de enviar alterações, execute:
 npm run validate
 ```
 
+Quando a alteração tocar Partitura, API, migrações ou CORS, execute também
+`npm run stack:up`. Além de iniciar a aplicação, ele confirma o fluxo completo
+de importação e criação das duas práticas.
+
 A interface usa controles semânticos, rótulos acessíveis e fluxos de teclado. Verificações automatizadas com axe, testes ponta a ponta e regressão visual ainda fazem parte do roadmap.
 
 ## Publicação
@@ -191,6 +204,10 @@ variável.
 
 Consulte [arquitetura e deploy da importação](docs/score-import-architecture.md)
 para topologia, comandos, healthchecks e requisitos de segurança.
+
+Consulte também a [arquitetura da aplicação](docs/application-architecture.md)
+para os limites entre interface, domínio, API, persistência, importação e os
+gates de teste que protegem cada fluxo.
 
 ## Limitações e roadmap
 

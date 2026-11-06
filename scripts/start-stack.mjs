@@ -1,6 +1,5 @@
-/* global console, fetch, process */
+/* global console, process */
 import { spawnSync } from 'node:child_process';
-import { setTimeout as delay } from 'node:timers/promises';
 
 const composeArguments = [
   'compose',
@@ -14,33 +13,15 @@ const composeArguments = [
 const started = spawnSync('docker', composeArguments, { stdio: 'inherit' });
 if (started.status !== 0) process.exit(started.status ?? 1);
 
-async function waitForUrl(url, attempts = 30) {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) return;
-    } catch {
-      // The container may still be moving from "started" to "ready".
-    }
-    await delay(1_000);
-  }
-  throw new Error(`O serviço não ficou disponível: ${url}`);
-}
-
 const appUrl = 'http://127.0.0.1:5173/cavaquinho-lab/';
 const practiceUrl = `${appUrl}practice`;
 const apiUrl = 'http://127.0.0.1:8080';
 const healthUrl = `${apiUrl}/api/health`;
 
-try {
-  await Promise.all([
-    waitForUrl(appUrl),
-    waitForUrl(healthUrl)
-  ]);
-} catch (error) {
-  console.error(`\nFalha ao iniciar a stack: ${error.message}`);
-  console.error('Use "npm run stack:status" e "npm run stack:logs" para diagnosticar.');
-  process.exit(1);
+const verified = spawnSync('node', ['scripts/verify-stack.mjs'], { stdio: 'inherit' });
+if (verified.status !== 0) {
+  console.error('\nFalha ao verificar a stack. Use "npm run stack:status" e "npm run stack:logs" para diagnosticar.');
+  process.exit(verified.status ?? 1);
 }
 
 console.log(`
