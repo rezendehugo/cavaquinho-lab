@@ -28,14 +28,23 @@ function parseChordSymbol(harmony: Record<string, unknown>): string {
   const suffixes: Record<string, string> = {
     major: '', minor: 'm', dominant: '7', 'major-seventh': 'maj7', 'minor-seventh': 'm7',
     'major-sixth': '6', 'minor-sixth': 'm6', diminished: 'dim', 'diminished-seventh': 'dim7',
+    'dominant-ninth': '9', 'dominant-13th': '13', 'major-ninth': 'maj9',
     augmented: '+', 'half-diminished': 'm7b5', suspended: 'sus4'
   };
+  const degrees = asArray(harmony.degree as Record<string, unknown> | Array<Record<string, unknown>>);
+  const degreeNumber = (degree: Record<string, unknown>): number => asNumber(degree['degree-value'], 0);
+  const degreeAlter = (degree: Record<string, unknown>): number => asNumber(degree['degree-alter'], 0);
+  const flatNinth = degrees.some(degree => degreeNumber(degree) === 9 && degreeAlter(degree) < 0);
+  const flatThirteenth = degrees.some(degree => degreeNumber(degree) === 13 && degreeAlter(degree) < 0);
+  let suffix = suffixes[kindValue] ?? kindValue;
+  if (flatNinth && ['7', '9'].includes(suffix)) suffix = '7b9';
+  if (flatThirteenth && ['7', '13'].includes(suffix)) suffix = '7b13';
   const bass = harmony.bass as Record<string, unknown> | undefined;
   const bassStep = bass ? String(bass['bass-step'] ?? '') : '';
   const bassAlter = asNumber(bass?.['bass-alter'], 0);
   const bassAccidental = bassAlter === 1 ? '#' : bassAlter === -1 ? 'b' : '';
   const slash = bassStep ? `/${bassStep}${bassAccidental}` : '';
-  return `${step}${accidental}${suffixes[kindValue] ?? kindValue}${slash}`;
+  return `${step}${accidental}${suffix}${slash}`;
 }
 
 function directionValues(rawMeasure: Record<string, unknown>, name: string): unknown[] {
@@ -49,6 +58,34 @@ function readDirectionText(value: unknown): string {
   if (!value || typeof value !== 'object') return '';
   const record = value as Record<string, unknown>;
   return String(record['#text'] ?? record['@_text'] ?? '').trim();
+}
+
+const PRINTED_CHORD_SYMBOL = /^[A-G](?:#|b|♯|♭)?(?:7(?:b|♭)(?:13|9)|maj(?:7|9)|m(?:7(?:b5|♭5)?|9|6)?|dim7?|aug|\+|13|9|7|6|sus[24]?|add9|7M)?(?:\/[A-G](?:#|b|♯|♭)?)?$/;
+
+function extractPrintedChordSymbols(value: string): string[] {
+  const normalized = value
+    .replace(/♯/g, '#').replace(/♭/g, 'b')
+    .replace(/[’‘']/g, '')
+    .replace(/([A-G]#?7)[|l]a?13/g, (_match, root) => `${root}b13`)
+    .replace(/([A-G]7)l13/g, (_match, root) => `${root}b13`)
+    .replace(/([A-G]m)G\b/g, (_match, root) => `${root}6`)
+    .replace(/\b([A-G])I>7\b/g, (_match, root) => `${root}b7`)
+    .replace(/\b([A-G])ma7J?\b/g, (_match, root) => `${root}maj7`)
+    .replace(/\b([A-G]b)d\b/g, (_match, root) => `${root}dim7`);
+  const symbols = normalized.match(/[A-G](?:#|b)?(?:7b(?:13|9)|maj(?:7|9)|m(?:7(?:b5)?|9|6)?|dim7?|aug|\+|13|9|7|6|sus[24]?|add9|7M)?(?:\/[A-G](?:#|b)?)?/g) ?? [];
+  return symbols.filter(symbol => PRINTED_CHORD_SYMBOL.test(symbol));
+}
+
+function directionChordEvents(rawMeasure: Record<string, unknown>): ChordEvent[] {
+  return asArray(rawMeasure.direction as Record<string, unknown> | Array<Record<string, unknown>>)
+    .flatMap(direction => {
+      const directionTypes = asArray(direction['direction-type'] as Record<string, unknown> | Array<Record<string, unknown>>);
+      const offset = asNumber(direction.offset, 0);
+      return directionTypes.flatMap(directionType => asArray(directionType.words as unknown)
+        .flatMap(readDirectionText)
+        .flatMap(extractPrintedChordSymbols)
+        .map(symbol => ({ id: randomUUID(), offsetTicks: offset, symbol, confidence: 0.72, alternatives: [] })));
+    });
 }
 
 function parseSections(rawMeasures: Array<Record<string, unknown>>, measureNumbers: number[]): ScoreDraft['sections'] {
@@ -127,6 +164,10 @@ export function parseMusicXml(content: string, context: { importId: string; owne
       id: randomUUID(), offsetTicks: asNumber((harmony.offset as Record<string, unknown> | undefined)?.['#text'] ?? harmony.offset, 0),
       symbol: parseChordSymbol(harmony), confidence: 1, alternatives: []
     }));
+    for (const chord of directionChordEvents(rawMeasure)) {
+      if (!chords.some(existing => existing.symbol.toLowerCase() === chord.symbol.toLowerCase())) chords.push(chord);
+    }
+    chords.sort((a, b) => a.offsetTicks - b.offsetTicks);
     const structuralIssues: ScoreIssue[] = events.some(event => event.durationTicks <= 0 || event.rest === Boolean(event.pitch))
       ? [{ code: 'invalid_note_event', severity: 'critical', message: 'A medida contém uma nota ou pausa inválida.' }]
       : [];
@@ -136,6 +177,7 @@ export function parseMusicXml(content: string, context: { importId: string; owne
       expectedTicks: divisions * meter.beats * (4 / meter.beatType),
       page,
       system,
+      layoutWidth: asNumber(rawMeasure['@_width'], 0) || undefined,
       newPage,
       newSystem,
       events,

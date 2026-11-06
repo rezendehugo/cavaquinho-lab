@@ -33,9 +33,10 @@ export function buildSequencePdfModel(sequence, options = {}) {
 export async function createSequencePdf(sequence, options = {}) {
   const model = buildSequencePdfModel(sequence, options);
   const { jsPDF } = await import('jspdf');
-  const pdf = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+  const isMap = options.kind === 'map';
+  const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: isMap ? 'landscape' : 'portrait', compress: true });
   pdf.setProperties({ title: model.title, subject: 'Mapa de acordes e prática deliberada', author: 'Cavaquinho Lab' });
-  const W = 595.28, H = 841.89, margin = 36, width = W - margin * 2;
+  const W = isMap ? 841.89 : 595.28, H = isMap ? 595.28 : 841.89, margin = isMap ? 24 : 36, width = W - margin * 2;
   const ink = '#20372f', muted = '#52645b', green = '#24745b', line = '#ccd9d1';
   const text = (value, x, y, size = 11, bold = false, color = ink) => {
     pdf.setFont('helvetica', bold ? 'bold' : 'normal'); pdf.setFontSize(size); pdf.setTextColor(color);
@@ -43,29 +44,39 @@ export async function createSequencePdf(sequence, options = {}) {
   };
   const shortTitle = printable(model.title).length > 75 ? `${printable(model.title).slice(0, 72)}...` : printable(model.title);
   const header = subtitle => {
-    text('CAVAQUINHO LAB / MEU MAPA DE PRÁTICA', margin, 32, 9, true, green);
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(16);
-    text(shortTitle, margin, 61, Math.min(16, 16 * width / Math.max(1, pdf.getTextWidth(shortTitle))), true);
-    text(subtitle, margin, 82, 10, false, muted);
-    pdf.setDrawColor(line); pdf.setLineWidth(.7); pdf.line(margin, 94, W - margin, 94);
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(isMap ? 14 : 15);
+    text(shortTitle, margin, isMap ? 27 : 35, Math.min(isMap ? 14 : 15, (isMap ? 14 : 15) * width / Math.max(1, pdf.getTextWidth(shortTitle))), true);
+    text(subtitle, margin, isMap ? 43 : 54, isMap ? 8 : 9, false, muted);
+    pdf.setDrawColor(line); pdf.setLineWidth(.7); pdf.line(margin, isMap ? 49 : 64, W - margin, isMap ? 49 : 64);
   };
   const drawCard = async (step, x, y, cardW, cardH) => {
-    pdf.setFillColor('#f6f8f5'); pdf.setDrawColor(line); pdf.roundedRect(x, y, cardW, cardH, 7, 7, 'FD');
-    text(String(step.number).padStart(2, '0'), x + 12, y + 21, 10, true, green);
-    text(step.name, x + 42, y + 25, 21, true);
-    text(`${step.beats} ${step.beats === 1 ? 'batida' : 'batidas'} · forma ${step.positionIndex + 1}`, x + 12, y + 44, 10, false, muted);
-    await drawChordDiagramPdf(pdf, step, x + (cardW - 210 * 154 / 190) / 2, y + 49, 210);
-    pdf.setLineWidth(.7);
-    text(`Casas: ${step.frets.map(f => f < 0 ? 'x' : f).join(' / ')}`, x + 12, y + 278, 10);
-    text(`Soam: ${step.theory.playedNotes.join(' · ')}`, x + 12, y + 293, 10);
-    text(step.theory.extraNotes.length ? `Notas adicionais: ${step.theory.extraNotes.join(', ')}` : step.theory.missingNotes.length ? `Omite: ${step.theory.missingNotes.join(', ')}` : 'Acorde completo', x + 12, y + 308, 9, false, muted);
+    if (!isMap) {
+      pdf.setFillColor('#f6f8f5'); pdf.setDrawColor(line); pdf.roundedRect(x, y, cardW, cardH, 7, 7, 'FD');
+      text(String(step.number).padStart(2, '0'), x + 10, y + 19, 8, true, green);
+      text(step.name, x + 34, y + 21, 15, true);
+      pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8); pdf.setTextColor(muted);
+      pdf.text(`Forma ${step.positionIndex + 1}`, x + cardW - 10, y + 19, { align: 'right' });
+      await drawChordDiagramPdf(pdf, step, x + (cardW - 112 * 154 / 190) / 2, y + 27, 112);
+      return;
+    }
+    text(step.name, x + cardW / 2, y + 15, 12, true, ink);
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12); pdf.setTextColor(ink);
+    await drawChordDiagramPdf(pdf, step, x + (cardW - 104 * 154 / 190) / 2, y + 20, 104);
   };
-  const perPage = 4, gap = 12, cardW = (width - gap) / 2, cardH = 320;
+  const perPage = isMap ? 12 : 8;
+  const gap = isMap ? 8 : 9;
+  const columns = isMap ? 4 : 2;
+  const cardW = (width - gap * (columns - 1)) / columns;
+  const cardH = isMap ? 145 : 174;
+  const rowGap = isMap ? 7 : gap;
+  const startY = isMap ? 56 : 73;
   for (let start = 0; start < model.steps.length; start += perPage) {
     if (start) pdf.addPage();
-    header(`${model.bpm} BPM · ${model.steps.length} acordes · ao terminar, volte ao acorde ${model.loop + 1}`);
-    for (const [i, step] of model.steps.slice(start, start + perPage).entries()) await drawCard(step, margin + (i % 2) * (cardW + gap), 107 + Math.floor(i / 2) * (cardH + gap), cardW, cardH);
-    text('Da esquerda para a direita: D4 · G4 · B4 · D5. Notas e cores como na tela; x = não tocar.', margin, 800, 9, false, muted);
+    header(`${model.bpm} BPM · ${model.steps.length} acordes · afinação D-G-B-D`);
+    for (const [i, step] of model.steps.slice(start, start + perPage).entries()) {
+      const row = Math.floor(i / columns);
+      await drawCard(step, margin + (i % columns) * (cardW + gap), startY + row * (cardH + rowGap), cardW, cardH);
+    }
   }
   if (options.kind !== 'map') {
     let y;
@@ -109,8 +120,9 @@ export async function createSequencePdf(sequence, options = {}) {
   }
   const pageCount = pdf.getNumberOfPages();
   for (let p = 1; p <= pageCount; p++) {
-    pdf.setPage(p); text('Cavaquinho Lab · prática com intenção', margin, H - 18, 8, false, muted);
-    text(`${p} / ${pageCount}`, W - 64, H - 18, 9, false, muted);
+    pdf.setPage(p);
+    if (!isMap) text('Cavaquinho Lab · prática com intenção', margin, H - 18, 8, false, muted);
+    text(`${p} / ${pageCount}`, W - 44, H - 12, 8, false, muted);
   }
   return pdf;
 }

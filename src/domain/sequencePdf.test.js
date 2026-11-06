@@ -33,14 +33,14 @@ describe('sequence study PDF', () => {
   it('paginates all occurrences, including a last partial page', async () => {
     const sequence = { ...sample, steps: Array.from({ length: 13 }, (_, i) => ({ ...sample.steps[i % 5], id: `${i}` })) };
     const pdf = await createSequencePdf(sequence, { kind: 'map' });
-    expect(pdf.getNumberOfPages()).toBe(4);
+    expect(pdf.getNumberOfPages()).toBe(2);
     expect(pdf.output('arraybuffer').byteLength).toBeGreaterThan(3000);
   });
   it('creates an annotated guide and paginates long personal notes', async () => {
     const pdf = await createSequencePdf(sample, { study: { intention: 'Trocar com continuidade e escutar as notas comuns.' } });
-    expect(pdf.getNumberOfPages()).toBe(4);
+    expect(pdf.getNumberOfPages()).toBe(3);
     const long = await createSequencePdf(sample, { study: { observation: 'Uma descoberta musical com intenção. '.repeat(50), connection: 'Relacionar com outras músicas. '.repeat(60) } });
-    expect(long.getNumberOfPages()).toBeGreaterThan(4);
+    expect(long.getNumberOfPages()).toBeGreaterThan(3);
   });
   it('makes portable file names', () => {
     expect(sequencePdfFileName('As Rosas não falam')).toBe('As-Rosas-nao-falam-guia.pdf');

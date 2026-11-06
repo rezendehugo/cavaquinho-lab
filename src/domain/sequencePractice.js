@@ -1,5 +1,5 @@
 import { noteNames } from '../chordDisplay';
-import { getAbsoluteFrets, optimizeSequence } from '../progressionOptimizer';
+import { getAbsoluteFrets, optimizeSequence, resolveSelectedShape } from '../progressionOptimizer';
 import { cavaquinhoOpenMidi } from './scalePaths';
 import { getNextPracticeIndex } from './sequencePresets';
 
@@ -76,6 +76,45 @@ export const shapeToFretboardPositions = (shape) => {
     });
   });
   return { positions, mutedStrings };
+};
+
+// These fields describe the written sequence. A chosen voicing is kept out of
+// this key so changing a shape does not invalidate the full progression plan.
+export const getSequenceStructureKey = (steps = []) => JSON.stringify(steps.map(step => ({
+  id: step.id,
+  key: step.key,
+  displayKey: step.displayKey,
+  suffix: step.suffix,
+  bassNote: step.bassNote,
+  sourceSymbol: step.sourceSymbol,
+  measure: step.measure
+})));
+
+export const getSequenceStructureSteps = (steps = []) => steps.map(step => {
+  const structure = { ...step };
+  delete structure.positionIndex;
+  delete structure.customPosition;
+  delete structure.shapeSuffix;
+  return structure;
+});
+
+export const projectSequencePractice = (basePractice, storedSteps = [], chordDb) => {
+  if (basePractice.missing.length) return basePractice;
+  const storedById = new Map(storedSteps.map(step => [step.id, step]));
+  return {
+    ...basePractice,
+    steps: basePractice.steps.map(baseStep => {
+      const storedStep = storedById.get(baseStep.id) || baseStep;
+      const selected = resolveSelectedShape(storedStep, chordDb);
+      if (!selected) return { ...baseStep, ...storedStep };
+      return {
+        ...baseStep,
+        ...storedStep,
+        ...selected,
+        ...shapeToFretboardPositions(selected.position)
+      };
+    })
+  };
 };
 
 export const buildSequencePractice = (steps, chordDb) => {

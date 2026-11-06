@@ -6,27 +6,30 @@ const spokenNamesByPitch = {
 };
 
 export const chordQualities = {
-  major: { intervals: [0, 4, 7], family: 'tríade maior', required: [0, 4] },
-  minor: { intervals: [0, 3, 7], family: 'tríade menor', required: [0, 3] },
-  '6': { intervals: [0, 4, 7, 9], family: 'tétrade maior com sexta', required: [0, 4, 9] },
-  m6: { intervals: [0, 3, 7, 9], family: 'tétrade menor com sexta', required: [0, 3, 9] },
-  '7': { intervals: [0, 4, 7, 10], family: 'tétrade dominante', required: [0, 4, 10] },
-  maj7: { intervals: [0, 4, 7, 11], family: 'tétrade maior com sétima', required: [0, 4, 11] },
-  m7: { intervals: [0, 3, 7, 10], family: 'tétrade menor com sétima', required: [0, 3, 10] },
-  m7b5: { intervals: [0, 3, 6, 10], family: 'tétrade meio diminuta', required: [0, 3, 6, 10] },
-  dim: { intervals: [0, 3, 6], family: 'tríade diminuta', required: [0, 3, 6] },
-  dim7: { intervals: [0, 3, 6, 9], family: 'tétrade diminuta simétrica', required: [0, 3, 6, 9], symmetry: 3 },
-  sus2: { intervals: [0, 2, 7], family: 'tríade suspensa com segunda', required: [0, 2] },
-  sus4: { intervals: [0, 5, 7], family: 'tríade suspensa com quarta', required: [0, 5], aliases: ['4', 'sus'] },
-  '7sus4': { intervals: [0, 5, 7, 10], family: 'tétrade dominante suspensa com quarta', required: [0, 5, 10], aliases: ['7sus'] },
-  add9: { intervals: [0, 2, 4, 7], family: 'tríade maior com nona adicionada', required: [0, 2, 4] },
-  '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [2, 4, 10] },
-  aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], aliases: ['+', 'aum'], rootRequired: true },
-  '69': { intervals: [0, 2, 4, 7, 9], family: 'acorde maior com sexta e nona', required: [0, 4, 9], aliases: ['6/9'] },
-  m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [2, 3, 10] },
-  maj9: { intervals: [0, 2, 4, 7, 11], family: 'acorde maior com sétima maior e nona', required: [2, 4, 11], aliases: ['7M(9)'] },
-  madd9: { intervals: [0, 2, 3, 7], family: 'tríade menor com nona adicionada', required: [0, 2, 3], aliases: ['m(add9)'], rootRequired: true },
-  mmaj7: { intervals: [0, 3, 7, 11], family: 'acorde menor com sétima maior', required: [0, 3, 11], aliases: ['m(7M)', 'm(maj7)', 'mM7'], rootRequired: true }
+  major: { intervals: [0, 4, 7], family: 'tríade maior', required: [0, 4], characteristicIntervals: [4] },
+  minor: { intervals: [0, 3, 7], family: 'tríade menor', required: [0, 3], characteristicIntervals: [3] },
+  '6': { intervals: [0, 4, 7, 9], family: 'tétrade maior com sexta', required: [0, 4, 9], characteristicIntervals: [4, 9] },
+  m6: { intervals: [0, 3, 7, 9], family: 'tétrade menor com sexta', required: [0, 3, 9], characteristicIntervals: [3, 9] },
+  '7': { intervals: [0, 4, 7, 10], family: 'tétrade dominante', required: [0, 4, 10], characteristicIntervals: [4, 10] },
+  maj7: { intervals: [0, 4, 7, 11], family: 'tétrade maior com sétima', required: [0, 4, 11], characteristicIntervals: [4, 11] },
+  m7: { intervals: [0, 3, 7, 10], family: 'tétrade menor com sétima', required: [0, 3, 10], characteristicIntervals: [3, 10] },
+  m7b5: { intervals: [0, 3, 6, 10], family: 'tétrade meio diminuta', required: [0, 3, 6, 10], characteristicIntervals: [0, 6] },
+  dim: { intervals: [0, 3, 6], family: 'tríade diminuta', required: [0, 3, 6], characteristicIntervals: [0, 6] },
+  dim7: { intervals: [0, 3, 6, 9], family: 'tétrade diminuta simétrica', required: [0, 3, 6, 9], characteristicIntervals: [0, 6, 9], symmetry: 3 },
+  sus2: { intervals: [0, 2, 7], family: 'tríade suspensa com segunda', required: [0, 2], characteristicIntervals: [2] },
+  sus4: { intervals: [0, 5, 7], family: 'tríade suspensa com quarta', required: [0, 5], characteristicIntervals: [5], aliases: ['4', 'sus'] },
+  '7sus4': { intervals: [0, 5, 7, 10], family: 'tétrade dominante suspensa com quarta', required: [0, 5, 10], characteristicIntervals: [5, 10], aliases: ['7sus'] },
+  add9: { intervals: [0, 2, 4, 7], family: 'tríade maior com nona adicionada', required: [0, 2, 4], characteristicIntervals: [2, 4] },
+  '9': { intervals: [0, 2, 4, 7, 10], family: 'dominante com nona', required: [2, 4, 10], characteristicIntervals: [2, 4, 10] },
+  '13': { intervals: [0, 2, 4, 7, 9, 10], family: 'dominante com décima terceira', required: [4, 9, 10], characteristicIntervals: [4, 9, 10] },
+  '7b13': { intervals: [0, 4, 7, 8, 10], family: 'dominante com décima terceira menor', required: [4, 8, 10], characteristicIntervals: [4, 8, 10] },
+  '7b9': { intervals: [0, 1, 4, 7, 10], family: 'dominante com nona menor', required: [1, 4, 10], characteristicIntervals: [1, 10] },
+  aug: { intervals: [0, 4, 8], family: 'tríade aumentada', required: [0, 4, 8], characteristicIntervals: [4, 8], aliases: ['+', 'aum'], rootRequired: true },
+  '69': { intervals: [0, 2, 4, 7, 9], family: 'acorde maior com sexta e nona', required: [0, 4, 9], characteristicIntervals: [2, 9], aliases: ['6/9'] },
+  m9: { intervals: [0, 2, 3, 7, 10], family: 'acorde menor com nona', required: [2, 3, 10], characteristicIntervals: [2, 3, 10] },
+  maj9: { intervals: [0, 2, 4, 7, 11], family: 'acorde maior com sétima maior e nona', required: [2, 4, 11], characteristicIntervals: [2, 4, 11], aliases: ['7M(9)'] },
+  madd9: { intervals: [0, 2, 3, 7], family: 'tríade menor com nona adicionada', required: [0, 2, 3], characteristicIntervals: [2, 3], aliases: ['m(add9)'], rootRequired: true },
+  mmaj7: { intervals: [0, 3, 7, 11], family: 'acorde menor com sétima maior', required: [0, 3, 11], characteristicIntervals: [3, 11], aliases: ['m(7M)', 'm(maj7)', 'mM7'], rootRequired: true }
 };
 
 const uniqueSorted = (values) => [...new Set(values)].sort((a, b) => a - b);
@@ -52,12 +55,15 @@ const letters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const degreeLetterOffsets = { 0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 4, 7: 4, 8: 4, 9: 5, 10: 6, 11: 6 };
 
 const detailForInterval = (interval, suffix) => {
+  if (suffix === '13' && interval === 9) return { degreeId: 'sixth', degreeLabel: '13', description: 'décima terceira', colorGroup: 'ninth' };
+  if (suffix === '7b13' && interval === 8) return { degreeId: 'fifth', degreeLabel: '♭13', description: 'décima terceira menor', colorGroup: 'ninth' };
   if (suffix === 'sus2' && interval === 2) return { degreeId: 'second', degreeLabel: '2', description: 'segunda maior', colorGroup: 'ninth' };
   if (suffix === 'dim7' && interval === 9) return { degreeId: 'seventh', degreeLabel: '♭♭7', description: 'sétima diminuta', colorGroup: 'seventh' };
   return degreeDetails[interval];
 };
 
 const getPitchClass = (key) => pitchNames.indexOf(key) >= 0 ? pitchNames.indexOf(key) : enharmonicPitchClasses[key] ?? -1;
+export const getChordRootPitchClass = getPitchClass;
 const getSpokenName = (key, pitchClass) => spokenNamesByPitch[key] || spokenPitchNames[pitchClass];
 
 const spellChordTone = (key, interval, suffix) => {
@@ -65,7 +71,7 @@ const spellChordTone = (key, interval, suffix) => {
   const rootPitch = letterSemitones[rootLetter];
   const root = getPitchClass(key);
   if (rootPitch === undefined || root < 0) return pitchNames[(root + interval + 12) % 12];
-  const letterOffset = suffix === 'dim7' && interval === 9 ? 6 : degreeLetterOffsets[interval];
+  const letterOffset = suffix === 'dim7' && interval === 9 ? 6 : suffix === '7b13' && interval === 8 ? 5 : degreeLetterOffsets[interval];
   const targetLetter = letters[(letters.indexOf(rootLetter) + letterOffset) % letters.length];
   const targetPitch = (root + interval) % 12;
   let delta = (targetPitch - letterSemitones[targetLetter] + 12) % 12;
@@ -157,14 +163,14 @@ export const getVoicingCompleteness = (analysis) => {
   if (analysis.extraNotes.length) {
     return { id: 'additional', label: `Voicing com notas adicionais: ${analysis.extraNotes.join(', ')}.` };
   }
+  if (analysis.acceptedDim7Omission) {
+    return { id: 'incomplete', label: `Voicing incompleto: omite ${analysis.missingNotes.join(', ')}. Válido no cavaquinho.` };
+  }
   if (analysis.blocked) {
     return {
       id: 'blocked',
-      label: `Voicing bloqueado: omite tom característico (${analysis.missingCharacteristicNotes.join(', ')}).`
+      label: 'Voicing bloqueado: não contém uma nota obrigatória para esta forma.'
     };
-  }
-  if (analysis.acceptedDim7Omission) {
-    return { id: 'incomplete', label: `Voicing incompleto: omite ${analysis.missingNotes.join(', ')}. Válido no cavaquinho.` };
   }
   if (analysis.rootMissing && !analysis.rootRequired) {
     return {
@@ -203,11 +209,18 @@ export const analyzeChordVoicing = (step, position) => {
   const extra = played.filter(note => !expected.includes(note));
   const equivalents = getEquivalentChords(spellingKey, step.suffix);
   const root = getPitchClass(spellingKey);
-  const essentialPitchClasses = quality.required.map(interval => (root + interval) % 12);
-  const missingEssential = essentialPitchClasses.filter(note => !played.includes(note));
-  const characteristicIntervals = quality.required.filter(interval => interval !== 0);
-  const characteristicPitchClasses = characteristicIntervals.map(interval => (root + interval) % 12);
-  const missingCharacteristic = characteristicPitchClasses.filter(note => !played.includes(note));
+  const requiredIntervals = quality.required;
+  const characteristicIntervals = quality.characteristicIntervals || [];
+  const playedIntervals = quality.intervals.filter(interval => played.includes((root + interval) % 12));
+  const playedIntervalSet = new Set(playedIntervals);
+  const playedRequiredIntervals = requiredIntervals.filter(interval => playedIntervalSet.has(interval));
+  const missingRequiredIntervals = requiredIntervals.filter(interval => !playedIntervalSet.has(interval));
+  const playedCharacteristicIntervals = characteristicIntervals.filter(interval => playedIntervalSet.has(interval));
+  const missingCharacteristicIntervals = characteristicIntervals.filter(interval => !playedIntervalSet.has(interval));
+  const spellIntervals = intervals => intervals.map(interval =>
+    getChordToneDetail(spellingKey, step.suffix, root + interval)?.note || pitchNames[(root + interval) % 12]
+  );
+  const missingEssential = missingRequiredIntervals.map(interval => (root + interval) % 12);
   const acceptedDim7Omission = step.suffix === 'dim7' && missingEssential.length === 1 && extra.length === 0;
   const notes = quality.intervals.map(interval => spellChordTone(spellingKey, interval, step.suffix));
   const playedInStringOrder = [...new Set((position?.midi || []).map(note => note % 12))];
@@ -217,17 +230,28 @@ export const analyzeChordVoicing = (step, position) => {
     suffix: step.suffix,
     family: quality.family,
     notes,
+    playedIntervals,
+    requiredIntervals: [...requiredIntervals],
+    requiredNotes: spellIntervals(requiredIntervals),
+    playedRequiredIntervals,
+    playedRequiredNotes: spellIntervals(playedRequiredIntervals),
+    missingRequiredIntervals,
+    missingRequiredNotes: spellIntervals(missingRequiredIntervals),
+    characteristicIntervals: [...characteristicIntervals],
+    characteristicNotes: spellIntervals(characteristicIntervals),
+    playedCharacteristicIntervals,
+    playedCharacteristicNotes: spellIntervals(playedCharacteristicIntervals),
+    missingCharacteristicIntervals,
+    missingCharacteristicNotes: spellIntervals(missingCharacteristicIntervals),
     playedNotes: playedInStringOrder.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
     missingNotes: missing.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
-    missingEssentialNotes: missingEssential.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
-    missingCharacteristicNotes: missingCharacteristic.map(note => getChordToneDetail(spellingKey, step.suffix, note)?.note || pitchNames[note]),
+    missingEssentialNotes: spellIntervals(missingRequiredIntervals),
     extraNotes: extra.map(note => pitchNames[note]),
     rootMissing: !played.includes(root),
     rootRequired: Boolean(quality.rootRequired),
     acceptedDim7Omission,
     blocked:
       extra.length > 0 ||
-      (missingCharacteristic.length > 0 && !acceptedDim7Omission) ||
       (Boolean(quality.rootRequired) && !played.includes(root)),
     exact: missing.length === 0 && extra.length === 0,
     equivalents,

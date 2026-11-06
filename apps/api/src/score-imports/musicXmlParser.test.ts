@@ -50,4 +50,40 @@ describe('MusicXML normalizer', () => {
     });
     expect(draft.measures[0].chords[0].symbol).toBe('E7/G#');
   });
+
+  test('includes printed chord symbols exported as text directions in score order', () => {
+    const withChordNames = score.replace(
+      '<direction><sound tempo="96"/></direction>',
+      '<direction><direction-type><words>F#13</words></direction-type><offset>2</offset></direction>' +
+        '<direction><direction-type><words>F#7b13</words></direction-type><offset>4</offset></direction>' +
+        '<direction><direction-type><words>B9</words></direction-type><offset>6</offset></direction><direction><sound tempo="96"/></direction>'
+    );
+    const draft = parseMusicXml(withChordNames, { importId: 'printed-chords', ownerId: 'user-1' });
+    expect(draft.measures[0].chords.map(chord => [chord.symbol, chord.offsetTicks])).toEqual([
+      ['C', 0], ['F#13', 2], ['F#7b13', 4], ['B9', 6]
+    ]);
+  });
+
+  test('splits and cleans OCR-combined chord labels without losing their printed suffixes', () => {
+    const ocrWords = score.replace(
+      '<direction><sound tempo="96"/></direction>',
+      '<direction><direction-type><words>F#7|a13 B9</words></direction-type></direction>' +
+        '<direction><direction-type><words>Em7b5A7l13</words></direction-type></direction>' +
+        '<direction><direction-type><words>Fma7J</words></direction-type></direction>' +
+        '<direction><direction-type><words>GmG</words></direction-type></direction>' +
+        '<direction><sound tempo="96"/></direction>'
+    );
+    const draft = parseMusicXml(ocrWords, { importId: 'ocr-chords', ownerId: 'user-1' });
+    expect(draft.measures[0].chords.map(chord => chord.symbol)).toEqual([
+      'C', 'F#7b13', 'B9', 'Em7b5', 'A7b13', 'Fmaj7', 'Gm6'
+    ]);
+  });
+
+  test('formats MusicXML major ninth chord kinds with the conventional maj9 suffix', () => {
+    const majorNinth = score.replace(
+      '<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>',
+      '<harmony><root><root-step>D</root-step></root><kind>major-ninth</kind></harmony>'
+    );
+    expect(parseMusicXml(majorNinth, { importId: 'major-ninth', ownerId: 'user-1' }).measures[0].chords[0].symbol).toBe('Dmaj9');
+  });
 });

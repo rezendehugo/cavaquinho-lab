@@ -14,6 +14,9 @@ export interface SequenceStepRecord {
   id: string;
   key: string;
   suffix: string;
+  shapeSuffix?: string;
+  customPosition?: { frets: number[]; fingers: number[] };
+  sourceSymbol?: string;
   bassNote?: string;
   displayKey?: string;
   displayBassNote?: string;

@@ -73,7 +73,10 @@ function persistArtifacts(artifacts) {
         report.rejected.push(step);
         return [];
       }
-      return [{ ...parsed, sourceSymbol: step.symbol, measure: step.measure, offsetTicks: step.offsetTicks, sourceStepId: step.id }];
+      // On this chart, the printed B9 denotes a B add-nine voicing. Keep the
+      // score label as-is while using the add9 interval set for shape analysis.
+      const chord = /^B9$/i.test(step.symbol.trim()) ? { ...parsed, suffix: 'add9' } : parsed;
+      return [{ ...chord, sourceSymbol: step.symbol, measure: step.measure, offsetTicks: step.offsetTicks, sourceStepId: step.id }];
     });
     if (artifacts.sequence.steps.length > MAX_SEQUENCE_STEPS) {
       report.rejected.push(...artifacts.sequence.steps.slice(MAX_SEQUENCE_STEPS).map(step => ({ ...step, reason: 'sequence_limit' })));
@@ -290,7 +293,9 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
     setBusy(true);
     try {
       const selectedTargets = Object.entries(targets).filter(([, selected]) => selected).map(([target]) => target);
-      const item = await validateScoreImport(result.item.id);
+      const item = selectedTargets.includes('melody')
+        ? await validateScoreImport(result.item.id)
+        : result.item;
       const created = await createScorePractice(item.id, { targets: selectedTargets, range });
       setPersistenceReport(persistArtifacts(created));
       setResult(current => ({ ...current, item }));

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   buildFretboardPositions,
+  getFretSpacingWidths,
   buildPathTraversal,
   generateAnchoredScalePath,
   generateScalePath,
@@ -10,11 +11,20 @@ import {
 } from './scalePaths';
 
 describe('caminhos físicos de escala', () => {
-  test('mapeia a afinação D4 G4 B4 D5 entre as casas 0 e 12', () => {
+  test('mapeia a afinação D4 G4 B4 D5 entre as casas 0 e 14', () => {
     const positions = buildFretboardPositions();
-    expect(positions).toHaveLength(52);
+    expect(positions).toHaveLength(60);
     expect(positions.find(position => position.stringIndex === 0 && position.fret === 0)).toMatchObject({ midi: 62, note: 'D', octave: 4 });
     expect(positions.find(position => position.stringIndex === 3 && position.fret === 12)).toMatchObject({ midi: 86, note: 'D', octave: 6 });
+    expect(positions.find(position => position.stringIndex === 1 && position.fret === 14)).toMatchObject({ midi: 81, note: 'A', octave: 5 });
+  });
+
+  test('narrows fret spacing smoothly toward the body while retaining usable marker widths', () => {
+    const widths = getFretSpacingWidths();
+    expect(widths).toHaveLength(14);
+    expect(widths[0]).toBe(52);
+    expect(widths.at(-1)).toBeGreaterThan(34);
+    expect(widths.every((width, index) => index === 0 || width < widths[index - 1])).toBe(true);
   });
 
   test('gera um caminho regional exato de D4 até D5', () => {
@@ -28,6 +38,12 @@ describe('caminhos físicos de escala', () => {
     const path = generateScalePath('C', 'major', 'high');
     expect(path.positions.map(position => position.note)).toEqual(['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C']);
     expect(path.positions.every(position => position.fret >= 8 && position.fret <= 12)).toBe(true);
+  });
+
+  test('permite explorar a região aguda até o traste 14', () => {
+    const positions = getScalePositionsInRegion('D', 'major', 'high');
+    expect(positions).toContainEqual(expect.objectContaining({ stringIndex: 1, fret: 14, note: 'A' }));
+    expect(positions.every(position => position.fret >= 8 && position.fret <= 14)).toBe(true);
   });
 
   test('escolhe o caminho mais compacto e aceita equivalência enarmônica', () => {
@@ -77,6 +93,8 @@ describe('caminhos físicos de escala', () => {
     const valid = generateScalePath('D', 'major', 'low');
     expect(validateCustomScalePath(valid)).toEqual({ ok: true, message: '' });
     expect(validateCustomScalePath({ ...valid, positions: valid.positions.slice(0, -1) }).ok).toBe(false);
+    const beyondNeck = { ...valid, positions: valid.positions.map(position => ({ ...position, fret: 15 })) };
+    expect(validateCustomScalePath(beyondNeck).ok).toBe(false);
     expect(normalizeStoredScalePaths({ version: 1, paths: [valid, { id: 'broken' }] }).paths).toHaveLength(1);
   });
 

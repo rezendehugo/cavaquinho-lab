@@ -2,7 +2,7 @@ export const chromaticKeys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', '
 
 export const MAX_SEQUENCE_STEPS = 500;
 
-export const suffixCycle = ['major', 'minor', '6', '7', '69', 'm6', '9', 'add9', 'aug', 'maj7', 'maj9', 'm7', 'm9', 'madd9', 'mmaj7', 'm7b5', 'dim', 'dim7', 'sus2', 'sus4', '7sus4'];
+export const suffixCycle = ['major', 'minor', '6', '7', '69', 'm6', '9', '13', '7b13', '7b9', 'add9', 'aug', 'maj7', 'maj9', 'm7', 'm9', 'madd9', 'mmaj7', 'm7b5', 'dim', 'dim7', 'sus2', 'sus4', '7sus4'];
 
 export const defaultSequences = [
   { id: 'sequence-1', title: 'Sequência 1', steps: [], practiceBpm: 60, loopStartIndex: 0 }
@@ -35,6 +35,12 @@ export const reorderSequence = (sequence, fromIndex, toIndex) => {
 };
 
 export const normalizeSteps = (value) => {
+  const normalizeCustom = step => {
+    if (!Array.isArray(step.customPosition?.frets) || step.customPosition.frets.length !== 4) return {};
+    const frets = step.customPosition.frets;
+    if (frets.some(fret => !Number.isInteger(fret) || fret < -1 || fret > 24)) return {};
+    return { customPosition: { frets: [...frets], fingers: Array.isArray(step.customPosition.fingers) && step.customPosition.fingers.length === 4 ? [...step.customPosition.fingers] : [0, 0, 0, 0] } };
+  };
   if (!Array.isArray(value)) return [];
   const usedIds = new Set();
   return value.filter(Boolean).slice(0, MAX_SEQUENCE_STEPS).map((step, index) => {
@@ -51,6 +57,8 @@ export const normalizeSteps = (value) => {
       ...(Number.isInteger(step.measure) ? { measure: step.measure } : {}),
       ...(Number.isInteger(step.offsetTicks) ? { offsetTicks: step.offsetTicks } : {}),
       ...(typeof step.sourceSymbol === 'string' ? { sourceSymbol: step.sourceSymbol } : {}),
+      ...(suffixCycle.includes(step.shapeSuffix) ? { shapeSuffix: step.shapeSuffix } : {}),
+      ...normalizeCustom(step),
       suffix: suffixCycle.includes(step.suffix) ? step.suffix : 'major',
       positionIndex: Number.isInteger(step.positionIndex) ? step.positionIndex : null,
       practiceBeats: Math.min(16, Math.max(1, Math.round(Number(step.practiceBeats) || 4)))

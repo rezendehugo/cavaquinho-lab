@@ -7,15 +7,18 @@ export const scalePathStorageVersion = 2;
 export const fretRegions = {
   low: { label: 'Grave', minimum: 0, maximum: 4 },
   middle: { label: 'Média', minimum: 4, maximum: 8 },
-  high: { label: 'Aguda', minimum: 8, maximum: 12 },
-  compact: { label: 'Mais compacta', minimum: 0, maximum: 12 }
+  high: { label: 'Aguda', minimum: 8, maximum: 14 },
+  compact: { label: 'Mais compacta', minimum: 0, maximum: 14 }
 };
+
+export const MAX_FRET = 14;
+export const getFretSpacingWidths = () => Array.from({ length: MAX_FRET }, (_item, index) => 52 * Math.pow(0.972, index));
 
 /** @typedef {import('./scalePaths.types').ScalePathPosition} ScalePathPosition */
 /** @typedef {import('./scalePaths.types').ScalePath} ScalePath */
 
 export const buildFretboardPositions = () => cavaquinhoOpenMidi.flatMap((openMidi, stringIndex) => (
-  Array.from({ length: 13 }, (_item, fret) => {
+  Array.from({ length: MAX_FRET + 1 }, (_item, fret) => {
     const midi = openMidi + fret;
     const pitchClass = midi % 12;
     return { stringIndex, fret, midi, pitchClass, note: noteNames[pitchClass], octave: Math.floor(midi / 12) - 1 };
@@ -127,7 +130,7 @@ export const validateCustomScalePath = (path) => {
   if (expectedMidi.length !== path.positions.length) return { ok: false, message: 'O caminho deve seguir os graus da escala em ordem.' };
   const validPositions = path.positions.every((position, index) => Number.isInteger(position.stringIndex)
     && position.stringIndex >= 0 && position.stringIndex < 4
-    && Number.isInteger(position.fret) && position.fret >= 0 && position.fret <= 12
+    && Number.isInteger(position.fret) && position.fret >= 0 && position.fret <= MAX_FRET
     && position.midi === cavaquinhoOpenMidi[position.stringIndex] + position.fret
     && expectedClasses.includes(position.pitchClass)
     && position.pitchClass === position.midi % 12

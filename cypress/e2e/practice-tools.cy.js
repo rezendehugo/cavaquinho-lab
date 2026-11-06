@@ -43,7 +43,83 @@ describe('ferramentas da sessão de prática', () => {
     cy.get('[aria-label="Batidas por minuto"]').should('have.value', '104');
     cy.get('[aria-label="Fechar metrônomo"]').click();
     cy.contains('[role="tab"]', 'Sequência').click();
+    cy.get('.sequence-practice-tools > summary').click();
     cy.get('[aria-label="BPM da prática de sequência"]').should('have.value', '104').type('{downarrow}').should('have.value', '103');
+  });
+
+  it('esconde os acordes, oferece pistas e revela a sequência na prática sem olhar', () => {
+    cy.viewport(390, 844);
+    cy.visit('/practice', { onBeforeLoad(window) {
+      window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+        id: 'sequence-1', title: 'Treino de memória', steps: [
+          { id: 'one', key: 'C', suffix: 'major' },
+          { id: 'two', key: 'D', suffix: 'minor' }
+        ]
+      }]));
+    } });
+    cy.contains('[role="tab"]', 'Sequência').click();
+    cy.get('.sequence-practice-tools > summary').click();
+    cy.contains('button', 'Praticar sem olhar').click();
+    cy.get('[aria-label="Prática sem olhar: Treino de memória"]').as('noLook');
+    cy.get('@noLook').should('contain.text', 'Toque o que você lembra').and('not.contain.text', 'Dm');
+    cy.contains('button', 'Pedir pista de qualidade').click();
+    cy.get('@noLook').should('contain.text', 'Pista 1: qualidade maior.').and('not.contain.text', 'C maior');
+    cy.contains('button', 'Pedir pista da nota').click();
+    cy.get('@noLook').should('contain.text', 'Pista 2: a nota fundamental é C.');
+    cy.contains('button', 'Marcar acorde tocado').click();
+    cy.get('@noLook').should('contain.text', 'Acorde 2 de 2').and('not.contain.text', 'Dm');
+    cy.contains('button', 'Terminar e conferir sequência').click();
+    cy.get('@noLook').find('[aria-label="Sequência revelada"]').should('contain.text', 'C').and('contain.text', 'Dm');
+    cy.get('.no-look-reflection textarea').type('Lembrei a troca pelo som.');
+    cy.contains('button', 'Registrar esta sessão').click();
+    cy.get('@noLook').should('contain.text', 'Sessão registrada.');
+    cy.document().then(document => {
+      expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
+    });
+  });
+
+  it('reproduz um desafio de ouvido e apresenta feedback e próximos caminhos', () => {
+    cy.visit('/practice');
+    cy.contains('[role="tab"]', 'Ouvido').click();
+    cy.contains('h2', 'Treino de ouvido').should('be.visible');
+    cy.get('.ear-training-listen').click();
+    cy.get('#ear-training-audio-status').should('contain.text', 'Trecho em reprodução');
+    cy.get('.ear-training-options button').first().should('be.disabled');
+    cy.get('#ear-training-audio-status').should('contain.text', 'Trecho concluído');
+    cy.get('.ear-training-options button').first().click();
+    cy.get('.ear-training-feedback').should('be.visible');
+    cy.contains('button', 'Próximo desafio').click();
+    cy.contains('button', 'Caminhos').click();
+    cy.get('.ear-training-round').should('contain.text', 'Reconheça o caminho');
+    cy.document().then(document => {
+      expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
+    });
+  });
+
+  it('treina antecipação numa sequência salva e agenda revisão local', () => {
+    cy.visit('/practice', { onBeforeLoad(window) {
+      installFakeAudioContext(window);
+      window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{ id: 'ear-sequence', title: 'Cadência salva', tonic: 'C', steps: [
+        { id: 'step-a', key: 'C', suffix: 'major', positionIndex: null, practiceBeats: 4 },
+        { id: 'step-b', key: 'G', suffix: '7', positionIndex: null, practiceBeats: 4 },
+        { id: 'step-c', key: 'C', suffix: 'major', positionIndex: null, practiceBeats: 4 }
+      ], practiceBpm: 60, loopStartIndex: 0 }]));
+    } });
+    cy.contains('[role="tab"]', 'Ouvido').click();
+    cy.contains('button', 'Minha sequência').click();
+    cy.get('#ear-saved-sequence').should('have.value', 'ear-sequence');
+    cy.contains('h3', 'Antecipe seus acordes').should('be.visible');
+    cy.get('.ear-training-listen').click();
+    cy.get('#ear-training-audio-status').should('contain.text', 'Trecho em reprodução');
+    cy.get('.ear-training-options button').first().should('be.disabled');
+    cy.get('#ear-training-audio-status').should('contain.text', 'Trecho concluído');
+    cy.get('.ear-training-options button').first().click();
+    cy.get('.ear-training-feedback').should('be.visible');
+    cy.window().then(window => {
+      const review = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequenceEarReview:v1'))['ear-sequence'];
+      expect(review.attempts).to.equal(1);
+      expect(review.dueAt).to.be.a('string');
+    });
   });
 
   it('não sobrepõe cabeçalho e controles', () => {
@@ -128,7 +204,7 @@ describe('ferramentas da sessão de prática', () => {
   it('fixa uma forma pela galeria e volta para escolha automática', () => {
     cy.get('[aria-label="Adicionar acorde"]').click();
     cy.contains('button', 'Escolher forma').click();
-    cy.get('[aria-label="Fixar forma 3 de 7"]').click();
+    cy.get('[aria-label="Usar forma 3 de 7"]').click();
     cy.contains('Forma 3 fixada').should('be.visible');
     cy.window().then(window => expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).to.equal(2));
     cy.contains('button', 'Escolher forma').click();
@@ -189,4 +265,5 @@ describe('ferramentas da sessão de prática', () => {
     cy.viewport(390, 844);
     cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
   });
+
 });

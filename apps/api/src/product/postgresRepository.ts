@@ -17,6 +17,9 @@ function mapProfile(row: Row): Profile {
 function mapStep(row: Row): SequenceStepRecord {
   return {
     id: String(row.id), key: String(row.chord_root), suffix: String(row.chord_suffix),
+    ...(row.shape_suffix ? { shapeSuffix: String(row.shape_suffix) } : {}),
+    ...(row.custom_position ? { customPosition: row.custom_position as { frets: number[]; fingers: number[] } } : {}),
+    ...(row.source_symbol ? { sourceSymbol: String(row.source_symbol) } : {}),
     ...(row.bass_note ? { bassNote: String(row.bass_note) } : {}),
     ...(row.display_root ? { displayKey: String(row.display_root) } : {}),
     ...(row.display_bass_note ? { displayBassNote: String(row.display_bass_note) } : {}),
@@ -100,6 +103,6 @@ export class PostgresProductRepository implements ProductRepository {
   }
   private async insertSteps(sql: Sql | TransactionSql, value: SequenceRecord): Promise<void> {
     if (!value.steps.length) return;
-    await sql`insert into sequence_steps ${sql(value.steps.map((step, position) => ({ id: step.id, sequence_id: value.id, owner_id: value.ownerId, position, chord_root: step.key, chord_suffix: step.suffix, bass_note: step.bassNote ?? null, display_root: step.displayKey ?? null, display_bass_note: step.displayBassNote ?? null, position_index: step.positionIndex, practice_beats: step.practiceBeats })))}`;
+    await sql`insert into sequence_steps ${sql(value.steps.map((step, position) => ({ id: step.id, sequence_id: value.id, owner_id: value.ownerId, position, chord_root: step.key, chord_suffix: step.suffix, shape_suffix: step.shapeSuffix ?? null, custom_position: step.customPosition ? sql.json(step.customPosition) : null, source_symbol: step.sourceSymbol ?? null, bass_note: step.bassNote ?? null, display_root: step.displayKey ?? null, display_bass_note: step.displayBassNote ?? null, position_index: step.positionIndex, practice_beats: step.practiceBeats })))}`;
   }
 }

@@ -8,13 +8,14 @@ export const qualityLabels = Object.fromEntries(
   Object.entries(cavaquinho.suffixMetadata || {}).map(([suffix, metadata]) => [suffix, metadata.label])
 );
 
-export const formatSuffix = (suffix) => suffixLabels[suffix] ?? suffix;
+export const formatSuffix = (suffix) => ({ '13': '13', '7b13': '7b13', '7b9': '7b9' })[suffix] ?? suffixLabels[suffix] ?? suffix;
 
 export const formatQualityOption = (suffix) => formatSuffix(suffix) || qualityLabels[suffix] || suffix;
 
 export const formatChordName = (key, suffix, displayKey) => (displayKey || key) + formatSuffix(suffix);
 
 export const formatSequenceChord = (step) => {
+  if (typeof step.sourceSymbol === 'string' && step.sourceSymbol.trim()) return step.sourceSymbol.trim();
   const chord = formatChordName(step.key, step.suffix, step.displayKey);
   return step.bassNote ? `${chord}/${step.displayBassNote || step.bassNote}` : chord;
 };

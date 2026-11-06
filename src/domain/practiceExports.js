@@ -162,6 +162,8 @@ export function downloadMarkdown(document) {
   const anchor = window.document.createElement('a');
   anchor.href = url;
   anchor.download = document.fileName;
+  window.document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

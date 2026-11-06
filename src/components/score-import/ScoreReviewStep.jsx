@@ -22,6 +22,7 @@ export default function ScoreReviewStep({
   const confidentCount = measures.length - reviewMeasures.length;
   const selectedCount = measures.filter(item => item.number >= range.startMeasure && item.number <= range.endMeasure).length;
   const criticalCount = measures.filter(item => item.issues.some(issue => issue.severity === 'critical')).length;
+  const sequenceOnly = targets.sequence && !targets.melody;
   const chordEvents = measures
     .filter(measure => measure.number >= range.startMeasure && measure.number <= range.endMeasure)
     .flatMap(measure => measure.chords.map(chord => ({ ...chord, measure: measure.number })));
@@ -52,9 +53,9 @@ export default function ScoreReviewStep({
         <strong>{reviewMeasures.length ? `${reviewMeasures.length} medidas precisam de revisão` : 'Todas as medidas estão confiáveis'}</strong>
       </div>
       {reviewMeasures.length ? <span>{confidentCount} medidas confiáveis</span> : null}
-      {criticalCount ? <span className="critical">{criticalCount} impedem a criação</span> : null}
+      {criticalCount ? <span className={sequenceOnly ? '' : 'critical'}>{sequenceOnly ? `${criticalCount} não afetam a sequência` : `${criticalCount} impedem o solo`}</span> : null}
     </div>
-    {sequenceProblem ? <div className="score-import-rejections" role="alert"><strong>A sequência precisa de correção</strong>{invalidChords.length ? <p>{invalidChords.slice(0, 8).map(chord => `Medida ${chord.measure}: ${chord.symbol}`).join(' · ')}</p> : null}{chordEvents.length > MAX_SEQUENCE_STEPS ? <p>O trecho possui {chordEvents.length} cifras; selecione até {MAX_SEQUENCE_STEPS}.</p> : null}<small>Você pode corrigir as cifras ou criar somente o Solo com melodia.</small></div> : null}
+    {sequenceProblem ? <div className="score-import-rejections" role="alert"><strong>A sequência precisa de correção</strong>{invalidChords.length ? <p>{invalidChords.slice(0, 8).map(chord => `Medida ${chord.measure}: ${chord.symbol}`).join(' · ')}</p> : null}{chordEvents.length > MAX_SEQUENCE_STEPS ? <p>O trecho possui {chordEvents.length} cifras; selecione até {MAX_SEQUENCE_STEPS}.</p> : null}<small>Corrija as cifras ou desmarque a sequência para criar somente o Solo com melodia.</small></div> : null}
 
     <div className="score-review-mobile-tabs" role="tablist" aria-label="Visualização da revisão">
       <button type="button" role="tab" aria-selected={mobileView === 'original'} onClick={() => setMobileView('original')}>Original</button>
@@ -101,7 +102,7 @@ export default function ScoreReviewStep({
         <label className={targets.sequence ? 'selected' : ''}><input type="checkbox" checked={targets.sequence} onChange={event => onTargetsChange({ ...targets, sequence: event.target.checked })} /><strong>Sequência de acordes</strong><span>Pratique as trocas reconhecidas.</span></label>
         <label className={targets.melody ? 'selected' : ''}><input type="checkbox" checked={targets.melody} onChange={event => onTargetsChange({ ...targets, melody: event.target.checked })} /><strong>Solo com melodia</strong><span>Pratique notas, pausas e ritmo.</span></label>
       </div>
-      <div className="score-create-action"><span>{selectedCount} medidas selecionadas</span><button type="button" data-ui-text-reason="workflow" className="primary-button" disabled={busy || criticalCount > 0 || sequenceProblem || range.startMeasure > range.endMeasure || !Object.values(targets).some(Boolean)} onClick={onApprove}>Validar e criar prática</button></div>
+      <div className="score-create-action"><span>{selectedCount} medidas selecionadas</span><button type="button" aria-label={sequenceOnly ? 'Criar sequência de acordes' : 'Validar e criar prática'} title={sequenceOnly ? 'Criar sequência de acordes' : 'Validar e criar prática'} data-ui-text-reason="workflow" className="primary-button" disabled={busy || (targets.melody && criticalCount > 0) || sequenceProblem || range.startMeasure > range.endMeasure || !Object.values(targets).some(Boolean)} onClick={onApprove}>{sequenceOnly ? 'Criar sequência de acordes' : 'Validar e criar prática'}</button></div>
     </div>
   </section>;
 }

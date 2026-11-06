@@ -27,7 +27,7 @@ BLANK_INK_RATIO = 0.00005
 MAX_ARCHIVE_MEMBERS = 256
 MAX_ARCHIVE_UNCOMPRESSED_BYTES = 64 * 1024 * 1024
 CHORD_PATTERN = re.compile(
-    r"(?<![A-Za-z])(?:[A-G](?:#|b|♯|♭)?)(?:maj7|m7(?:b5|♭5)?|m|dim7?|sus[24]?|add9|7M|7|\+|9)?(?:\([^)]{1,8}\))?"
+    r"(?<![A-Za-z])(?:[A-G](?:#|b|♯|♭)?)(?:7(?:b|♭)13|7(?:b|♭)9|maj7|m7(?:b5|♭5)?|m|dim7?|sus[24]?|add9|7M|7|13|\+|9)?(?:\([^)]{1,8}\))?"
 )
 
 
@@ -70,14 +70,19 @@ def _inspect_pdf(path: str, original_name: str = "score.pdf") -> tuple[int, dict
         if document.page_count < 1 or document.page_count > MAX_PAGES:
             raise ValueError("pdf_page_limit")
         candidates: list[dict[str, object]] = []
+        page_sizes: list[dict[str, float | int]] = []
         first_lines: list[str] = []
         for page_index, page in enumerate(document):
+            page_sizes.append({"page": page_index + 1, "width": float(page.rect.width), "height": float(page.rect.height)})
             blocks = page.get_text("blocks")
             for x0, y0, _x1, _y1, text, *_rest in blocks:
                 clean = " ".join(text.split())
                 if page_index == 0 and clean:
                     first_lines.append(clean)
-                for match in CHORD_PATTERN.finditer(clean):
+            # Word coordinates keep each chord at its own horizontal position;
+            # block coordinates collapse an entire staff line to one x value.
+            for x0, y0, _x1, _y1, word, *_rest in page.get_text("words"):
+                for match in CHORD_PATTERN.finditer(word):
                     candidates.append({
                         "text": match.group(0).replace("♯", "#").replace("♭", "b"),
                         "page": page_index + 1,
@@ -88,7 +93,7 @@ def _inspect_pdf(path: str, original_name: str = "score.pdf") -> tuple[int, dict
         metadata_lines = [line for line in first_lines if _is_metadata_text(line) and not CHORD_PATTERN.fullmatch(line)]
         title = metadata_lines[0][:160] if metadata_lines else _humanize_filename(original_name)
         composer = metadata_lines[1][:160] if len(metadata_lines) > 1 else None
-        return document.page_count, {"title": title, "composer": composer, "chordCandidates": candidates}
+        return document.page_count, {"title": title, "composer": composer, "chordCandidates": candidates, "pageSizes": page_sizes}
     finally:
         document.close()
 
@@ -206,7 +211,16 @@ def _run_audiveris(source: str, output: str, page_count: int) -> None:
     timeout = min(600, max(base_timeout, 45 * page_count))
     try:
         completed = subprocess.run(
-            [command, "-batch", "-export", "-output", output, source],
+            [
+                command,
+                "-batch",
+                "-constant",
+                "org.audiveris.omr.sheet.ProcessingSwitches.chordNames=true",
+                "-export",
+                "-output",
+                output,
+                source,
+            ],
             capture_output=True,
             text=True,
             timeout=timeout,

@@ -7,6 +7,7 @@ export interface OmrResult {
     title: string | null;
     composer: string | null;
     chordCandidates: Array<{ text: string; page: number; x: number; y: number; confidence: number }>;
+    pageSizes?: Array<{ page: number; width: number; height: number }>;
   };
   preprocessing?: {
     geometryNormalized: boolean;

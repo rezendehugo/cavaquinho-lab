@@ -1,6 +1,32 @@
-import { analyzeChordVoicing, compareChordShapes, getChordFormulaLegend, getChordPitchClasses, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
+import { analyzeChordVoicing, chordQualities, compareChordShapes, getChordFormulaLegend, getChordPitchClasses, getChordRootPitchClass, getChordToneDetail, getEquivalentChords, getVoicingCompleteness, positionMatchesChordExactly } from './chordTheory';
 
 describe('teoria aplicada às formas', () => {
+  test('toda qualidade declara intervalos definidores contidos em sua fórmula', () => {
+    Object.entries(chordQualities).forEach(([suffix, quality]) => {
+      expect(quality.characteristicIntervals, suffix).toBeInstanceOf(Array);
+      expect(quality.characteristicIntervals.length, suffix).toBeGreaterThan(0);
+      expect(quality.characteristicIntervals.every(interval => quality.intervals.includes(interval)), suffix).toBe(true);
+    });
+  });
+
+  test.each(['B', 'C', 'F#', 'Eb'])('transporta a relação definidora de %s7♭9 pela tonalidade', key => {
+    const root = getChordRootPitchClass(key);
+    const definingIntervals = chordQualities['7b9'].characteristicIntervals;
+    const definingTones = getChordFormulaLegend(key, '7b9').filter(tone => definingIntervals.includes(tone.interval));
+    expect(definingIntervals).toEqual([1, 10]);
+    expect(definingTones.map(tone => tone.interval)).toEqual([1, 10]);
+    expect(definingTones.map(tone => tone.pitchClass)).toEqual([(root + 1) % 12, (root + 10) % 12]);
+    expect(definingTones.map(tone => tone.degreeLabel)).toEqual(['♭9', '♭7']);
+  });
+
+  test.each(['C', 'D', 'F#', 'Bb'])('ensina a quinta diminuta como trítone da tônica em %sm7♭5', key => {
+    const definingIntervals = chordQualities.m7b5.characteristicIntervals;
+    const definingTones = getChordFormulaLegend(key, 'm7b5').filter(tone => definingIntervals.includes(tone.interval));
+    expect(definingIntervals).toEqual([0, 6]);
+    expect(definingTones.map(tone => tone.degreeLabel)).toEqual(['1', '♭5']);
+    expect((definingTones[1].pitchClass - definingTones[0].pitchClass + 12) % 12).toBe(6);
+  });
+
   test('reconhece equivalências exatas entre tétrades', () => {
     expect(getChordPitchClasses('G', 'm6')).toEqual(getChordPitchClasses('E', 'm7b5'));
     expect(getEquivalentChords('G', 'm6')).toContainEqual({ key: 'E', suffix: 'm7b5' });
@@ -48,12 +74,69 @@ describe('teoria aplicada às formas', () => {
     });
   });
 
-  test('bloqueia tons característicos ausentes e aceita uma omissão em dim7', () => {
-    const blocked = analyzeChordVoicing({ key: 'G', suffix: 'mmaj7' }, { midi: [55, 62, 66] });
-    expect(getVoicingCompleteness(blocked)).toMatchObject({ id: 'blocked' });
+  test('trata tons definidores omitidos como voicing incompleto e aceita uma omissão em dim7', () => {
+    const partial = analyzeChordVoicing({ key: 'G', suffix: 'mmaj7' }, { midi: [55, 62, 66] });
+    expect(getVoicingCompleteness(partial)).toMatchObject({ id: 'incomplete' });
 
     const incompleteDim7 = analyzeChordVoicing({ key: 'C', suffix: 'dim7' }, { midi: [63, 66, 69] });
     expect(getVoicingCompleteness(incompleteDim7)).toMatchObject({ id: 'incomplete' });
+  });
+
+  test('mantém ♭9 e ♭7 como tons definidores de 7♭9, mas classifica sua omissão como voicing parcial', () => {
+    const analysis = analyzeChordVoicing({ key: 'B', suffix: '7b9' }, { midi: [59, 63, 69] });
+
+    expect(analysis).toMatchObject({
+      playedIntervals: [0, 4, 10],
+      requiredIntervals: [1, 4, 10],
+      requiredNotes: ['C', 'D#', 'A'],
+      playedRequiredIntervals: [4, 10],
+      playedRequiredNotes: ['D#', 'A'],
+      missingRequiredIntervals: [1],
+      missingRequiredNotes: ['C'],
+      characteristicIntervals: [1, 10],
+      characteristicNotes: ['C', 'A'],
+      playedCharacteristicIntervals: [10],
+      playedCharacteristicNotes: ['A'],
+      missingCharacteristicIntervals: [1],
+      missingCharacteristicNotes: ['C'],
+      playedNotes: ['B', 'D#', 'A'],
+      missingEssentialNotes: ['C'],
+      blocked: false
+    });
+    expect(getVoicingCompleteness(analysis)).toMatchObject({ id: 'incomplete' });
+  });
+
+  test('classifica a tônica e a ♭5 como definidoras do meio-diminuto sem bloquear voicings parciais', () => {
+    const tritoneVoicing = analyzeChordVoicing({ key: 'C', suffix: 'm7b5' }, { midi: [60, 66] });
+    expect(tritoneVoicing).toMatchObject({
+      playedIntervals: [0, 6],
+      requiredIntervals: [0, 3, 6, 10],
+      requiredNotes: ['C', 'Eb', 'Gb', 'Bb'],
+      playedRequiredIntervals: [0, 6],
+      playedRequiredNotes: ['C', 'Gb'],
+      missingRequiredIntervals: [3, 10],
+      missingRequiredNotes: ['Eb', 'Bb'],
+      characteristicIntervals: [0, 6],
+      characteristicNotes: ['C', 'Gb'],
+      playedCharacteristicIntervals: [0, 6],
+      playedCharacteristicNotes: ['C', 'Gb'],
+      missingCharacteristicIntervals: [],
+      playedNotes: ['C', 'Gb'],
+      missingCharacteristicNotes: [],
+      blocked: false
+    });
+    expect(getVoicingCompleteness(tritoneVoicing)).toMatchObject({ id: 'incomplete' });
+
+    const missingFlatFive = analyzeChordVoicing({ key: 'C', suffix: 'm7b5' }, { midi: [60, 63, 70] });
+    expect(missingFlatFive).toMatchObject({
+      characteristicIntervals: [0, 6],
+      playedCharacteristicIntervals: [0],
+      playedCharacteristicNotes: ['C'],
+      missingCharacteristicIntervals: [6],
+      missingCharacteristicNotes: ['Gb'],
+      blocked: false
+    });
+    expect(getVoicingCompleteness(missingFlatFive)).toMatchObject({ id: 'incomplete' });
   });
 
   test('descreve os graus de C7(9) sem depender da cor', () => {
@@ -88,6 +171,19 @@ describe('teoria aplicada às formas', () => {
       expect.objectContaining({ note: 'G', degreeLabel: '5', description: 'quinta justa' }),
       expect.objectContaining({ note: 'Bb', degreeLabel: '♭7', description: 'sétima menor' })
     ]);
+  });
+
+  test('interpreta F#13 sem confundir o símbolo da partitura com a posição natural F#7', () => {
+    expect(getChordRootPitchClass('F#')).toBe(6);
+    expect(getChordRootPitchClass('Gb')).toBe(6);
+    expect(getChordRootPitchClass('Db')).toBe(1);
+    expect(getChordFormulaLegend('F#', '13').map(item => [item.note, item.degreeLabel])).toEqual([
+      ['F#', '1'], ['G#', '9'], ['A#', '3'], ['C#', '5'], ['D#', '13'], ['E', '♭7']
+    ]);
+    expect(analyzeChordVoicing({ key: 'Gb', displayKey: 'F#', suffix: '13' }, { midi: [66, 70, 73, 76] })).toMatchObject({
+      notes: ['F#', 'G#', 'A#', 'C#', 'D#', 'E'],
+      missingEssentialNotes: ['D#']
+    });
   });
 
   test('soletra os graus pelo contexto do acorde, inclusive sus2 e dim7', () => {

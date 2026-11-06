@@ -38,7 +38,7 @@ export default function ScoreMeasureEditor({ measure, revision, onSave, busy, ex
       <span>{uncertain ? 'Revisar' : 'Confiável'} · {events.reduce((sum, event) => sum + event.durationTicks, 0)}/{measure.expectedTicks} ticks</span>
     </button>
     {open ? <div className="score-measure-editor-body">
-    <label><span>Cifras, separadas por |</span><input value={chordText} onChange={event => setChordText(event.target.value)} /></label>
+    <label><span>Cifras exatas da partitura, separadas por |</span><input value={chordText} placeholder="Ex.: F#13 | B9" onChange={event => setChordText(event.target.value)} /></label>
     <ol>{events.map((event, index) => <li key={event.id} className="score-event-editor">
       <span>{event.rest ? 'Pausa' : `${event.pitch.step}${accidental(event.pitch.alter)}${event.pitch.octave}`}</span>
       {!event.rest && <><label><span>Nota</span><select value={event.pitch.step} onChange={input => updateEvent(index, 'pitch', { ...event.pitch, step: input.target.value })}>{['C', 'D', 'E', 'F', 'G', 'A', 'B'].map(note => <option key={note}>{note}</option>)}</select></label>

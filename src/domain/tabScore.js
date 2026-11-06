@@ -1,4 +1,4 @@
-import { cavaquinhoOpenMidi } from './scalePaths';
+import { cavaquinhoOpenMidi, MAX_FRET } from './scalePaths';
 
 const pitchSteps = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
@@ -19,7 +19,7 @@ export function getPlayablePositions(pitch) {
   if (midi === null) return [];
   return cavaquinhoOpenMidi.flatMap((openMidi, stringIndex) => {
     const fret = midi - openMidi;
-    return fret >= 0 && fret <= 12 ? [{ stringIndex, fret, midi }] : [];
+    return fret >= 0 && fret <= MAX_FRET ? [{ stringIndex, fret, midi }] : [];
   });
 }
 
