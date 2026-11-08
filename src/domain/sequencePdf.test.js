@@ -76,6 +76,10 @@ describe('sequence study PDF', () => {
     expect(layout.contentOccupancy).toBeGreaterThan(0.65);
     expect(pdf.getNumberOfPages()).toBe(1);
     expect(pdf.internal.pageSize.getWidth()).toBeLessThan(pdf.internal.pageSize.getHeight());
+    const output = pdf.output();
+    expect(output).toContain('(G7) Tj');
+    expect(output).not.toContain('Notas:');
+    expect(output).not.toContain('Toca:');
   });
   it('paginates all distinct chord cards, including a last partial page', async () => {
     const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];

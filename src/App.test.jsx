@@ -837,7 +837,8 @@ describe('Cavaquinho Lab', () => {
     expect([...document.querySelectorAll('.sequence-note-pills b')].map(note => note.textContent)).toEqual(['F#', 'A#', 'C#', 'E', 'G#', 'D#']);
     expect(document.querySelectorAll('.sequence-note-pills .is-essential')).toHaveLength(3);
     expect([...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note small')].map(note => note.textContent)).toEqual(expect.arrayContaining(['3', '13']));
-    expect(document.querySelector('.sequence-tone-coverage')).toHaveTextContent(/Voicing sem raiz/);
+    expect(document.querySelector('.sequence-tone-coverage')).toBeNull();
+    expect(document.querySelector('.sequence-map-legend')).toBeNull();
     const chordNotes = new Set(['F#', 'G#', 'A#', 'C#', 'D#', 'E']);
     const chordMarkers = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.chord-tone-candidate')];
     expect(chordMarkers.length).toBeGreaterThan(0);

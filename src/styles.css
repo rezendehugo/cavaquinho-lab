@@ -943,7 +943,6 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .sequence-note-pills > span.is-played { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
 .sequence-note-pills > span.is-missing { color: var(--color-muted); border-style: dashed; background: color-mix(in srgb, var(--color-surface), var(--color-border) 12%); }
 .sequence-note-pills small { color: var(--color-muted); font-size: .67rem; }
-.sequence-tone-coverage { margin: 2px 0 0; color: var(--color-muted); font-size: .78rem; font-weight: 650; }
 .sequence-shape-editor-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--color-border); }
 .sequence-string-tools { display: flex; flex-wrap: wrap; gap: 4px; }
 .sequence-string-tools button { min-height: 38px; padding: 5px 9px; color: var(--color-text); background: var(--color-surface); }
@@ -964,13 +963,6 @@ summary { cursor: pointer; font-weight: 800; color: var(--color-accent); }
 .fretboard-note.chord-tone-defining { outline: 3px solid #7555b8; outline-offset: 4px; }
 .fretboard-note.chord-tone-essential { border-style: solid; outline: 2px solid color-mix(in srgb, var(--color-accent), transparent 30%); outline-offset: 2px; }
 .fretboard-note.path-candidate.chord-tone-candidate:not(.path-note) { color: var(--color-accent-hover); background: var(--color-accent-soft); }
-.sequence-map-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 0 auto var(--space-1); color: var(--color-muted); font-size: .72rem; font-weight: 750; }
-.sequence-map-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.sequence-map-legend span::before { width: 10px; height: 10px; border-radius: 50%; content: ''; }
-.sequence-map-legend .selected::before { background: #36a37d; border: 1px solid #17684e; }
-.sequence-map-legend .defining::before { background: #7555b8; border: 1px solid #543b8a; }
-.sequence-map-legend .essential::before { background: transparent; border: 2px solid #e9b44c; }
-.sequence-map-legend .chord-tone::before { background: #23302d; border: 1px solid #91a79e; }
 .chord-degree-mode .fretboard-note.path-note { color: #fff; background: #258365; border-color: #145d47; box-shadow: 0 0 0 2px rgba(37,131,101,.22); }
 .chord-degree-mode .fretboard-note.path-note small { color: #fff; font-size: .62rem; font-weight: 900; opacity: 1; }
 .chord-degree-mode .fretboard-note.chord-tone-candidate:not(.path-note) { color: var(--color-text); background: var(--color-surface); border-color: #91a79e; box-shadow: none; }

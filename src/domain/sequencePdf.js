@@ -100,13 +100,7 @@ export async function createSequencePdf(sequence, options = {}) {
       pdf.setFont('helvetica', 'normal'); pdf.setFontSize(7); pdf.setTextColor(muted);
       pdf.text(`Forma ${(step.positionIndex ?? 0) + 1}`, x + cardW - 7, y + 17, { align: 'right' });
     }
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(muted);
-    const formula = `Notas: ${(step.theory?.notes || []).join(' ')}`;
-    pdf.text(pdf.splitTextToSize(printable(formula), cardW - 14).slice(0, 1), x + 7, y + 28);
     await drawChordDiagramPdf(pdf, step, x + (cardW - diagramHeight * 154 / 190) / 2, y + 31, diagramHeight);
-    const coverage = `Toca: ${(step.theory?.playedNotes || []).join(' ')}${step.theory?.missingNotes?.length ? ` · falta: ${step.theory.missingNotes.join(' ')}` : ''}`;
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(5.5); pdf.setTextColor(muted);
-    pdf.text(pdf.splitTextToSize(printable(coverage), cardW - 14).slice(0, 2), x + 7, y + cardH - 14);
   };
   for (let start = 0; start < model.steps.length; start += cardsPerPage) {
     if (start) pdf.addPage();
