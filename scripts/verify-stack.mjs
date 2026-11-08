@@ -26,10 +26,19 @@ async function waitForJson(url, label, attempts = 45) {
   throw new Error(`${label} is unavailable at ${url}: ${lastError}`);
 }
 
-async function requireResponse(url, label) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`${label} returned HTTP ${response.status}`);
-  return response;
+async function waitForResponse(url, label, attempts = 45) {
+  let lastError = 'not_ready';
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return response;
+      lastError = `HTTP ${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    await delay(1_000);
+  }
+  throw new Error(`${label} is unavailable at ${url}: ${lastError}`);
 }
 
 async function request(path, options = {}) {
@@ -89,7 +98,7 @@ async function verifyImportFeature() {
   }
 }
 
-await requireResponse(frontendUrl, 'Frontend');
+await waitForResponse(frontendUrl, 'Frontend');
 const health = await waitForJson(`${apiUrl}/api/health`, 'API health');
 const ready = await waitForJson(`${apiUrl}/api/ready`, 'API readiness');
 if (health.status !== 'ok' || ready.status !== 'ready' || !ready.omrEnabled) throw new Error('API did not report a ready OMR-enabled service.');
