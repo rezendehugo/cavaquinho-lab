@@ -2,7 +2,8 @@
 import { spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const frontendUrl = (process.env.CAVAQUINHO_FRONTEND_URL ?? 'http://127.0.0.1:5173/cavaquinho-lab/').replace(/\/$/, '/');
+const configuredFrontendUrl = process.env.CAVAQUINHO_FRONTEND_URL ?? 'http://127.0.0.1:5173/cavaquinho-lab/';
+const frontendUrl = configuredFrontendUrl.endsWith('/') ? configuredFrontendUrl : `${configuredFrontendUrl}/`;
 const apiUrl = (process.env.CAVAQUINHO_API_URL ?? 'http://127.0.0.1:8080').replace(/\/$/, '');
 const origins = (process.env.CAVAQUINHO_FRONTEND_ORIGINS ?? 'http://127.0.0.1:5173,http://127.0.0.1:4180')
   .split(',')
