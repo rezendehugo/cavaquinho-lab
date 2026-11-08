@@ -346,17 +346,6 @@ export default function SequencePracticePanel() {
     setShapeSaveMessage(feedback === 'uncomfortable' ? 'Anotado. Esta forma ficará mais abaixo nas sugestões deste acorde.' : feedback === 'hidden' ? 'Forma ocultada para este acorde. Você pode limpar esse retorno depois.' : 'Avaliação removida.');
   };
 
-  const playedFormula = chordFormula.filter(tone => playedPitchClasses.has(tone.pitchClass));
-  const missingFormula = chordFormula.filter(tone => !playedPitchClasses.has(tone.pitchClass));
-  const rootTone = chordFormula.find(tone => tone.interval === 0);
-  const requiredToneMissing = chordFormula.some(tone => requiredIntervals.has(tone.interval) && !playedPitchClasses.has(tone.pitchClass));
-  const isRootlessVoicing = chordFormula.length > 4 && rootTone && !playedPitchClasses.has(rootTone.pitchClass) && !requiredToneMissing;
-  const toneCoverageLabel = missingFormula.length === 0
-    ? `Forma completa: ${playedFormula.map(tone => tone.note).join(', ')}.`
-    : isRootlessVoicing
-      ? `Voicing sem raiz: toca ${playedFormula.map(tone => tone.note).join(', ')}; omite ${missingFormula.map(tone => tone.note).join(', ')}. Use com baixo ou acompanhamento que sustente a raiz.`
-      : `Toca ${playedFormula.map(tone => tone.note).join(', ') || 'nenhum tom'}; faltam ${missingFormula.map(tone => tone.note).join(', ')}.`;
-
   return <div className="sequence-practice-panel sequence-practice-panel--focused">
     <div className="fretboard-control-panel">
       <div className="scale-explorer sequence-practice-controls">
@@ -388,7 +377,6 @@ export default function SequencePracticePanel() {
           </div>
           <div className="sequence-required-notes" aria-label={`Notas de ${formatSequenceChord(current)}`}>
             <div className="sequence-note-pills">{chordFormula.map(tone => <span key={tone.interval} className={[requiredIntervals.has(tone.interval) ? 'is-essential' : '', characteristicIntervals.has(tone.interval) ? 'is-defining' : '', playedPitchClasses.has(tone.pitchClass) ? 'is-played' : 'is-missing'].filter(Boolean).join(' ')} data-played={playedPitchClasses.has(tone.pitchClass) ? 'true' : 'false'} data-defining={characteristicIntervals.has(tone.interval) ? 'true' : 'false'} aria-label={`${tone.degreeLabel} ${tone.note}, ${playedPitchClasses.has(tone.pitchClass) ? 'tocada' : 'ausente'}`} title={`${tone.description} · ${playedPitchClasses.has(tone.pitchClass) ? 'tocada' : 'ausente'}`}><small>{tone.degreeLabel}</small><b>{tone.note}</b></span>)}</div>
-            <p className="sequence-tone-coverage" role="status">{toneCoverageLabel}</p>
           </div>
           {fingeringAlternatives.length > 1 ? <div className="sequence-fingering-options" aria-label="Dedilhados alternativos"><span>Dedilhados para este desenho</span>{fingeringAlternatives.map(fingers => <button type="button" key={fingers.join(',')} aria-pressed={fingers.join(',') === (current.position.fingers || []).join(',')} aria-label={`Usar dedilhado ${fingers.join(', ')}`} title={`Usar dedilhado ${fingers.join(', ')}`} onClick={() => currentCandidate && persistShapeCandidate(currentCandidate, fingers)}>{fingers.map(finger => finger || '–').join(' · ')}</button>)}</div> : null}
           {currentCandidateGroup?.variants.length > 1 ? <details className="sequence-shape-variants" open={showShapeVariants} onToggle={event => setShowShapeVariants(event.currentTarget.open)}>
@@ -406,7 +394,6 @@ export default function SequencePracticePanel() {
         </section> : null}
       </div>
     </div>
-    {current ? <div className="sequence-map-legend" aria-label="Legenda das notas do acorde"><span className="selected">Na forma</span><span className="defining">Definidora</span><span className="essential">Essencial</span><span className="chord-tone">Outro tom</span></div> : null}
     <FretboardGrid ariaLabel={current ? editingShape ? `Editar forma de ${formatSequenceChord(current)}` : `Notas pressionadas de ${formatSequenceChord(current)}` : 'Notas da sequência'} editing={editingShape} chordDegreeMode showRegionLegend={false} initialFocusPosition={editingFocusPosition} mutedStrings={editingShape ? activeFrets.flatMap((fret, index) => fret < 0 ? [index] : []) : current?.mutedStrings || []} onChoose={position => setStringFret(position.stringIndex, position.fret)} getPositionState={position => {
       const key = positionKey(position);
       const selected = activeFrets[position.stringIndex] === position.fret;
