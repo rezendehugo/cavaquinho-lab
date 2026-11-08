@@ -1,11 +1,11 @@
-import { cavaquinhoOpenMidi } from './scalePaths';
+import { cavaquinhoOpenMidi, MAX_FRET } from './scalePaths';
 
 export const freeSoloStorageVersion = 1;
 export const maximumSoloSteps = 1000;
 
 const validPosition = (position) => Number.isInteger(position?.stringIndex)
   && position.stringIndex >= 0 && position.stringIndex < cavaquinhoOpenMidi.length
-  && Number.isInteger(position.fret) && position.fret >= 0 && position.fret <= 12
+  && Number.isInteger(position.fret) && position.fret >= 0 && position.fret <= MAX_FRET
   && position.midi === cavaquinhoOpenMidi[position.stringIndex] + position.fret
   && position.pitchClass === position.midi % 12
   && position.octave === Math.floor(position.midi / 12) - 1

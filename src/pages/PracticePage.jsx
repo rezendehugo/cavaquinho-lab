@@ -1,11 +1,11 @@
 import { lazy, Suspense, useState } from 'react';
 import ScalePracticePanel from '../components/ScalePracticePanel';
-import SequencePracticePanel from '../components/SequencePracticePanel';
-import FreeSoloPracticePanel from '../components/FreeSoloPracticePanel';
-import EarTrainingPanel from '../components/EarTrainingPanel';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import { scoreImportsEnabled } from '../config';
 
+const SequencePracticePanel = lazy(() => import('../components/SequencePracticePanel'));
+const FreeSoloPracticePanel = lazy(() => import('../components/FreeSoloPracticePanel'));
+const EarTrainingPanel = lazy(() => import('../components/EarTrainingPanel'));
 const ScoreImportPage = lazy(() => import('./ScoreImportPage'));
 
 export default function PracticePage({ initialMode = 'scale' }) {
@@ -40,7 +40,9 @@ export default function PracticePage({ initialMode = 'scale' }) {
       {scoreImportsEnabled ? <button type="button" id="practice-tab-score" data-practice-tab="score" role="tab" aria-selected={mode === 'score'} aria-controls="practice-panel-score" tabIndex={mode === 'score' ? 0 : -1} onClick={() => selectMode('score')}>Partitura</button> : null}
     </div>
     <div id={`practice-panel-${mode}`} role="tabpanel" aria-labelledby={`practice-tab-${mode}`} tabIndex="0">
-      {mode === 'scale' ? <ScalePracticePanel key="scale" /> : mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' ? <SequencePracticePanel key="sequence" /> : mode === 'ear' ? <EarTrainingPanel key="ear" /> : <Suspense fallback={<p className="panel-loading" role="status">Preparando importação de partitura…</p>}><ScoreImportPage embedded onOpenPractice={openCreatedPractice} /></Suspense>}
+      {mode === 'scale' ? <ScalePracticePanel key="scale" /> : <Suspense fallback={<p className="panel-loading" role="status">Carregando…</p>}>
+        {mode === 'solo' ? <FreeSoloPracticePanel key={`solo-${createdSoloId}`} initialSoloId={createdSoloId} /> : mode === 'sequence' ? <SequencePracticePanel key="sequence" /> : mode === 'ear' ? <EarTrainingPanel key="ear" /> : <ScoreImportPage embedded onOpenPractice={openCreatedPractice} />}
+      </Suspense>}
     </div>
   </section>;
 }

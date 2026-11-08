@@ -56,7 +56,7 @@ describe('Braço de referência e prática regional', () => {
       cy.get('.fretboard-note.in-scale').its('length').should('be.greaterThan', 20);
       cy.get('.fretboard-note.path-note').should('not.exist');
       cy.get('.fretboard-open-strings').should('exist');
-      cy.get('.fretboard-matrix .matrix-fret-label').should('have.length', 12).each($label => expect($label.text()).not.to.equal('0'));
+      cy.get('.fretboard-matrix .matrix-fret-label').should('have.length', 14).each($label => expect($label.text()).not.to.equal('0'));
       cy.contains('button', 'Praticar escala').should('not.exist');
       cy.contains('Escolha o início e o fim no braço para liberar as opções de prática.').should('be.visible');
     });
@@ -112,24 +112,27 @@ describe('Braço de referência e prática regional', () => {
       } });
       cy.contains('[role="tab"]', 'Sequência').click();
       cy.get('[aria-label="Sequência para praticar"]').should('have.value', 'daily');
+      cy.get('.sequence-practice-tools > summary').click();
       cy.get('[aria-label="Batidas por acorde"]').select('1');
-      cy.get('[aria-label="Acordes da sequência"]').within(() => {
-        cy.get('[aria-label="Acorde 1 de 2: C"]').should('be.visible');
-        cy.get('[aria-label="Acorde 2 de 2: G"]').should('be.visible').click();
-        cy.get('.sequence-inline-shapes span').invoke('text').then(before => {
-          cy.get('[aria-label="Próxima forma"]').click();
-          cy.get('.sequence-inline-shapes span').should('not.have.text', before).invoke('text').should('match', /^\d+\/\d+$/);
-        });
+      cy.get('[aria-label="Acordes da sequência"] [role="listitem"]').should('have.length', 2);
+      cy.get('[aria-label="Acordes da sequência"] button').eq(0).should('have.attr', 'aria-label', 'C, 1 ocorrência');
+      cy.get('[aria-label="Acordes da sequência"] button').eq(1).should('have.attr', 'aria-label', 'G, 1 ocorrência').click();
+      cy.get('.sequence-chord-workspace h3').should('have.text', 'G');
+      cy.get('.sequence-shape-navigation [aria-live="polite"]').invoke('text').then(before => {
+        cy.get('[aria-label="Próxima forma"]').click();
+        cy.get('.sequence-shape-navigation [aria-live="polite"]').should('not.have.text', before).invoke('text').should('match', /^\d+\/\d+$/);
       });
       cy.window().then(window => {
         const steps = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps;
         expect(steps[0].positionIndex).to.equal(0);
-        expect(steps[1].positionIndex).to.be.a('number');
+        expect(Number.isInteger(steps[1].positionIndex) || Array.isArray(steps[1].customPosition?.frets)).to.equal(true);
       });
       cy.get('[aria-label="Tônica da escala"]').should('not.exist');
-      cy.get('.fretboard-open-strings .fretboard-note.path-note').should('exist');
+      cy.get('.fretboard-note.path-note').should('exist');
       cy.contains('button', 'Praticar sequência').should('be.enabled');
       cy.contains('button', 'Praticar sequência').click();
+      cy.get('[aria-label="Acordes da sequência"] button').eq(0).should('have.attr', 'aria-label', 'Acorde 1 de 2: C');
+      cy.get('[aria-label="Acordes da sequência"] button').eq(1).should('have.attr', 'aria-label', 'Acorde 2 de 2: G');
       cy.get('[role="dialog"][aria-label="Prática focada: Trocas diárias"]').within(() => {
         cy.get('[aria-label="Notas pressionadas da sequência em prática focada"]').should('exist');
         cy.get('.sequence-film-carousel').should('not.exist');

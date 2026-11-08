@@ -1,6 +1,6 @@
 import { chromaticKeys } from '../sequences';
 import { formatRootOption, formatSequenceChord } from '../chordDisplay';
-import { cavaquinhoChords } from './chords';
+import { getCavaquinhoChords } from './chords';
 import { findChord, optimizeSequence } from '../progressionOptimizer';
 import { buildSequencePractice } from './sequencePractice';
 
@@ -64,7 +64,7 @@ function shuffle(items, random) {
   return result;
 }
 
-export function createEarTrainingExercise(levelId, { chordDb = cavaquinhoChords, random = Math.random } = {}) {
+export function createEarTrainingExercise(levelId, { chordDb = getCavaquinhoChords(), random = Math.random } = {}) {
   if (levelId === 'mode') {
     const modes = [
       { id: 'major', label: 'Maior', offsets: majorCadence },
@@ -189,7 +189,7 @@ export function getRecommendedEarTrainingLevel(progress) {
   }) || earTrainingLevels[earTrainingLevels.length - 1];
 }
 
-export function createSequenceRecallExercise(sequence, { chordDb = cavaquinhoChords, random = Math.random } = {}) {
+export function createSequenceRecallExercise(sequence, { chordDb = getCavaquinhoChords(), random = Math.random } = {}) {
   if (!sequence || !Array.isArray(sequence.steps) || sequence.steps.length < 2) return null;
   const resolved = buildSequencePractice(sequence.steps, chordDb);
   if (resolved.missing.length || resolved.steps.length < 2) return null;

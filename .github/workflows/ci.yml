@@ -30,10 +30,42 @@ jobs:
         run: npm run typecheck
       - name: Test
         run: npm test
+      - name: API contracts
+        run: npm run test:api
+      - name: Install pinned OMR test dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/omr-venv"
+          "$RUNNER_TEMP/omr-venv/bin/python" -m pip install -r workers/omr/requirements.txt
+          echo "$RUNNER_TEMP/omr-venv/bin" >> "$GITHUB_PATH"
+      - name: OMR unit tests
+        run: npm run test:omr
       - name: Browser layout tests
         run: npm run test:e2e
       - name: Build
         run: npm run build
+
+  stack-feature-verification:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Start and verify the complete score-import stack
+        run: npm run stack:up
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose --profile dev --profile backend logs --no-color
+      - name: Remove CI containers and volumes
+        if: always()
+        run: docker compose --profile dev --profile backend down --volumes
 
   private-nivaldo-corpus:
     runs-on: ubuntu-latest

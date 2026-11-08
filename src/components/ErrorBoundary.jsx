@@ -2,13 +2,14 @@ import { Component } from 'react';
 import * as Sentry from '@sentry/react';
 
 class ErrorBoundary extends Component {
-  state = { hasError: false };
+  state = { hasError: false, error: null };
 
   static getDerivedStateFromError() {
     return { hasError: true };
   }
 
   componentDidCatch(error, info) {
+    this.setState({ error });
     Sentry.captureException(error, { contexts: { react: { componentStack: info.componentStack } } });
   }
 
@@ -19,6 +20,7 @@ class ErrorBoundary extends Component {
       <section className="panel error-boundary" role="alert">
         <h2>Não foi possível abrir esta área.</h2>
         <p>Seus dados salvos não foram alterados. Recarregue a página para tentar novamente.</p>
+        {import.meta.env.DEV && this.state.error ? <details><summary>Detalhes para diagnóstico</summary><pre>{this.state.error.stack || String(this.state.error)}</pre></details> : null}
         <button type="button" data-ui-text-reason="workflow" onClick={() => window.location.reload()}>Recarregar página</button>
       </section>
     );

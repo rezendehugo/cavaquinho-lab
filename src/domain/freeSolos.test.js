@@ -9,6 +9,12 @@ describe('solos livres', () => {
     expect(validateFreeSolo({ name: 'Frase', positions })).toEqual({ ok: true, message: '' });
   });
 
+  test('aceita posições até o 14º traste e rejeita notas fora do braço exibido', () => {
+    const highA = { stringIndex: 1, fret: 14, midi: 81, pitchClass: 9, note: 'A', octave: 5 };
+    expect(validateFreeSolo({ name: 'Agudo', positions: [highA] })).toEqual({ ok: true, message: '' });
+    expect(validateFreeSolo({ name: 'Fora do braço', positions: [{ ...highA, fret: 15, midi: 82, pitchClass: 10 }] }).ok).toBe(false);
+  });
+
   test('aceita mil passos e impede a inserção seguinte', () => {
     const full = Array.from({ length: 1000 }, () => position);
     expect(validateFreeSolo({ name: 'Longo', positions: full })).toEqual({ ok: true, message: '' });

@@ -7,7 +7,8 @@ import { getScaleNotes, noteMatchesPitchClass, scaleDefinitions, scaleDegreeName
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import BpmInput from '../features/metronome/BpmInput';
 import { chromaticKeys } from '../sequences';
-import { loadScalePaths, saveScalePaths, storageErrorMessage } from '../storage';
+import { storageErrorMessage } from '../storage';
+import { loadScalePaths, saveScalePaths } from '../storage/scalePaths';
 
 const positionKey = (position) => position.stringIndex + ':' + position.fret;
 const directionLabels = { oneWay: 'Até o fim', thereBack: 'Ida e volta' };

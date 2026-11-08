@@ -10,6 +10,7 @@ import { ScoreImportJobProcessor } from './score-imports/jobProcessor.js';
 import { PostgresProductRepository } from './product/postgresRepository.js';
 import { InMemoryProductRepository } from './product/repository.js';
 import { DisabledBillingGateway, StripeBillingGateway } from './product/billing.js';
+import { getAllowedOrigins } from './runtimeConfig.js';
 import * as Sentry from '@sentry/node';
 
 const port = Number(process.env.PORT ?? 8080);
@@ -38,7 +39,7 @@ const app = await buildApp({
   authenticate,
   storage,
   service,
-  allowedOrigins: (process.env.CORS_ALLOWED_ORIGINS ?? 'http://127.0.0.1:5173').split(','),
+  allowedOrigins: getAllowedOrigins(),
   allowDirectMusicXml: !supabaseUrl,
   omrImportsEnabled: Boolean(workerUrl),
   productRepository,

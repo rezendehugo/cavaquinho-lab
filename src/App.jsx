@@ -1,24 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
-import SequenceLab from './components/SequenceLab';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { fallbackRoute, getRoutes, routeRedirects } from './config';
 import PomodoroTimer from './features/pomodoro/PomodoroTimer';
 import MetronomeWidget from './features/metronome/MetronomeWidget';
 import { MetronomeProvider } from './features/metronome/MetronomeContext';
-import FretboardPage from './pages/FretboardPage';
-import PracticePage from './pages/PracticePage';
-import ShapesPage from './pages/ShapesPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import PricingPage from './pages/PricingPage';
-import AccountPage from './pages/AccountPage';
-import LegalPage from './pages/LegalPage';
 import FeatureUnavailablePage from './pages/FeatureUnavailablePage';
 import { useAuth } from './auth/AuthContext';
-import { useCloudSequences } from './hooks/useCloudSequences';
 import { LogIn, UserRound } from 'lucide-react';
 import { scoreImportsEnabled } from './config';
 import KeyboardHelpDialog from './components/KeyboardHelpDialog';
+
+const SequenceLab = lazy(() => import('./components/SequenceLab'));
+const CloudSequenceLab = lazy(() => import('./components/CloudSequenceLab'));
+const FretboardPage = lazy(() => import('./pages/FretboardPage'));
+const PracticePage = lazy(() => import('./pages/PracticePage'));
+const ShapesPage = lazy(() => import('./pages/ShapesPage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const LegalPage = lazy(() => import('./pages/LegalPage'));
 
 const normalizeBasePath = (basePath) => {
   if (!basePath || basePath === '/') return '';
@@ -77,12 +78,6 @@ function NavTabs({ route, routes }) {
 
 const marketingRoutes = ['/', '/login', '/pricing', '/terms', '/privacy', '/cancellation', '/contact'];
 const publicWorkspaceRoutes = ['/shapes', '/sequences', '/fretboard', '/practice', '/imports'];
-
-function CloudSequenceLab() {
-  const cloud = useCloudSequences();
-  if (cloud.status === 'loading') return <section className="panel"><p>Carregando suas sequências…</p></section>;
-  return <SequenceLab cloud={cloud} />;
-}
 
 function PublicHeader({ authenticated }) {
   return <header className="public-header"><a className="brand-link" href={getPublicPath('/')} onClick={event => { event.preventDefault(); pushBrowserRoute('/'); }}><span>Cavaquinho Lab</span><small>Acordes e prática</small></a><nav aria-label="Navegação pública"><a href={getPublicPath('/pricing')} onClick={event => { event.preventDefault(); pushBrowserRoute('/pricing'); }}>Planos</a><a href={getPublicPath(authenticated ? '/shapes' : '/login')} onClick={event => { event.preventDefault(); pushBrowserRoute(authenticated ? '/shapes' : '/login'); }}>{authenticated ? <UserRound aria-hidden="true" /> : <LogIn aria-hidden="true" />} {authenticated ? 'Abrir app' : 'Entrar'}</a></nav></header>;
@@ -146,9 +141,9 @@ function App() {
         : route === '/imports' ? (scoreImportsEnabled ? <PracticePage initialMode="score" /> : <FeatureUnavailablePage />)
       : auth.cloudEnabled && auth.user ? <CloudSequenceLab /> : <SequenceLab />;
 
-  if (protectedRoute && !auth.user) return <main className="public-shell"><PublicHeader authenticated={false} /><LoginPage /></main>;
+  if (protectedRoute && !auth.user) return <main className="public-shell"><PublicHeader authenticated={false} /><ErrorBoundary><Suspense fallback={<p className="panel-loading" role="status">Carregando…</p>}><LoginPage /></Suspense></ErrorBoundary></main>;
 
-  if (publicRoute) return <main className="public-shell"><PublicHeader authenticated={Boolean(auth.user)} /><ErrorBoundary>{page}</ErrorBoundary></main>;
+  if (publicRoute) return <main className="public-shell"><PublicHeader authenticated={Boolean(auth.user)} /><ErrorBoundary><Suspense fallback={<p className="panel-loading" role="status">Carregando…</p>}>{page}</Suspense></ErrorBoundary></main>;
 
   return (
     <MetronomeProvider><main className="app-shell">
@@ -166,7 +161,7 @@ function App() {
         </div>
         <NavTabs route={route} routes={routes} />
       </header>
-      <ErrorBoundary>{page}</ErrorBoundary>
+      <ErrorBoundary><Suspense fallback={<p className="panel-loading" role="status">Carregando…</p>}>{page}</Suspense></ErrorBoundary>
       <KeyboardHelpDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </main></MetronomeProvider>
   );

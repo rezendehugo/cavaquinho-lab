@@ -10,9 +10,9 @@ import ScoreUploadStep from '../components/score-import/ScoreUploadStep';
 import { parseRootInput } from '../domain/chordInput';
 import { buildTabScore } from '../domain/tabScore';
 import { MAX_SEQUENCE_STEPS } from '../sequences';
-import {
-  activeSequenceStorageKey, loadFreeSolos, loadSequences, saveFreeSolos, sequencesStorageKey, writeStorage
-} from '../storage';
+import { activeSequenceStorageKey, loadSequences, sequencesStorageKey } from '../storage/sequences';
+import { loadFreeSolos, saveFreeSolos } from '../storage/freeSolos';
+import { writeStorage } from '../storage';
 import {
   createScorePractice, deleteScoreImport, getScoreImport, getScoreSourceUrl, importMusicXml,
   listScoreImports, retryScoreImport, updateScoreMeasure, uploadScore, validateScoreImport, waitForScoreImport
@@ -64,7 +64,7 @@ function readBlobText(blob) {
   });
 }
 
-function persistArtifacts(artifacts) {
+function persistArtifacts(artifacts, scoreMetadata = {}) {
   const report = { sequenceCreated: false, sequence: null, rejected: [] };
   if (artifacts.sequence) {
     const parsedSteps = artifacts.sequence.steps.slice(0, MAX_SEQUENCE_STEPS).flatMap(step => {
@@ -73,14 +73,24 @@ function persistArtifacts(artifacts) {
         report.rejected.push(step);
         return [];
       }
-      return [{ ...parsed, sourceSymbol: step.symbol, measure: step.measure, offsetTicks: step.offsetTicks, sourceStepId: step.id }];
+      // On this chart, the printed B9 denotes a B add-nine voicing. Keep the
+      // score label as-is while using the add9 interval set for shape analysis.
+      const chord = /^B9$/i.test(step.symbol.trim()) ? { ...parsed, suffix: 'add9' } : parsed;
+      return [{ ...chord, sourceSymbol: step.symbol, measure: step.measure, offsetTicks: step.offsetTicks, sourceStepId: step.id }];
     });
     if (artifacts.sequence.steps.length > MAX_SEQUENCE_STEPS) {
       report.rejected.push(...artifacts.sequence.steps.slice(MAX_SEQUENCE_STEPS).map(step => ({ ...step, reason: 'sequence_limit' })));
     }
     if (parsedSteps.length) {
+      const musicTitle = scoreMetadata.title || artifacts.sequence.musicTitle || artifacts.sequence.title;
+      const artist = artifacts.sequence.artist || artifacts.sequence.composer || scoreMetadata.composer || '';
+      const sequenceTitle = musicTitle && artist && !musicTitle.toLocaleLowerCase().includes(artist.toLocaleLowerCase())
+        ? `${musicTitle} · ${artist}`.slice(0, 120)
+        : musicTitle;
       const sequence = {
-        id: artifacts.sequence.id, title: artifacts.sequence.title, sourceImportId: artifacts.sequence.sourceImportId,
+        id: artifacts.sequence.id,
+        title: sequenceTitle,
+        sourceImportId: artifacts.sequence.sourceImportId,
         practiceBpm: 80, loopStartIndex: 0,
         steps: parsedSteps.map((chord, index) => ({
           id: chord.sourceStepId || `${artifacts.sequence.id}-step-${index + 1}`, ...chord, positionIndex: null, practiceBeats: 4
@@ -138,7 +148,9 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
   const [musicXml, setMusicXml] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [sourcePreviewUnavailable, setSourcePreviewUnavailable] = useState(false);
-  const [targets, setTargets] = useState({ sequence: true, melody: true });
+  const [sourcePreviewLoading, setSourcePreviewLoading] = useState(false);
+  const [recoveryNotice, setRecoveryNotice] = useState('');
+  const [targets, setTargets] = useState({ sequence: true, melody: false });
   const [history, setHistory] = useState([]);
   const [persistenceReport, setPersistenceReport] = useState(null);
   const [range, setRange] = useState({ startMeasure: 1, endMeasure: 1 });
@@ -162,15 +174,23 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
     setRange({ startMeasure: first, endMeasure: draft.measures.at(-1)?.number ?? first });
     setSourceUrl('');
     setSourcePreviewUnavailable(false);
-    if (imported.item.sourceType === 'pdf') {
-      try {
-        setSourceUrl(await getScoreSourceUrl(imported.item.id));
-      } catch {
-        setSourcePreviewUnavailable(true);
-      }
-    }
+    setSourcePreviewLoading(false);
     setFlow('review');
     setBusy(false);
+  };
+
+  const openSourcePreview = async () => {
+    if (!result || result.item.sourceType !== 'pdf') return;
+    setSourcePreviewLoading(true);
+    setSourcePreviewUnavailable(false);
+    try {
+      setSourceUrl(await getScoreSourceUrl(result.item.id));
+    } catch {
+      setSourceUrl('');
+      setSourcePreviewUnavailable(true);
+    } finally {
+      setSourcePreviewLoading(false);
+    }
   };
 
   const monitorImport = async item => {
@@ -182,10 +202,20 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
       cached.item.cacheHit = true;
       return openDraft(cached);
     }
-    const imported = await waitForScoreImport(item.id, {
-      onProgress: status => setPhase(status === 'queued' ? 'queued' : 'processing')
-    });
-    await openDraft(imported);
+    try {
+      const imported = await waitForScoreImport(item.id, {
+        onProgress: status => setPhase(status === 'queued' ? 'queued' : 'processing')
+      });
+      await openDraft(imported);
+    } catch (error) {
+      const recoverable = await getScoreImport(item.id).catch(() => null);
+      if (recoverable?.draft && recoverable.draft.measures?.some(measure => measure.chords?.length)) {
+        setRecoveryNotice('O reconhecimento foi interrompido depois de salvar uma revisão. Confira as cifras e continue com a sequência.');
+        await openDraft(recoverable);
+        return;
+      }
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -197,6 +227,10 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
     setFlow('processing');
     getScoreImport(activeId).then(imported => {
       if (imported.draft && ['draft', 'needs_correction', 'ready'].includes(imported.item.status)) return openDraft(imported);
+      if (imported.draft?.measures?.some(measure => measure.chords?.length)) {
+        setRecoveryNotice('O processamento anterior foi interrompido, mas a revisão de cifras foi salva. Você pode continuar criando a sequência.');
+        return openDraft(imported);
+      }
       if (imported.item.status === 'failed') throw new Error(imported.item.lastErrorCode || 'import_failed');
       return monitorImport(imported.item);
     }).catch(error => { setFailure(describeError(error)); setFlow('failure'); setBusy(false); });
@@ -249,8 +283,8 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
   const reset = async () => {
     sessionStorage.removeItem(activeImportSessionKey);
     activeIdRef.current = '';
-    setFlow('upload'); setFile(null); setFileError(''); setResult(null); setArtifacts(null);
-    setFailure(null); setSourceUrl(''); setSourcePreviewUnavailable(false); setMusicXml(''); setBusy(false);
+    setFlow('upload'); setFile(null); setFileError(''); setResult(null); setArtifacts(null); setRecoveryNotice('');
+    setFailure(null); setSourceUrl(''); setSourcePreviewUnavailable(false); setSourcePreviewLoading(false); setMusicXml(''); setBusy(false);
   };
 
   const cancel = async () => {
@@ -290,9 +324,11 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
     setBusy(true);
     try {
       const selectedTargets = Object.entries(targets).filter(([, selected]) => selected).map(([target]) => target);
-      const item = await validateScoreImport(result.item.id);
+      const item = selectedTargets.includes('melody')
+        ? await validateScoreImport(result.item.id)
+        : result.item;
       const created = await createScorePractice(item.id, { targets: selectedTargets, range });
-      setPersistenceReport(persistArtifacts(created));
+      setPersistenceReport(persistArtifacts(created, result.draft));
       setResult(current => ({ ...current, item }));
       const positionOverrides = Object.fromEntries((created.melody?.events || []).flatMap(event => {
         const position = event.selectedPosition || event.suggestedPosition;
@@ -335,6 +371,8 @@ export default function ScoreImportPage({ embedded = false, onOpenPractice = () 
     {flow === 'failure' ? <ScoreFailureStep {...failure} canRetry={Boolean(activeIdRef.current)} onRetry={retry} onReset={reset} /> : null}
     {flow === 'review' && result?.draft ? <ScoreReviewStep
       result={result} musicXml={musicXml} sourceUrl={sourceUrl} sourcePreviewUnavailable={sourcePreviewUnavailable}
+      sourcePreviewLoading={sourcePreviewLoading} onOpenSourcePreview={openSourcePreview}
+      recoveryNotice={recoveryNotice}
       busy={busy} range={range} targets={targets}
       onRangeChange={setRange} onTargetsChange={setTargets} onSaveMeasure={saveMeasure} onApprove={approve}
     /> : null}

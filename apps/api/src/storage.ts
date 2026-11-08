@@ -52,18 +52,18 @@ export class DevelopmentStorage implements PrivateStorage {
     return readFile(this.filePath(upload.storageKey)).catch(() => null);
   }
   async createDownloadUrl(storageKey: string): Promise<string> {
-    let entry = [...this.uploads.entries()].find(([, upload]) => upload.storageKey === storageKey && upload.content);
-    if (!entry && this.directory) {
-      const content = await readFile(this.filePath(storageKey)).catch(() => null);
-      if (content) {
-        const token = randomUUID();
-        const upload = { storageKey, content, expiresAt: Date.now() + 5 * 60_000 };
-        this.uploads.set(token, upload);
-        entry = [token, upload];
-      }
-    }
-    if (!entry) throw new Error('stored_file_not_found');
-    return `/v1/development-downloads/${entry[0]}`;
+    const now = Date.now();
+    const existing = [...this.uploads.entries()].find(([, upload]) =>
+      upload.storageKey === storageKey && upload.content && upload.expiresAt > now
+    );
+    if (existing) return `/v1/development-downloads/${existing[0]}`;
+
+    const content = [...this.uploads.values()].find(upload => upload.storageKey === storageKey && upload.content)?.content
+      ?? (this.directory ? await readFile(this.filePath(storageKey)).catch(() => null) : null);
+    if (!content) throw new Error('stored_file_not_found');
+    const token = randomUUID();
+    this.uploads.set(token, { storageKey, content, expiresAt: now + 5 * 60_000 });
+    return `/v1/development-downloads/${token}`;
   }
   async deletePrefix(storageKey: string): Promise<void> {
     [...this.uploads.entries()].filter(([, upload]) => upload.storageKey === storageKey)

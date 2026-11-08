@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { advanceSequenceFilm, buildSequencePractice, getSequenceBeatState, getSequenceCarouselItems, moveSequenceFilm, normalizePracticeBeats, shapeToFretboardPositions } from './sequencePractice';
+import { advanceSequenceFilm, buildSequencePractice, getSequenceBeatState, getSequenceCarouselItems, getSequenceStructureKey, getSequenceStructureSteps, moveSequenceFilm, normalizePracticeBeats, projectSequencePractice, shapeToFretboardPositions } from './sequencePractice';
 
 const shape = {
   baseFret: 1,
@@ -20,9 +20,12 @@ describe('prática física de sequências', () => {
   });
 
   test('respeita shapes fixados e otimiza os demais acordes', () => {
+    const cFirst = { ...shape, frets: [2, 0, 1, 2], fingers: [2, 0, 1, 3], baseFret: 1 };
+    const cSecond = { ...shape, frets: [5, 5, 5, 5], fingers: [1, 1, 1, 1], barres: [5], baseFret: 1 };
+    const dMinor = { ...shape, frets: [0, 2, 3, 3], fingers: [0, 1, 2, 2], barres: [3], baseFret: 1 };
     const chordDb = { chords: {
-      C: [{ suffix: 'major', positions: [shape, { ...shape, frets: [5, 5, 5, 5], baseFret: 1 }] }],
-      D: [{ suffix: 'minor', positions: [{ ...shape, frets: [2, 2, 3, 2] }] }]
+      C: [{ suffix: 'major', positions: [cFirst, cSecond] }],
+      D: [{ suffix: 'minor', positions: [dMinor] }]
     } };
     const result = buildSequencePractice([
       { id: 'one', key: 'C', suffix: 'major', positionIndex: 1 },
@@ -30,7 +33,33 @@ describe('prática física de sequências', () => {
     ], chordDb);
     expect(result.missing).toEqual([]);
     expect(result.steps.map(step => step.positionIndex)).toEqual([1, 0]);
-    expect(result.steps[0].positions.every(position => position.fret === 5)).toBe(true);
+    expect(result.steps[0].positions.map(position => position.fret)).toEqual([5, 5, 5, 5]);
+  });
+
+  test('mantém a resolução musical ao projetar uma nova escolha de forma', () => {
+    const cFirst = { ...shape, frets: [2, 0, 1, 2], fingers: [2, 0, 1, 3], baseFret: 1 };
+    const cSecond = { ...shape, frets: [5, 5, 5, 5], fingers: [1, 1, 1, 1], barres: [5], baseFret: 1 };
+    const dMinor = { ...shape, frets: [0, 2, 3, 3], fingers: [0, 1, 2, 2], barres: [3], baseFret: 1 };
+    const chordDb = { chords: {
+      C: [{ suffix: 'major', positions: [cFirst, cSecond] }],
+      D: [{ suffix: 'minor', positions: [dMinor] }]
+    } };
+    const automatic = [
+      { id: 'one', key: 'C', suffix: 'major', positionIndex: null },
+      { id: 'two', key: 'D', suffix: 'minor', positionIndex: null }
+    ];
+    const selected = [{ ...automatic[0], positionIndex: 1 }, automatic[1]];
+
+    expect(getSequenceStructureKey(automatic)).toBe(getSequenceStructureKey(selected));
+    expect(getSequenceStructureSteps(selected)[0]).not.toHaveProperty('positionIndex');
+
+    const basePractice = buildSequencePractice(getSequenceStructureSteps(automatic), chordDb);
+    const baseFrets = basePractice.steps[0].positions.map(position => position.fret);
+    const projected = projectSequencePractice(basePractice, selected, chordDb);
+    expect(projected.steps[0].positionIndex).toBe(1);
+    expect(projected.steps[0].positions.map(position => position.fret)).toEqual([5, 5, 5, 5]);
+    expect(projected.steps[0]).not.toBe(basePractice.steps[0]);
+    expect(basePractice.steps[0].positions.map(position => position.fret)).toEqual(baseFrets);
   });
 
   test.each([1, 2, 4])('avança a sequência a cada %i batidas', (beatsPerChord) => {

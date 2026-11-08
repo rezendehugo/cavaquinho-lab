@@ -12,7 +12,7 @@ export default function SequencePdfExport({ sequence, study, resolvedSteps, bpm 
     try {
       const { createSequencePdf, sequencePdfFileName } = await import('../domain/sequencePdf');
       const pdf = await createSequencePdf({ ...sequence, practiceBpm: bpm }, { study, kind, resolvedSteps });
-      pdf.save(sequencePdfFileName(sequence.title, kind));
+      pdf.save(sequencePdfFileName(sequence, kind));
       setStatus('PDF pronto. Abra em Arquivos ou Downloads para estudar e anotar.');
     } catch {
       setStatus('Não foi possível gerar o PDF. Suas alterações continuam aqui; tente novamente.');

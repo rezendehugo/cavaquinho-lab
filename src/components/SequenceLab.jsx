@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatChordName, formatSequenceChord } from '../chordDisplay';
-import { cavaquinhoChords, getAvailableSuffixes } from '../domain/chords';
+import { getAvailableSuffixes, getCavaquinhoChords, getShapeSourceOptions } from '../domain/chords';
 import { advanceSequenceFilm, moveSequenceFilm, normalizePracticeBeats } from '../domain/sequencePractice';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import { analyzeSequence, buildExercises, getColorForChord } from '../harmony';
 import { optimizeSequence } from '../progressionOptimizer';
 import { chromaticKeys, createSequence, createSequenceStep, defaultSequences, MAX_SEQUENCE_STEPS, normalizeLoopStartIndex, reorderSequence, suffixCycle } from '../sequences';
-import { activeSequenceStorageKey, loadActiveSequenceId, loadSequences, sequencesStorageKey, storageErrorMessage, writeStorage } from '../storage';
+import { activeSequenceStorageKey, loadActiveSequenceId, loadSequences } from '../storage/sequences';
+import { sequencesStorageKey, storageErrorMessage, writeStorage } from '../storage';
 import { AddChordSlot, AddSequenceButton } from './SequenceActions';
 import SequenceChordStep from './SequenceChordStep';
 import SequencePracticeBar from './SequencePracticeBar';
@@ -121,6 +122,7 @@ function LabSummary({ analysis, sequence, colorMode }) {
 
 function SequenceLab({ cloud = null }) {
   const metronome = useSharedMetronome();
+  const cavaquinhoChords = getCavaquinhoChords();
   const [sequences, setSequences] = useState(loadSequences);
   const [activeSequenceId, setActiveSequenceId] = useState(() => loadActiveSequenceId(loadSequences()));
   const [colorMode, setColorMode] = useState('graus');
@@ -243,7 +245,7 @@ function SequenceLab({ cloud = null }) {
 
   const updateStep = (index, patch) => updateActiveSequence(sequence => ({
     ...sequence,
-    steps: sequence.steps.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch, positionIndex: null } : step)
+    steps: sequence.steps.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch, ...(patch.key !== undefined || patch.suffix !== undefined ? { shapeSuffix: patch.shapeSuffix, sourceSymbol: undefined } : {}), positionIndex: null } : step)
   }));
 
   const moveStep = (fromIndex, toIndex) => {
@@ -312,14 +314,24 @@ function SequenceLab({ cloud = null }) {
     updateActiveSequence(sequence => ({
       ...sequence,
       steps: sequence.steps.map((item, itemIndex) => itemIndex === index
-        ? { ...item, positionIndex: wrapIndex(step.positionIndex + direction, step.chord.positions.length) }
+        ? { ...item, customPosition: undefined, positionIndex: wrapIndex(step.positionIndex + direction, step.chord.positions.length) }
         : item)
     }));
   };
 
-  const setShape = (index, positionIndex) => updateActiveSequence(sequence => ({
+  const setShape = (index, positionIndex, sourceSuffix) => updateActiveSequence(sequence => ({
     ...sequence,
-    steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, positionIndex } : item)
+    steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, customPosition: undefined, positionIndex, shapeSuffix: positionIndex === null || sourceSuffix === item.suffix ? undefined : sourceSuffix } : item)
+  }));
+
+  const setCustomShape = (index, customPosition, sourceSuffix) => updateActiveSequence(sequence => ({
+    ...sequence,
+    steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, customPosition: { frets: customPosition.frets, fingers: customPosition.fingers }, positionIndex: null, shapeSuffix: sourceSuffix === item.suffix ? undefined : sourceSuffix } : item)
+  }));
+
+  const setShapeSource = (index, shapeSuffix) => updateActiveSequence(sequence => ({
+    ...sequence,
+    steps: sequence.steps.map((item, itemIndex) => itemIndex === index ? { ...item, customPosition: undefined, positionIndex: null, shapeSuffix: shapeSuffix === item.suffix ? undefined : shapeSuffix } : item)
   }));
 
   const selectAdjacentCard = (fromIndex, direction) => {
@@ -445,7 +457,10 @@ function SequenceLab({ cloud = null }) {
                   cycleSuffix={cycleSuffix}
                   cycleShape={cycleShape}
                   setShape={setShape}
+                  setCustomShape={setCustomShape}
                   availableSuffixes={getAvailableSuffixes}
+                  shapeSourceOptions={getShapeSourceOptions(activeSequence.steps[index])}
+                  setShapeSource={setShapeSource}
                   setChordIdentity={setChordIdentity}
                   setChordSuffix={setChordSuffix}
                   selected={selectedCardIndex === index}

@@ -17,6 +17,12 @@ function mapProfile(row: Row): Profile {
 function mapStep(row: Row): SequenceStepRecord {
   return {
     id: String(row.id), key: String(row.chord_root), suffix: String(row.chord_suffix),
+    ...(row.shape_suffix ? { shapeSuffix: String(row.shape_suffix) } : {}),
+    ...(row.region_id ? { regionId: String(row.region_id) as 'low' | 'middle' | 'high' } : {}),
+    ...(row.region_block_id ? { regionBlockId: String(row.region_block_id) } : {}),
+    ...(row.region_source_step_id ? { regionSourceStepId: String(row.region_source_step_id) } : {}),
+    ...(row.custom_position ? { customPosition: row.custom_position as { frets: number[]; fingers: number[] } } : {}),
+    ...(row.source_symbol ? { sourceSymbol: String(row.source_symbol) } : {}),
     ...(row.bass_note ? { bassNote: String(row.bass_note) } : {}),
     ...(row.display_root ? { displayKey: String(row.display_root) } : {}),
     ...(row.display_bass_note ? { displayBassNote: String(row.display_bass_note) } : {}),
@@ -50,14 +56,14 @@ export class PostgresProductRepository implements ProductRepository {
   }
   async createSequence(value: SequenceRecord): Promise<void> {
     await this.sql.begin(async sql => {
-      await sql`insert into sequences (id, owner_id, title, practice_bpm, loop_start_index, revision, created_at, updated_at)
-        values (${value.id}, ${value.ownerId}, ${value.title}, ${value.practiceBpm}, ${value.loopStartIndex}, ${value.revision}, ${value.createdAt}, ${value.updatedAt})`;
+      await sql`insert into sequences (id, owner_id, title, practice_bpm, loop_start_index, region_mode, revision, created_at, updated_at)
+        values (${value.id}, ${value.ownerId}, ${value.title}, ${value.practiceBpm}, ${value.loopStartIndex}, ${value.regionMode ? 'blocks' : null}, ${value.revision}, ${value.createdAt}, ${value.updatedAt})`;
       await this.insertSteps(sql, value);
     });
   }
   async updateSequence(value: SequenceRecord, expectedRevision: number): Promise<boolean> {
     return this.sql.begin(async sql => {
-      const rows = await sql`update sequences set title=${value.title}, practice_bpm=${value.practiceBpm}, loop_start_index=${value.loopStartIndex}, revision=${value.revision}, updated_at=${value.updatedAt}
+      const rows = await sql`update sequences set title=${value.title}, practice_bpm=${value.practiceBpm}, loop_start_index=${value.loopStartIndex}, region_mode=${value.regionMode ? 'blocks' : null}, revision=${value.revision}, updated_at=${value.updatedAt}
         where id=${value.id} and owner_id=${value.ownerId} and revision=${expectedRevision} returning id`;
       if (!rows[0]) return false;
       await sql`delete from sequence_steps where sequence_id=${value.id} and owner_id=${value.ownerId}`;
@@ -96,10 +102,10 @@ export class PostgresProductRepository implements ProductRepository {
     });
   }
   private mapSequence(row: Row, allSteps: Row[]): SequenceRecord {
-    return { id: String(row.id), ownerId: String(row.owner_id), title: String(row.title), practiceBpm: Number(row.practice_bpm), loopStartIndex: Number(row.loop_start_index), revision: Number(row.revision), steps: allSteps.filter(step => String(step.sequence_id) === String(row.id)).map(mapStep), createdAt: iso(row.created_at), updatedAt: iso(row.updated_at) };
+    return { id: String(row.id), ownerId: String(row.owner_id), title: String(row.title), practiceBpm: Number(row.practice_bpm), loopStartIndex: Number(row.loop_start_index), regionMode: row.region_mode ? 'blocks' : undefined, revision: Number(row.revision), steps: allSteps.filter(step => String(step.sequence_id) === String(row.id)).map(mapStep), createdAt: iso(row.created_at), updatedAt: iso(row.updated_at) };
   }
   private async insertSteps(sql: Sql | TransactionSql, value: SequenceRecord): Promise<void> {
     if (!value.steps.length) return;
-    await sql`insert into sequence_steps ${sql(value.steps.map((step, position) => ({ id: step.id, sequence_id: value.id, owner_id: value.ownerId, position, chord_root: step.key, chord_suffix: step.suffix, bass_note: step.bassNote ?? null, display_root: step.displayKey ?? null, display_bass_note: step.displayBassNote ?? null, position_index: step.positionIndex, practice_beats: step.practiceBeats })))}`;
+    await sql`insert into sequence_steps ${sql(value.steps.map((step, position) => ({ id: step.id, sequence_id: value.id, owner_id: value.ownerId, position, chord_root: step.key, chord_suffix: step.suffix, shape_suffix: step.shapeSuffix ?? null, custom_position: step.customPosition ? sql.json(step.customPosition) : null, region_id: step.regionId ?? null, region_block_id: step.regionBlockId ?? null, region_source_step_id: step.regionSourceStepId ?? null, source_symbol: step.sourceSymbol ?? null, bass_note: step.bassNote ?? null, display_root: step.displayKey ?? null, display_bass_note: step.displayBassNote ?? null, position_index: step.positionIndex, practice_beats: step.practiceBeats })))}`;
   }
 }

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { ScoreImportRepository } from './repository.js';
 import type { ChordEvent, PracticeArtifacts, ScoreDraft, ScoreEvent, ScoreImport, ScoreMeasure } from './types.js';
-import { hasCriticalIssues, parseMusicXml } from './musicXmlParser.js';
+import { hasCriticalIssues, parseMusicXml, validateMeasureTimeline } from './musicXmlParser.js';
 import { suggestMelodyRoute } from './melodyRoute.js';
 import type { OmrResult } from './omrWorker.js';
 
@@ -13,21 +13,77 @@ const now = () => new Date().toISOString();
 const checksum = (value: string) => createHash('sha256').update(value).digest('hex');
 
 function validateMeasure(measure: ScoreMeasure): ScoreMeasure {
-  const total = measure.events.reduce((sum, event) => sum + event.durationTicks, 0);
   const otherIssues = measure.issues.filter(issue => issue.code !== 'measure_duration_mismatch');
   return {
     ...measure,
-    issues: total === measure.expectedTicks ? otherIssues : [...otherIssues, {
-      code: 'measure_duration_mismatch', severity: 'critical',
-      message: `A medida soma ${total} ticks, mas deveria somar ${measure.expectedTicks}.`
-    }]
+    issues: [...otherIssues, ...validateMeasureTimeline(measure)]
   };
 }
 
-export class ScoreImportService {
-  constructor(private readonly repository: ScoreImportRepository, private readonly pipelineVersion = 'omr-v1') {}
+type PdfChordCandidate = { text: string; page: number; x: number; y: number; confidence: number };
 
-  async create(ownerId: string, input: { sourceType: 'musicxml' | 'pdf'; originalName: string; storageKey: string; sha256: string }): Promise<ScoreImport> {
+function addPdfChordCandidates(draft: ScoreDraft, candidates: PdfChordCandidate[], pageSizes: Array<{ page: number; width: number }> = []): void {
+  if (!candidates.length || !draft.measures.length) return;
+  const pageWidth = new Map(pageSizes.map(page => [page.page, page.width]));
+  const measuresByPage = new Map<number, ScoreMeasure[]>();
+  draft.measures.forEach(measure => {
+    const page = measure.page || 1;
+    measuresByPage.set(page, [...(measuresByPage.get(page) || []), measure]);
+  });
+  const candidatesByPage = new Map<number, PdfChordCandidate[]>();
+  candidates.forEach(candidate => candidatesByPage.set(candidate.page, [...(candidatesByPage.get(candidate.page) || []), candidate]));
+
+  for (const [page, pageCandidates] of candidatesByPage) {
+    const systems = new Map<number, ScoreMeasure[]>();
+    for (const measure of measuresByPage.get(page) || []) {
+      const system = measure.system || 1;
+      systems.set(system, [...(systems.get(system) || []), measure]);
+    }
+    const orderedSystems = [...systems.values()];
+    if (!orderedSystems.length) continue;
+    const orderedCandidates = [...pageCandidates].sort((a, b) => a.y - b.y || a.x - b.x);
+    const rows: PdfChordCandidate[][] = [];
+    for (const candidate of orderedCandidates) {
+      const row = rows.at(-1);
+      const rowY = row ? row.reduce((sum, item) => sum + item.y, 0) / row.length : 0;
+      if (!row || Math.abs(candidate.y - rowY) > 54) rows.push([candidate]);
+      else row.push(candidate);
+    }
+    const width = pageWidth.get(page) || Math.max(...pageCandidates.map(candidate => candidate.x), 600);
+    const left = Math.min(36, width * .06);
+    const usableWidth = Math.max(1, width - left * 2);
+    rows.forEach((row, rowIndex) => {
+      const systemMeasures = orderedSystems[Math.min(rowIndex, orderedSystems.length - 1)];
+      const widths = systemMeasures.map(measure => measure.layoutWidth || 1);
+      const totalWidth = widths.reduce((sum, value) => sum + value, 0);
+      row.forEach(candidate => {
+        const pagePosition = Math.max(0, Math.min(.999, (candidate.x - left) / usableWidth));
+        let target = pagePosition * totalWidth;
+        let measureIndex = widths.findIndex(measureWidth => {
+          if (target < measureWidth) return true;
+          target -= measureWidth;
+          return false;
+        });
+        if (measureIndex < 0) measureIndex = systemMeasures.length - 1;
+        const measure = systemMeasures[measureIndex];
+        const measureWidth = widths[measureIndex] || 1;
+        const offsetTicks = Math.floor(Math.max(0, Math.min(.999, target / measureWidth)) * measure.expectedTicks);
+        const symbol = candidate.text.replace(/♯/g, '#').replace(/♭/g, 'b');
+        if (measure.chords.some(chord => chord.symbol.toLowerCase() === symbol.toLowerCase())) return;
+        const conflict = measure.chords.length === 1 ? measure.chords[0] : null;
+        const chord: ChordEvent = { id: randomUUID(), offsetTicks, symbol, confidence: candidate.confidence, alternatives: [] };
+        measure.chords = conflict
+          ? measure.chords.map(existing => existing.id === conflict.id ? chord : existing)
+          : [...measure.chords, chord].sort((a, b) => a.offsetTicks - b.offsetTicks);
+      });
+    });
+  }
+}
+
+export class ScoreImportService {
+  constructor(private readonly repository: ScoreImportRepository, private readonly pipelineVersion = 'omr-v3') {}
+
+  private async createImport(ownerId: string, input: { sourceType: 'musicxml' | 'pdf'; originalName: string; storageKey: string; sha256: string }, queueForOmr: boolean): Promise<ScoreImport> {
     const existing = await this.repository.findImportByOwnerAndSha(ownerId, input.sha256, this.pipelineVersion);
     if (existing) return existing;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -40,8 +96,14 @@ export class ScoreImportService {
       attemptCount: 0, lastErrorCode: null, createdAt: timestamp, updatedAt: timestamp
     };
     await this.repository.createImport(item);
-    await this.repository.createJob({ id: randomUUID(), importId: item.id, status: 'queued', availableAt: timestamp, lockedAt: null, attemptCount: 0, createdAt: timestamp });
+    if (queueForOmr) {
+      await this.repository.createJob({ id: randomUUID(), importId: item.id, status: 'queued', availableAt: timestamp, lockedAt: null, attemptCount: 0, createdAt: timestamp });
+    }
     return item;
+  }
+
+  async create(ownerId: string, input: { sourceType: 'musicxml' | 'pdf'; originalName: string; storageKey: string; sha256: string }): Promise<ScoreImport> {
+    return this.createImport(ownerId, input, true);
   }
 
   async list(ownerId: string, limit = 20, before?: string) {
@@ -62,7 +124,7 @@ export class ScoreImportService {
   }
 
   async importMusicXml(ownerId: string, originalName: string, content: string): Promise<{ item: ScoreImport; draft: ScoreDraft }> {
-    const item = await this.create(ownerId, { sourceType: 'musicxml', originalName, storageKey: `private/${ownerId}/${randomUUID()}.musicxml`, sha256: checksum(content) });
+    const item = await this.createImport(ownerId, { sourceType: 'musicxml', originalName, storageKey: `private/${ownerId}/${randomUUID()}.musicxml`, sha256: checksum(content) }, false);
     item.status = 'processing';
     item.updatedAt = now();
     await this.repository.updateImport(item);
@@ -100,6 +162,7 @@ export class ScoreImportService {
     const item = await this.repository.getImport(importId);
     if (!item) throw new ScoreImportError('score_import_not_found', 404);
     const draft = parseMusicXml(result.musicXml, { importId, ownerId: item.ownerId });
+    addPdfChordCandidates(draft, result.textReport.chordCandidates, result.textReport.pageSizes);
     draft.sourceMusicXml = result.musicXml;
     draft.title = result.textReport.title || draft.title;
     draft.composer = result.textReport.composer || draft.composer;
@@ -190,7 +253,8 @@ export class ScoreImportService {
 
   async createPractice(ownerId: string, importId: string, targets: Array<'sequence' | 'melody'>, range?: { startMeasure: number; endMeasure: number }): Promise<PracticeArtifacts> {
     const { item, draft } = await this.getOwned(ownerId, importId);
-    if (!draft || item.status !== 'ready') throw new ScoreImportError('draft_not_ready', 422);
+    const sequenceOnly = targets.length === 1 && targets[0] === 'sequence';
+    if (!draft || (item.status !== 'ready' && !sequenceOnly)) throw new ScoreImportError('draft_not_ready', 422);
     const result: PracticeArtifacts = {};
     const measures = range
       ? draft.measures.filter(measure => measure.number >= range.startMeasure && measure.number <= range.endMeasure)

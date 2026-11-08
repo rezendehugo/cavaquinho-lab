@@ -1,5 +1,5 @@
 import { formatSequenceChord } from '../chordDisplay';
-import { cavaquinhoChords } from './chords';
+import { getCavaquinhoChords } from './chords';
 
 export const MARKDOWN_MEASURES_PER_SYSTEM = 8;
 
@@ -10,6 +10,7 @@ const safeFileName = value => (value || 'pratica').normalize('NFD')
   .toLowerCase() || 'pratica';
 
 export function buildChordMarkdown(sequence, metadata = {}) {
+  const cavaquinhoChords = getCavaquinhoChords();
   const shapeDescription = step => {
     if (!Number.isInteger(step.positionIndex)) return 'Automática';
     const chord = (cavaquinhoChords.chords[step.key] || []).find(item => item.suffix === step.suffix);
@@ -162,6 +163,8 @@ export function downloadMarkdown(document) {
   const anchor = window.document.createElement('a');
   anchor.href = url;
   anchor.download = document.fileName;
+  window.document.body.append(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { ChordEvent, Pitch, ScoreDraft, ScoreEvent, ScoreIssue, ScoreMeasure } from './types.js';
 
 const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: true, trimValues: true });
+const orderedParser = new XMLParser({ ignoreAttributes: false, parseTagValue: true, trimValues: true, preserveOrder: true });
 const asArray = <T>(value: T | T[] | undefined): T[] => value === undefined ? [] : Array.isArray(value) ? value : [value];
 const asNumber = (value: unknown, fallback: number): number => Number.isFinite(Number(value)) ? Number(value) : fallback;
 
@@ -28,14 +29,23 @@ function parseChordSymbol(harmony: Record<string, unknown>): string {
   const suffixes: Record<string, string> = {
     major: '', minor: 'm', dominant: '7', 'major-seventh': 'maj7', 'minor-seventh': 'm7',
     'major-sixth': '6', 'minor-sixth': 'm6', diminished: 'dim', 'diminished-seventh': 'dim7',
+    'dominant-ninth': '9', 'dominant-13th': '13', 'major-ninth': 'maj9',
     augmented: '+', 'half-diminished': 'm7b5', suspended: 'sus4'
   };
+  const degrees = asArray(harmony.degree as Record<string, unknown> | Array<Record<string, unknown>>);
+  const degreeNumber = (degree: Record<string, unknown>): number => asNumber(degree['degree-value'], 0);
+  const degreeAlter = (degree: Record<string, unknown>): number => asNumber(degree['degree-alter'], 0);
+  const flatNinth = degrees.some(degree => degreeNumber(degree) === 9 && degreeAlter(degree) < 0);
+  const flatThirteenth = degrees.some(degree => degreeNumber(degree) === 13 && degreeAlter(degree) < 0);
+  let suffix = suffixes[kindValue] ?? kindValue;
+  if (flatNinth && ['7', '9'].includes(suffix)) suffix = '7b9';
+  if (flatThirteenth && ['7', '13'].includes(suffix)) suffix = '7b13';
   const bass = harmony.bass as Record<string, unknown> | undefined;
   const bassStep = bass ? String(bass['bass-step'] ?? '') : '';
   const bassAlter = asNumber(bass?.['bass-alter'], 0);
   const bassAccidental = bassAlter === 1 ? '#' : bassAlter === -1 ? 'b' : '';
   const slash = bassStep ? `/${bassStep}${bassAccidental}` : '';
-  return `${step}${accidental}${suffixes[kindValue] ?? kindValue}${slash}`;
+  return `${step}${accidental}${suffix}${slash}`;
 }
 
 function directionValues(rawMeasure: Record<string, unknown>, name: string): unknown[] {
@@ -49,6 +59,34 @@ function readDirectionText(value: unknown): string {
   if (!value || typeof value !== 'object') return '';
   const record = value as Record<string, unknown>;
   return String(record['#text'] ?? record['@_text'] ?? '').trim();
+}
+
+const PRINTED_CHORD_SYMBOL = /^[A-G](?:#|b|♯|♭)?(?:7(?:b|♭)(?:13|9)|maj(?:7|9)|m(?:7(?:b5|♭5)?|9|6)?|dim7?|aug|\+|13|9|7|6|sus[24]?|add9|7M)?(?:\/[A-G](?:#|b|♯|♭)?)?$/;
+
+function extractPrintedChordSymbols(value: string): string[] {
+  const normalized = value
+    .replace(/♯/g, '#').replace(/♭/g, 'b')
+    .replace(/[’‘']/g, '')
+    .replace(/([A-G]#?7)[|l]a?13/g, (_match, root) => `${root}b13`)
+    .replace(/([A-G]7)l13/g, (_match, root) => `${root}b13`)
+    .replace(/([A-G]m)G\b/g, (_match, root) => `${root}6`)
+    .replace(/\b([A-G])I>7\b/g, (_match, root) => `${root}b7`)
+    .replace(/\b([A-G])ma7J?\b/g, (_match, root) => `${root}maj7`)
+    .replace(/\b([A-G]b)d\b/g, (_match, root) => `${root}dim7`);
+  const symbols = normalized.match(/[A-G](?:#|b)?(?:7b(?:13|9)|maj(?:7|9)|m(?:7(?:b5)?|9|6)?|dim7?|aug|\+|13|9|7|6|sus[24]?|add9|7M)?(?:\/[A-G](?:#|b)?)?/g) ?? [];
+  return symbols.filter(symbol => PRINTED_CHORD_SYMBOL.test(symbol));
+}
+
+function directionChordEvents(rawMeasure: Record<string, unknown>): ChordEvent[] {
+  return asArray(rawMeasure.direction as Record<string, unknown> | Array<Record<string, unknown>>)
+    .flatMap(direction => {
+      const directionTypes = asArray(direction['direction-type'] as Record<string, unknown> | Array<Record<string, unknown>>);
+      const offset = asNumber(direction.offset, 0);
+      return directionTypes.flatMap(directionType => asArray(directionType.words as unknown)
+        .flatMap(readDirectionText)
+        .flatMap(extractPrintedChordSymbols)
+        .map(symbol => ({ id: randomUUID(), offsetTicks: offset, symbol, confidence: 0.72, alternatives: [] })));
+    });
 }
 
 function parseSections(rawMeasures: Array<Record<string, unknown>>, measureNumbers: number[]): ScoreDraft['sections'] {
@@ -65,20 +103,76 @@ function parseSections(rawMeasures: Array<Record<string, unknown>>, measureNumbe
   }));
 }
 
-function validateMeasure(measure: ScoreMeasure): ScoreIssue[] {
-  const playedTicks = measure.events.reduce((sum, event) => sum + event.durationTicks, 0);
-  if (playedTicks === measure.expectedTicks) return [];
+export function validateMeasureTimeline(measure: ScoreMeasure): ScoreIssue[] {
+  const intervals = measure.events
+    .filter(event => event.durationTicks > 0)
+    .map(event => [Math.max(0, event.offsetTicks), event.offsetTicks + event.durationTicks] as const)
+    .sort((left, right) => left[0] - right[0]);
+  let coveredUntil = 0;
+  let hasGap = false;
+  let overflow = false;
+  for (const [start, end] of intervals) {
+    if (start > coveredUntil) hasGap = true;
+    if (end > measure.expectedTicks) overflow = true;
+    coveredUntil = Math.max(coveredUntil, end);
+  }
+  if (!hasGap && !overflow && coveredUntil === measure.expectedTicks) return [];
+  const reason = overflow ? 'ultrapassa' : hasGap || coveredUntil < measure.expectedTicks ? 'não preenche' : 'não corresponde';
   return [{
     code: 'measure_duration_mismatch',
     severity: 'critical',
-    message: `A medida soma ${playedTicks} ticks, mas deveria somar ${measure.expectedTicks}.`
+    message: `A linha do tempo da medida ${reason} ${measure.expectedTicks} ticks.`
   }];
+}
+
+function findOrderedMeasures(nodes: unknown[]): Array<Record<string, unknown>> {
+  const found: Array<Record<string, unknown>> = [];
+  for (const node of nodes) {
+    if (!node || typeof node !== 'object') continue;
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (key === 'measure' && Array.isArray(value)) found.push({ measure: value });
+      if (Array.isArray(value)) {
+        if (key !== 'measure') found.push(...findOrderedMeasures(value));
+      }
+    }
+  }
+  return found;
+}
+
+function orderedEventOffsets(measure: Record<string, unknown>): number[] {
+  let cursor = 0;
+  let lastOnset = 0;
+  const offsets: number[] = [];
+  const children = Object.values(measure).find(Array.isArray) as Array<Record<string, unknown>> | undefined;
+  for (const child of children ?? []) {
+    if ('note' in child) {
+      const fields = child.note as Array<Record<string, unknown>>;
+      const rawDuration = fields.find(field => 'duration' in field)?.duration as Array<Record<string, unknown>> | undefined;
+      const duration = asNumber(rawDuration?.[0]?.['#text'], 0);
+      const isChordTone = fields.some(field => 'chord' in field);
+      const isGrace = fields.some(field => 'grace' in field);
+      offsets.push(isChordTone ? lastOnset : cursor);
+      if (!isChordTone && !isGrace) {
+        lastOnset = cursor;
+        cursor += duration;
+      }
+    } else if ('backup' in child || 'forward' in child) {
+      const tag = 'backup' in child ? 'backup' : 'forward';
+      const data = child[tag] as Array<Record<string, unknown>>;
+      const raw = data.find(field => 'duration' in field)?.duration as Array<Record<string, unknown>> | undefined;
+      const amount = asNumber(raw?.[0]?.['#text'], 0);
+      cursor = tag === 'backup' ? Math.max(0, cursor - amount) : cursor + amount;
+    }
+  }
+  return offsets;
 }
 
 export function parseMusicXml(content: string, context: { importId: string; ownerId: string }): ScoreDraft {
   if (content.length > 20 * 1024 * 1024 || /<!DOCTYPE|<!ENTITY/i.test(content)) throw new Error('unsafe_musicxml');
   if ((content.match(/<measure\b/gi) ?? []).length > 2000 || (content.match(/<part\s+id=/gi) ?? []).length !== 1) throw new Error('unsupported_musicxml_structure');
   const document = parser.parse(content) as Record<string, unknown>;
+  const orderedDocument = orderedParser.parse(content) as unknown[];
+  const orderedMeasures = findOrderedMeasures(orderedDocument);
   const score = document['score-partwise'] as Record<string, unknown> | undefined;
   const part = asArray(score?.part as Record<string, unknown> | Array<Record<string, unknown>>)[0];
   if (!score || !part) throw new Error('invalid_musicxml');
@@ -106,13 +200,12 @@ export function parseMusicXml(content: string, context: { importId: string; owne
       .map(directionType => directionType.metronome as Record<string, unknown> | undefined)
       .find(Boolean);
     tempo = asNumber(sound?.['@_tempo'] ?? metronome?.['per-minute'], tempo);
-    let offsetTicks = 0;
-    const events: ScoreEvent[] = asArray(rawMeasure.note as Record<string, unknown> | Array<Record<string, unknown>>).map(note => {
+    const offsets = orderedEventOffsets(orderedMeasures[measureIndex] ?? {});
+    const events: ScoreEvent[] = asArray(rawMeasure.note as Record<string, unknown> | Array<Record<string, unknown>>).map((note, noteIndex) => {
       const durationTicks = asNumber(note.duration, 0);
-      const isChordTone = note.chord !== undefined;
       const event: ScoreEvent = {
         id: randomUUID(),
-        offsetTicks: isChordTone ? Math.max(0, offsetTicks - durationTicks) : offsetTicks,
+        offsetTicks: offsets[noteIndex] ?? 0,
         durationTicks,
         pitch: parsePitch(note),
         rest: note.rest !== undefined,
@@ -120,13 +213,16 @@ export function parseMusicXml(content: string, context: { importId: string; owne
         confidence: 1,
         alternatives: []
       };
-      if (!isChordTone) offsetTicks += durationTicks;
       return event;
     });
     const chords: ChordEvent[] = asArray(rawMeasure.harmony as Record<string, unknown> | Array<Record<string, unknown>>).map(harmony => ({
       id: randomUUID(), offsetTicks: asNumber((harmony.offset as Record<string, unknown> | undefined)?.['#text'] ?? harmony.offset, 0),
       symbol: parseChordSymbol(harmony), confidence: 1, alternatives: []
     }));
+    for (const chord of directionChordEvents(rawMeasure)) {
+      if (!chords.some(existing => existing.symbol.toLowerCase() === chord.symbol.toLowerCase())) chords.push(chord);
+    }
+    chords.sort((a, b) => a.offsetTicks - b.offsetTicks);
     const structuralIssues: ScoreIssue[] = events.some(event => event.durationTicks <= 0 || event.rest === Boolean(event.pitch))
       ? [{ code: 'invalid_note_event', severity: 'critical', message: 'A medida contém uma nota ou pausa inválida.' }]
       : [];
@@ -136,13 +232,14 @@ export function parseMusicXml(content: string, context: { importId: string; owne
       expectedTicks: divisions * meter.beats * (4 / meter.beatType),
       page,
       system,
+      layoutWidth: asNumber(rawMeasure['@_width'], 0) || undefined,
       newPage,
       newSystem,
       events,
       chords,
       issues: structuralIssues
     };
-    measure.issues = [...measure.issues, ...validateMeasure(measure)];
+    measure.issues = [...measure.issues, ...validateMeasureTimeline(measure)];
     return measure;
   });
 

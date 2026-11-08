@@ -1,4 +1,5 @@
 import { chromaticKeys } from '../sequences';
+import { MAX_FRET } from './scalePaths';
 
 export const cavaquinhoTuning = ['D', 'G', 'B', 'D'];
 
@@ -12,7 +13,7 @@ export const enharmonicNotes = {
 
 export const getFretNote = (openNote, fret) => chromaticKeys[(chromaticKeys.indexOf(openNote) + fret) % chromaticKeys.length];
 
-export const buildFretboardRows = (tuning = cavaquinhoTuning, fretCount = 12, startFret = 1) => (
+export const buildFretboardRows = (tuning = cavaquinhoTuning, fretCount = MAX_FRET, startFret = 1) => (
   Array.from({ length: fretCount - startFret + 1 }, (_item, index) => {
     const fret = startFret + index;
     return {

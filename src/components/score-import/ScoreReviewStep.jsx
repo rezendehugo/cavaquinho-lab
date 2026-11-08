@@ -10,24 +10,28 @@ import TabScoreSheet from '../TabScoreSheet';
 const needsReview = measure => measure.issues.length > 0
   || measure.events.some(event => event.confidence < .8)
   || measure.chords.some(chord => chord.confidence < .8);
+const needsChordReview = measure => measure.chords.length === 0 || measure.chords.some(chord => chord.confidence < .8);
 
 export default function ScoreReviewStep({
-  result, musicXml, sourceUrl, sourcePreviewUnavailable = false, busy, range, targets,
+  result, musicXml, sourceUrl, sourcePreviewUnavailable = false, sourcePreviewLoading = false, recoveryNotice = '', busy, range, targets,
+  onOpenSourcePreview,
   onRangeChange, onTargetsChange, onSaveMeasure, onApprove
 }) {
-  const [mobileView, setMobileView] = useState('measures');
   const [selectedMeasure, setSelectedMeasure] = useState(null);
+  const [previewsOpen, setPreviewsOpen] = useState(false);
   const measures = result.draft.measures;
-  const reviewMeasures = useMemo(() => measures.filter(needsReview), [measures]);
+  const reviewMeasures = useMemo(() => measures.filter(targets.melody ? needsReview : needsChordReview), [measures, targets.melody]);
   const confidentCount = measures.length - reviewMeasures.length;
   const selectedCount = measures.filter(item => item.number >= range.startMeasure && item.number <= range.endMeasure).length;
-  const criticalCount = measures.filter(item => item.issues.some(issue => issue.severity === 'critical')).length;
+  const rangeMeasures = measures.filter(item => item.number >= range.startMeasure && item.number <= range.endMeasure);
+  const criticalCount = rangeMeasures.filter(item => item.issues.some(issue => issue.severity === 'critical')).length;
+  const sequenceOnly = targets.sequence && !targets.melody;
   const chordEvents = measures
     .filter(measure => measure.number >= range.startMeasure && measure.number <= range.endMeasure)
     .flatMap(measure => measure.chords.map(chord => ({ ...chord, measure: measure.number })));
   const invalidChords = chordEvents.filter(chord => !parseRootInput(chord.symbol, 'major'));
-  const sequenceProblem = targets.sequence && (invalidChords.length > 0 || chordEvents.length > MAX_SEQUENCE_STEPS);
-  const tabScore = useMemo(() => buildTabScore(result.draft), [result.draft]);
+  const sequenceProblem = targets.sequence && (!chordEvents.length || invalidChords.length > 0 || chordEvents.length > MAX_SEQUENCE_STEPS);
+  const tabScore = useMemo(() => targets.melody && previewsOpen ? buildTabScore(result.draft) : null, [previewsOpen, result.draft, targets.melody]);
 
   const chooseRangePreset = value => {
     if (value === 'all') return onRangeChange({ startMeasure: measures[0].number, endMeasure: measures.at(-1).number });
@@ -49,43 +53,48 @@ export default function ScoreReviewStep({
     <div className="score-review-summary" aria-label="Resumo da revisão">
       <div className={reviewMeasures.length ? 'attention' : 'success'}>
         {reviewMeasures.length ? <TriangleAlert size={19} /> : <Check size={19} />}
-        <strong>{reviewMeasures.length ? `${reviewMeasures.length} medidas precisam de revisão` : 'Todas as medidas estão confiáveis'}</strong>
+        <strong>{reviewMeasures.length ? `${reviewMeasures.length} medidas com ${targets.melody ? 'melodia' : 'cifras'} para conferir` : targets.melody ? 'Melodia e cifras prontas' : 'Cifras prontas para sequência'}</strong>
       </div>
       {reviewMeasures.length ? <span>{confidentCount} medidas confiáveis</span> : null}
-      {criticalCount ? <span className="critical">{criticalCount} impedem a criação</span> : null}
+      {criticalCount && targets.melody ? <span className="critical">{criticalCount} medidas impedem o solo neste trecho</span> : null}
     </div>
-    {sequenceProblem ? <div className="score-import-rejections" role="alert"><strong>A sequência precisa de correção</strong>{invalidChords.length ? <p>{invalidChords.slice(0, 8).map(chord => `Medida ${chord.measure}: ${chord.symbol}`).join(' · ')}</p> : null}{chordEvents.length > MAX_SEQUENCE_STEPS ? <p>O trecho possui {chordEvents.length} cifras; selecione até {MAX_SEQUENCE_STEPS}.</p> : null}<small>Você pode corrigir as cifras ou criar somente o Solo com melodia.</small></div> : null}
+    {recoveryNotice ? <p className="score-recovery-notice" role="status">{recoveryNotice}</p> : null}
+    {sequenceProblem ? <div className="score-import-rejections" role="alert"><strong>A sequência precisa de correção</strong>{!chordEvents.length ? <p>Nenhuma cifra foi reconhecida no trecho selecionado.</p> : null}{invalidChords.length ? <p>{invalidChords.slice(0, 8).map(chord => `Medida ${chord.measure}: ${chord.symbol}`).join(' · ')}</p> : null}{chordEvents.length > MAX_SEQUENCE_STEPS ? <p>O trecho possui {chordEvents.length} cifras; selecione até {MAX_SEQUENCE_STEPS}.</p> : null}<small>Abra a medida e adicione ou corrija as cifras impressas, depois crie a sequência.</small></div> : null}
 
-    <div className="score-review-mobile-tabs" role="tablist" aria-label="Visualização da revisão">
-      <button type="button" role="tab" aria-selected={mobileView === 'original'} onClick={() => setMobileView('original')}>Original</button>
-      <button type="button" role="tab" aria-selected={mobileView === 'recognized'} onClick={() => setMobileView('recognized')}>Reconhecida</button>
-      <button type="button" role="tab" aria-selected={mobileView === 'tab'} onClick={() => setMobileView('tab')}>Folha TAB</button>
-      <button type="button" role="tab" aria-selected={mobileView === 'measures'} onClick={() => setMobileView('measures')}>Medidas</button>
-    </div>
-    <div className="score-preview-pair">
-      <section className={`score-preview-panel original ${mobileView === 'original' ? 'is-mobile-active' : ''}`}><h4><FileText size={16} /> Original</h4>
-        {sourceUrl
-          ? <iframe title="PDF original" src={sourceUrl} />
-          : <p>{sourcePreviewUnavailable
-            ? 'A prévia do PDF original não está disponível nesta sessão. A revisão reconhecida continua acessível.'
-            : 'O arquivo simbólico não possui uma visualização PDF.'}</p>}
-      </section>
-      <section className={`score-preview-panel recognized ${mobileView === 'recognized' ? 'is-mobile-active' : ''}`}><h4><Music2 size={16} /> Reconhecida</h4><ScorePreview musicXml={musicXml} /></section>
-      <section className={`score-preview-panel tab ${mobileView === 'tab' ? 'is-mobile-active' : ''}`}><TabScoreSheet score={tabScore} compact /></section>
-    </div>
+    <details className="score-review-previews" onToggle={event => {
+      setPreviewsOpen(event.currentTarget.open);
+      if (event.currentTarget.open) onOpenSourcePreview?.();
+    }}>
+      <summary><FileText size={16} /> Conferir arquivos de referência</summary>
+      {previewsOpen ? <div className="score-preview-pair">
+        <section className="score-preview-panel original"><h4><FileText size={16} /> Original</h4>
+          {sourceUrl
+            ? <iframe title="PDF original" src={sourceUrl} />
+            : sourcePreviewLoading
+              ? <p role="status">Carregando a prévia do PDF original…</p>
+            : <p>{sourcePreviewUnavailable
+              ? 'A prévia do PDF original não está disponível nesta sessão. A revisão de cifras continua acessível.'
+              : 'O arquivo simbólico não possui uma visualização PDF.'}</p>}
+        </section>
+        <section className="score-preview-panel recognized"><h4><Music2 size={16} /> Reconhecida</h4><ScorePreview musicXml={musicXml} ariaLabel="Partitura reconhecida" /></section>
+        {targets.melody && tabScore ? <section className="score-preview-panel tab"><TabScoreSheet score={tabScore} compact /></section> : null}
+      </div> : null}
+    </details>
 
-    <section className={`score-measure-review ${mobileView === 'measures' ? 'is-mobile-active' : ''}`} aria-label="Medidas reconhecidas">
+    <section className="score-measure-review" aria-label="Medidas reconhecidas">
       <header><div><h4><ListMusic size={17} /> Revisão por medida</h4><p>Problemas aparecem primeiro. Abra qualquer medida para conferir.</p></div>
         <label>Ir para <select value={selectedMeasure || ''} onChange={event => setSelectedMeasure(Number(event.target.value) || null)}><option value="">Escolha</option>{measures.map(item => <option key={item.number} value={item.number}>Medida {item.number}</option>)}</select></label>
       </header>
       <div className="score-measure-list">
-        {[...measures].sort((left, right) => Number(needsReview(right)) - Number(needsReview(left)) || left.number - right.number).map(measure =>
+        {[...measures].sort((left, right) => Number((targets.melody ? needsReview : needsChordReview)(right)) - Number((targets.melody ? needsReview : needsChordReview)(left)) || left.number - right.number).map(measure =>
           <ScoreMeasureEditor
             key={`${measure.number}-${result.draft.revision}`}
             measure={measure}
             revision={result.draft.revision}
             busy={busy}
-            expanded={selectedMeasure === measure.number || needsReview(measure)}
+            beatType={result.draft.meter.beatType}
+            showMelody={targets.melody}
+            expanded={selectedMeasure === measure.number}
             onSave={onSaveMeasure}
           />)}
       </div>
@@ -101,7 +110,7 @@ export default function ScoreReviewStep({
         <label className={targets.sequence ? 'selected' : ''}><input type="checkbox" checked={targets.sequence} onChange={event => onTargetsChange({ ...targets, sequence: event.target.checked })} /><strong>Sequência de acordes</strong><span>Pratique as trocas reconhecidas.</span></label>
         <label className={targets.melody ? 'selected' : ''}><input type="checkbox" checked={targets.melody} onChange={event => onTargetsChange({ ...targets, melody: event.target.checked })} /><strong>Solo com melodia</strong><span>Pratique notas, pausas e ritmo.</span></label>
       </div>
-      <div className="score-create-action"><span>{selectedCount} medidas selecionadas</span><button type="button" data-ui-text-reason="workflow" className="primary-button" disabled={busy || criticalCount > 0 || sequenceProblem || range.startMeasure > range.endMeasure || !Object.values(targets).some(Boolean)} onClick={onApprove}>Validar e criar prática</button></div>
+      <div className="score-create-action"><span>{selectedCount} medidas selecionadas</span><button type="button" aria-label={sequenceOnly ? 'Criar sequência de acordes' : 'Validar e criar prática'} title={sequenceOnly ? 'Criar sequência de acordes' : 'Validar e criar prática'} data-ui-text-reason="workflow" className="primary-button" disabled={busy || (targets.melody && criticalCount > 0) || sequenceProblem || range.startMeasure > range.endMeasure || !Object.values(targets).some(Boolean)} onClick={onApprove}>{sequenceOnly ? 'Criar sequência de acordes' : 'Validar e criar prática'}</button></div>
     </div>
   </section>;
 }

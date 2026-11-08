@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { normalizeSequences } from '../sequences';
-import { loadSequences } from '../storage';
+import { loadSequences } from '../storage/sequences';
 import { createApiClient } from '../services/apiClient';
 import { createProductApi } from '../services/productApi';
 

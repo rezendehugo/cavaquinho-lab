@@ -43,6 +43,7 @@ describe('ferramentas da sessão de prática', () => {
     cy.get('[aria-label="Batidas por minuto"]').should('have.value', '104');
     cy.get('[aria-label="Fechar metrônomo"]').click();
     cy.contains('[role="tab"]', 'Sequência').click();
+    cy.get('.sequence-practice-tools > summary').click();
     cy.get('[aria-label="BPM da prática de sequência"]').should('have.value', '104').type('{downarrow}').should('have.value', '103');
   });
 
@@ -57,6 +58,7 @@ describe('ferramentas da sessão de prática', () => {
       }]));
     } });
     cy.contains('[role="tab"]', 'Sequência').click();
+    cy.get('.sequence-practice-tools > summary').click();
     cy.contains('button', 'Praticar sem olhar').click();
     cy.get('[aria-label="Prática sem olhar: Treino de memória"]').as('noLook');
     cy.get('@noLook').should('contain.text', 'Toque o que você lembra').and('not.contain.text', 'Dm');
@@ -202,7 +204,7 @@ describe('ferramentas da sessão de prática', () => {
   it('fixa uma forma pela galeria e volta para escolha automática', () => {
     cy.get('[aria-label="Adicionar acorde"]').click();
     cy.contains('button', 'Escolher forma').click();
-    cy.get('[aria-label="Fixar forma 3 de 7"]').click();
+    cy.get('[aria-label="Usar forma 3 de 7"]').click();
     cy.contains('Forma 3 fixada').should('be.visible');
     cy.window().then(window => expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).to.equal(2));
     cy.contains('button', 'Escolher forma').click();
@@ -263,4 +265,5 @@ describe('ferramentas da sessão de prática', () => {
     cy.viewport(390, 844);
     cy.document().then(document => expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth));
   });
+
 });

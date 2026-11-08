@@ -1,8 +1,3 @@
-import { defaultSequences, normalizeSequences } from './sequences';
-import { normalizeStoredScalePaths, scalePathStorageVersion } from './domain/scalePaths';
-import { freeSoloStorageVersion, normalizeStoredSolos } from './domain/freeSolos';
-import { sanitizeSequenceShapeIndexes } from './domain/chords';
-
 export const sequencesStorageKey = 'cavaquinhoLabSequences';
 export const activeSequenceStorageKey = 'cavaquinhoLabActiveSequenceId';
 export const legacySequenceStorageKey = 'cavaquinhoLabSequence';
@@ -27,48 +22,3 @@ export const writeStorage = (key, value) => {
     return { ok: false };
   }
 };
-
-export const loadSequences = () => {
-  try {
-    const saved = readStorage(sequencesStorageKey).value;
-    if (saved) return sanitizeSequenceShapeIndexes(normalizeSequences(JSON.parse(saved)));
-    const legacy = readStorage(legacySequenceStorageKey).value;
-    if (legacy) return sanitizeSequenceShapeIndexes(normalizeSequences(JSON.parse(legacy)));
-    return defaultSequences;
-  } catch {
-    return defaultSequences;
-  }
-};
-
-export const loadActiveSequenceId = (sequences) => {
-  const saved = readStorage(activeSequenceStorageKey).value;
-  return sequences.some(sequence => sequence.id === saved) ? saved : sequences[0].id;
-};
-
-export const loadScalePaths = () => {
-  try {
-    const saved = readStorage(scalePathsStorageKey).value;
-    return saved ? normalizeStoredScalePaths(JSON.parse(saved)).paths : [];
-  } catch {
-    return [];
-  }
-};
-
-export const saveScalePaths = (paths) => writeStorage(scalePathsStorageKey, JSON.stringify({
-  version: scalePathStorageVersion,
-  paths: normalizeStoredScalePaths({ version: scalePathStorageVersion, paths }).paths
-}));
-
-export const loadFreeSolos = () => {
-  try {
-    const saved = readStorage(freeSolosStorageKey).value;
-    return saved ? normalizeStoredSolos(JSON.parse(saved)).solos : [];
-  } catch {
-    return [];
-  }
-};
-
-export const saveFreeSolos = (solos) => writeStorage(freeSolosStorageKey, JSON.stringify({
-  version: freeSoloStorageVersion,
-  solos: normalizeStoredSolos({ version: freeSoloStorageVersion, solos }).solos
-}));

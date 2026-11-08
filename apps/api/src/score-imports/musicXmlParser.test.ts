@@ -28,6 +28,30 @@ describe('MusicXML normalizer', () => {
     expect(() => parseMusicXml(score.replace('</part></score-partwise>', '</part><part id="P2"/></score-partwise>'), { importId: 'i', ownerId: 'u' })).toThrow('unsupported_musicxml_structure');
   });
 
+  test('measures simultaneous chord tones once and follows backup and forward timelines', () => {
+    const polyphonic = `<score-partwise><part id="P1"><measure number="1"><attributes><divisions>10080</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>10080</duration><voice>1</voice></note>
+      <note><chord/><pitch><step>F</step><octave>4</octave></pitch><duration>10080</duration><voice>1</voice></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>10080</duration><voice>1</voice></note>
+      <backup><duration>20160</duration></backup>
+      <note><pitch><step>A</step><octave>3</octave></pitch><duration>40320</duration><voice>2</voice></note>
+      <forward><duration>40320</duration></forward>
+    </measure></part></score-partwise>`;
+    const measure = parseMusicXml(polyphonic, { importId: 'timeline', ownerId: 'user-1' }).measures[0];
+    expect(measure.events.map(event => event.offsetTicks)).toEqual([0, 0, 10080, 0]);
+    expect(measure.issues).toEqual([]);
+  });
+
+  test('detects uncovered gaps and true timeline overflow, not duration sums', () => {
+    const withGap = score.replace('<note><pitch><step>D</step><octave>4</octave></pitch><duration>2</duration></note>', '<note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration></note>');
+    const gap = parseMusicXml(withGap, { importId: 'gap', ownerId: 'user-1' }).measures[0];
+    expect(gap.issues.map(issue => issue.code)).toContain('measure_duration_mismatch');
+
+    const overflow = score.replace('<duration>4</duration>', '<duration>8</duration>');
+    const long = parseMusicXml(overflow, { importId: 'overflow', ownerId: 'user-1' }).measures[0];
+    expect(long.issues.map(issue => issue.code)).toContain('measure_duration_mismatch');
+  });
+
   test('preserves rehearsal sections, composer, slash bass and compact chord qualities', () => {
     const nivaldoLike = score
       .replace('<work-title>Estudo em C</work-title>', '<work-title>Nivaldo no choro</work-title>')
@@ -49,5 +73,41 @@ describe('MusicXML normalizer', () => {
       ]
     });
     expect(draft.measures[0].chords[0].symbol).toBe('E7/G#');
+  });
+
+  test('includes printed chord symbols exported as text directions in score order', () => {
+    const withChordNames = score.replace(
+      '<direction><sound tempo="96"/></direction>',
+      '<direction><direction-type><words>F#13</words></direction-type><offset>2</offset></direction>' +
+        '<direction><direction-type><words>F#7b13</words></direction-type><offset>4</offset></direction>' +
+        '<direction><direction-type><words>B9</words></direction-type><offset>6</offset></direction><direction><sound tempo="96"/></direction>'
+    );
+    const draft = parseMusicXml(withChordNames, { importId: 'printed-chords', ownerId: 'user-1' });
+    expect(draft.measures[0].chords.map(chord => [chord.symbol, chord.offsetTicks])).toEqual([
+      ['C', 0], ['F#13', 2], ['F#7b13', 4], ['B9', 6]
+    ]);
+  });
+
+  test('splits and cleans OCR-combined chord labels without losing their printed suffixes', () => {
+    const ocrWords = score.replace(
+      '<direction><sound tempo="96"/></direction>',
+      '<direction><direction-type><words>F#7|a13 B9</words></direction-type></direction>' +
+        '<direction><direction-type><words>Em7b5A7l13</words></direction-type></direction>' +
+        '<direction><direction-type><words>Fma7J</words></direction-type></direction>' +
+        '<direction><direction-type><words>GmG</words></direction-type></direction>' +
+        '<direction><sound tempo="96"/></direction>'
+    );
+    const draft = parseMusicXml(ocrWords, { importId: 'ocr-chords', ownerId: 'user-1' });
+    expect(draft.measures[0].chords.map(chord => chord.symbol)).toEqual([
+      'C', 'F#7b13', 'B9', 'Em7b5', 'A7b13', 'Fmaj7', 'Gm6'
+    ]);
+  });
+
+  test('formats MusicXML major ninth chord kinds with the conventional maj9 suffix', () => {
+    const majorNinth = score.replace(
+      '<harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>',
+      '<harmony><root><root-step>D</root-step></root><kind>major-ninth</kind></harmony>'
+    );
+    expect(parseMusicXml(majorNinth, { importId: 'major-ninth', ownerId: 'user-1' }).measures[0].chords[0].symbol).toBe('Dmaj9');
   });
 });

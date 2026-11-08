@@ -4,13 +4,21 @@ import path from 'node:path';
 import rawCavaquinhoChords from '@tombatossals/chords-db/lib/cavaquinho.json';
 import App from './App.jsx';
 import { getRoutes, uiAuditScenarios } from './config';
-import { cavaquinhoChords } from './domain/chords';
+import { getCavaquinhoChords } from './domain/chords';
 import { analyzeChordVoicing } from './domain/chordTheory';
+import { getChordShapeCandidates, getShapeCandidateRankingScore, groupChordShapeCandidates, hasPlayableFretSpan } from './progressionOptimizer';
+
+const cavaquinhoChords = getCavaquinhoChords();
 
 const renderAt = (route = '/sequences') => {
   window.localStorage.clear();
   window.history.pushState(null, '', route);
   return render(<App />);
+};
+
+const selectPracticeTab = async name => {
+  fireEvent.click(await screen.findByRole('tab', { name }));
+  await waitFor(() => expect(document.querySelector('.panel-loading')).not.toBeInTheDocument());
 };
 
 const getAbsoluteFrets = (position) => {
@@ -31,10 +39,19 @@ const createDataTransfer = () => {
 };
 
 describe('Cavaquinho Lab', () => {
+  test('abre Escala por padrão sem montar os painéis de acordes e prática inativos', async () => {
+    renderAt('/practice');
+    expect(await screen.findByRole('tab', { name: 'Escala' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByLabelText('Tônica da escala')).toHaveValue('C');
+    expect(screen.getByLabelText('Tipo de escala')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Treino de ouvido' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /sequência/i })).not.toBeInTheDocument();
+  });
+
   test('abre a apresentação pública como experiência principal', async () => {
     renderAt('/');
     await waitFor(() => expect(window.location.pathname).toBe('/'));
-    expect(screen.getByRole('heading', { name: /formas que estavam no PDF/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /formas que estavam no PDF/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'C maior no cavaquinho' })).toBeInTheDocument();
   });
 
@@ -48,9 +65,9 @@ describe('Cavaquinho Lab', () => {
     expect(screen.queryByRole('link', { name: 'Cavaquinho' })).not.toBeInTheDocument();
   });
 
-  test('oferece trilha auditiva em etapas e guarda o progresso localmente', () => {
+  test('oferece trilha auditiva em etapas e guarda o progresso localmente', async () => {
     renderAt('/practice');
-    fireEvent.click(screen.getByRole('tab', { name: 'Ouvido' }));
+    await selectPracticeTab('Ouvido');
     expect(screen.getByRole('heading', { name: 'Treino de ouvido' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sinta o modo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ouvir trecho' })).toBeEnabled();
@@ -217,7 +234,7 @@ describe('Cavaquinho Lab', () => {
     render(<App />);
     expect(screen.getByLabelText(/Voicing incompleto: omite/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Escolher forma' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Formas de C' })).getByRole('button', { name: /Fixar forma 1 de/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Cdim7' })).getByRole('button', { name: /Usar forma 1 de/ }));
     expect(screen.getByLabelText('Voicing completo: contém todas as notas do acorde.')).toBeInTheDocument();
   });
 
@@ -258,7 +275,7 @@ describe('Cavaquinho Lab', () => {
     }]));
     window.history.pushState(null, '', '/practice');
     render(<App />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    await selectPracticeTab('Sequência');
 
     fireEvent.click(screen.getByRole('button', { name: 'Praticar sem olhar' }));
     const dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Minha sequência' });
@@ -288,14 +305,14 @@ describe('Cavaquinho Lab', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Praticar sem olhar' })).toHaveFocus());
   });
 
-  test('permite conferir a resposta atual ou a sequência inteira antes de terminar', () => {
+  test('permite conferir a resposta atual ou a sequência inteira antes de terminar', async () => {
     window.localStorage.clear();
     window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
       id: 'sequence-1', title: 'Sequência curta', steps: [{ id: 'one', key: 'Db', displayKey: 'C#', suffix: 'major' }, { id: 'two', key: 'G', suffix: '7' }]
     }]));
     window.history.pushState(null, '', '/practice');
     render(<App />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    await selectPracticeTab('Sequência');
     fireEvent.click(screen.getByRole('button', { name: 'Praticar sem olhar' }));
     let dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Sequência curta' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Conferir este acorde' }));
@@ -307,20 +324,20 @@ describe('Cavaquinho Lab', () => {
     expect(within(dialog).getByLabelText('Sequência revelada')).toHaveTextContent('G7');
   });
 
-  test('bloqueia a prática sem olhar para uma sequência vazia', () => {
+  test('bloqueia a prática sem olhar para uma sequência vazia', async () => {
     renderAt('/practice');
-    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    await selectPracticeTab('Sequência');
     expect(screen.getByRole('button', { name: 'Praticar sem olhar' })).toBeDisabled();
   });
 
-  test('conclui e revela uma tentativa de um acorde', () => {
+  test('conclui e revela uma tentativa de um acorde', async () => {
     window.localStorage.clear();
     window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
       id: 'sequence-1', title: 'Um acorde', steps: [{ id: 'one', key: 'G', suffix: '7' }]
     }]));
     window.history.pushState(null, '', '/practice');
     render(<App />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    await selectPracticeTab('Sequência');
     fireEvent.click(screen.getByRole('button', { name: 'Praticar sem olhar' }));
     const dialog = screen.getByRole('dialog', { name: 'Prática sem olhar: Um acorde' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Terminar e conferir sequência' }));
@@ -494,7 +511,7 @@ describe('Cavaquinho Lab', () => {
     const getSavedSteps = () => JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps;
     const savedPositionIndexes = getSavedSteps().map(step => step.positionIndex);
     expect(savedPositionIndexes.every(Number.isInteger)).toBe(true);
-    expect(savedPositionIndexes[0]).not.toBe(savedPositionIndexes[1]);
+    expect(savedPositionIndexes).toHaveLength(2);
 
     const secondCard = within(screen.getByLabelText('Acordes da sequência')).getAllByRole('article')[1];
     const secondShapeBeforeRootChange = secondCard.querySelector('.shape-index-badge').textContent;
@@ -510,18 +527,19 @@ describe('Cavaquinho Lab', () => {
     renderAt();
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar acorde' }));
     fireEvent.click(screen.getByRole('button', { name: 'Escolher forma' }));
-    const dialog = screen.getByRole('dialog', { name: /Formas de C/ });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Fixar forma 3 de 7' }));
+    const dialog = screen.getByRole('dialog', { name: 'C' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Usar forma 3 de 7' }));
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(2);
     expect(screen.getByText('Forma 3 fixada')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Escolher forma' }));
-    fireEvent.click(within(screen.getByRole('dialog', { name: /Formas de C/ })).getByRole('button', { name: /Automática/ }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'C' })).getByRole('button', { name: /Automática/ }));
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0].positionIndex).toBe(null);
     expect(screen.getByText('Forma automática')).toBeInTheDocument();
   });
 
-  test('usa card compartilhado compacto na página Formas', () => {
+  test('usa card compartilhado compacto na página Formas', async () => {
     renderAt('/shapes');
+    await screen.findByText('1/7');
     expect(screen.getByRole('link', { name: 'Formas' })).toHaveClass('active');
     expect(document.querySelectorAll('.chord-shape-card').length).toBeGreaterThan(0);
     expect(screen.getByText('1/7')).toBeInTheDocument();
@@ -531,8 +549,9 @@ describe('Cavaquinho Lab', () => {
     expect(document.querySelector('.diagram-tuning')).toBe(null);
   });
 
-  test('apresenta voicings de nona sem raiz com orientação acessível', () => {
+  test('apresenta voicings de nona sem raiz com orientação acessível', async () => {
     renderAt('/shapes');
+    await screen.findByLabelText('Escolher qualidade');
     fireEvent.change(screen.getByLabelText('Escolher qualidade'), { target: { value: 'maj9' } });
     expect(screen.getByText(/C7M\(9\).*10 formas/)).toBeInTheDocument();
     expect(document.querySelectorAll('.shape-grid .voicing-status-dot--rootless')).toHaveLength(10);
@@ -588,8 +607,9 @@ describe('Cavaquinho Lab', () => {
     expect(screen.getByText('Aprofundar a leitura harmônica').closest('details')).not.toHaveAttribute('open');
   });
 
-  test('renderiza a página Braço com afinação e primeiras casas', () => {
+  test('renderiza a página Braço com afinação e primeiras casas', async () => {
     renderAt('/fretboard');
+    await screen.findByRole('heading', { name: 'Braço e notas no cavaquinho' });
     expect(screen.getByRole('link', { name: 'Braço' })).toHaveClass('active');
     expect(screen.getByRole('heading', { name: 'Braço e notas no cavaquinho' })).toBeInTheDocument();
     expect(screen.getByLabelText('Afinação do cavaquinho: D G B D')).toHaveTextContent('DGBD');
@@ -605,8 +625,9 @@ describe('Cavaquinho Lab', () => {
     expect(document.querySelectorAll('.fretboard-note.highlighted').length).toBeGreaterThan(0);
   });
 
-  test('destaca escalas na página Braço sem ativar prática', () => {
+  test('destaca escalas na página Braço sem ativar prática', async () => {
     renderAt('/fretboard');
+    await screen.findByRole('heading', { name: 'Braço e notas no cavaquinho' });
     fireEvent.click(screen.getByRole('button', { name: 'Escalas' }));
     expect(screen.getByLabelText('Tônica da escala no braço')).toHaveValue('C');
     expect(screen.getByLabelText('Tipo de escala no braço')).toHaveValue('major');
@@ -658,9 +679,9 @@ describe('Cavaquinho Lab', () => {
     expect(JSON.parse(window.localStorage.getItem('cavaquinhoLabScalePaths')).paths).toHaveLength(0);
   });
 
-  test('cria, salva e reabre um solo livre sem tonalidade', () => {
+  test('cria, salva e reabre um solo livre sem tonalidade', async () => {
     renderAt('/practice');
-    fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
+    await selectPracticeTab('Solo livre');
     fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
     fireEvent.click(screen.getByRole('button', { name: /Adicionar C5, corda 3, casa 1/ }));
     fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
@@ -685,7 +706,7 @@ describe('Cavaquinho Lab', () => {
     }
     window.AudioContext = FakeAudioContext;
     renderAt('/practice');
-    fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
+    await selectPracticeTab('Solo livre');
     fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
     expect(screen.queryByText(/de 1000 notas/)).not.toBeInTheDocument();
     expect(screen.queryByText(/de 64 notas/)).not.toBeInTheDocument();
@@ -709,14 +730,14 @@ describe('Cavaquinho Lab', () => {
   test('preserva o editor quando o áudio da prática focada não está disponível', async () => {
     delete window.AudioContext;
     renderAt('/practice');
-    fireEvent.click(screen.getByRole('tab', { name: 'Solo livre' }));
+    await selectPracticeTab('Solo livre');
     fireEvent.click(screen.getByRole('button', { name: /Adicionar D4, corda 1, casa 0/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Praticar solo' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Prática focada: Meu solo' })).not.toBeInTheDocument());
     expect(screen.getByLabelText('Notas do solo')).toHaveTextContent('1. D4');
   });
 
-  test('pratica qualquer sequência salva sem selecionar uma escala', () => {
+  test('pratica qualquer sequência salva sem selecionar uma escala', async () => {
     window.localStorage.clear();
     window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([
       { id: 'daily', title: 'Trocas diárias', steps: [
@@ -728,12 +749,26 @@ describe('Cavaquinho Lab', () => {
     window.history.pushState(null, '', '/practice');
     render(<App />);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Sequência' }));
+    await selectPracticeTab('Sequência');
     expect(screen.getByLabelText('Sequência para praticar')).toHaveValue('daily');
     const navigator = screen.getByRole('list', { name: 'Acordes da sequência' });
-    expect(within(navigator).getByRole('button', { name: 'Acorde 1 de 2: C' })).toBeInTheDocument();
-    expect(within(navigator).getByRole('button', { name: 'Acorde 2 de 2: G' })).toBeInTheDocument();
-    expect(within(navigator).getByText('1/7')).toBeInTheDocument();
+    expect(within(navigator).getAllByRole('button')).toHaveLength(2);
+    expect(within(navigator).getByRole('button', { name: 'C, 1 ocorrência' })).toBeInTheDocument();
+    expect(within(navigator).getByRole('button', { name: 'G, 1 ocorrência' })).toBeInTheDocument();
+    expect(within(navigator).queryByText('1')).not.toBeInTheDocument();
+    const chordOne = within(navigator).getByRole('button', { name: 'C, 1 ocorrência' });
+    fireEvent.keyDown(chordOne, { key: 'ArrowRight' });
+    expect(within(navigator).getByRole('button', { name: 'G, 1 ocorrência' })).toHaveAttribute('aria-current', 'step');
+    fireEvent.keyDown(within(navigator).getByRole('button', { name: 'G, 1 ocorrência' }), { key: 'ArrowLeft' });
+    expect(within(navigator).getByRole('button', { name: 'C, 1 ocorrência' })).toHaveAttribute('aria-current', 'step');
+    expect(within(navigator).queryByText('1/7')).not.toBeInTheDocument();
+    expect(document.querySelector('.sequence-note-pills')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Forma anterior' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Próxima forma' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar forma' })).toBeInTheDocument();
+    const practiceTools = screen.getByText('Praticar ou exportar');
+    expect(practiceTools.parentElement).not.toHaveAttribute('open');
+    fireEvent.click(practiceTools);
     expect(screen.getByLabelText('Batidas por acorde')).toHaveValue('4');
     expect(screen.getByRole('spinbutton', { name: 'BPM da prática de sequência' })).toHaveValue('80');
     expect(screen.getByRole('button', { name: 'Praticar sequência' })).toBeEnabled();
@@ -741,6 +776,391 @@ describe('Cavaquinho Lab', () => {
     expect(document.querySelectorAll('.fretboard-note.path-note')).toHaveLength(4);
     expect(document.querySelector('.fretboard-open-strings .fretboard-note.path-note')).not.toBe(null);
     expect(document.querySelector('.practice-page')).not.toHaveTextContent('NaN');
+  });
+
+  test('mostra a fórmula inteira, preserva o grip confortável e permite escolher dedilhado alternativo', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'impossible-csharp-dim', title: 'C#dim', steps: [{
+        id: 'csharp-dim', key: 'Db', displayKey: 'C#', suffix: 'dim',
+        customPosition: { frets: [2, 6, 2, 5] }
+      }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'impossible-csharp-dim');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    await selectPracticeTab('Sequência');
+
+    expect([...document.querySelectorAll('.sequence-note-pills b')].map(note => note.textContent)).toEqual(['C#', 'E', 'G']);
+    fireEvent.click(screen.getByRole('button', { name: 'Usar dedilhado 1, 4, 1, 3' }));
+    await waitFor(() => {
+      const saved = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0];
+      expect(saved.customPosition?.frets || []).toEqual([2, 6, 2, 5]);
+      expect(saved.customPosition?.fingers).toEqual([1, 4, 1, 3]);
+    });
+    expect(window.localStorage.getItem('cavaquinhoLabImpossibleChordShapes:v1')).toBeNull();
+  });
+
+  test('salva feedback pessoal e oculta uma forma apenas para o acorde atual', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'shape-feedback', title: 'C maior', steps: [{ id: 'c', key: 'C', suffix: 'major', positionIndex: 0 }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'shape-feedback');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    await selectPracticeTab('Sequência');
+
+    const controls = screen.getByLabelText('Formas compatíveis');
+    const counter = controls.querySelector('[aria-live="polite"]');
+    const currentCandidate = document.querySelector('.sequence-note-pills');
+    expect(currentCandidate).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ocultar forma para este acorde' }));
+    const savedFeedback = JSON.parse(window.localStorage.getItem('cavaquinhoLabShapeFeedback:v1'));
+    expect(Object.values(savedFeedback).some(feedback => Object.values(feedback).includes('hidden'))).toBe(true);
+    expect(counter).toBeInTheDocument();
+  });
+
+  test('preserva F#13 da partitura, mostra a fórmula e salva uma forma adaptada a partir de uma posição natural', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'wave-import', title: 'Wave · Antonio Carlos Jobim', steps: [{
+        id: 'wave-f-sharp-13', key: 'Gb', displayKey: 'F#', suffix: '13', shapeSuffix: '7', sourceSymbol: 'F#13', measure: 10, positionIndex: null
+      }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'wave-import');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    expect(screen.getByRole('heading', { name: 'F#13' })).toBeInTheDocument();
+    expect([...document.querySelectorAll('.sequence-note-pills b')].map(note => note.textContent)).toEqual(['F#', 'A#', 'C#', 'E', 'G#', 'D#']);
+    expect(document.querySelectorAll('.sequence-note-pills .is-essential')).toHaveLength(3);
+    expect([...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note small')].map(note => note.textContent)).toEqual(expect.arrayContaining(['3', '13']));
+    expect(document.querySelector('.sequence-tone-coverage')).toHaveTextContent(/Voicing sem raiz/);
+    const chordNotes = new Set(['F#', 'G#', 'A#', 'C#', 'D#', 'E']);
+    const chordMarkers = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.chord-tone-candidate')];
+    expect(chordMarkers.length).toBeGreaterThan(0);
+    expect(chordMarkers.every(marker => chordNotes.has(marker.dataset.note))).toBe(true);
+    expect(chordMarkers.some(marker => marker.dataset.note === 'Gb' || marker.dataset.note === 'Bb' || marker.dataset.note === 'Db' || marker.dataset.note === 'Eb' || marker.dataset.note === 'Ab')).toBe(false);
+    expect(chordMarkers.every(marker => ['1', '3', '5', '♭7', '9', '13'].includes(marker.dataset.degree))).toBe(true);
+    const formulaNotes = new Set([...document.querySelectorAll('.sequence-note-pills > span')].map(pill => `${pill.querySelector('small').textContent}:${pill.querySelector('b').textContent}`));
+    const selectedMarkers = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')];
+    expect(selectedMarkers.length).toBeGreaterThan(0);
+    expect(selectedMarkers.every(marker => formulaNotes.has(`${marker.dataset.degree}:${marker.dataset.note}`))).toBe(true);
+    ['A#', 'D#', 'E'].forEach(note => expect(document.querySelector(`.chord-degree-mode .fretboard-note.chord-tone-essential[data-note="${note}"]`)).not.toBeNull());
+
+    const shapeCounter = screen.getByLabelText('Formas compatíveis').querySelector('[aria-live="polite"]');
+    const initialShape = shapeCounter.textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima forma' }));
+    const keyboardShape = shapeCounter.textContent;
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Próxima forma' }), { key: 'ArrowRight' });
+    expect(shapeCounter.textContent).not.toBe(keyboardShape);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Forma anterior' }), { key: 'ArrowLeft' });
+    expect(shapeCounter.textContent).toBe(keyboardShape);
+    let saved = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0];
+    expect(shapeCounter.textContent).not.toBe(initialShape);
+    expect(saved.positionIndex).toBeNull();
+    expect(saved.customPosition.frets).toHaveLength(4);
+    expect(saved.sourceSymbol).toBe('F#13');
+    expect(saved.suffix).toBe('13');
+    const chosenShapeSuffix = saved.shapeSuffix;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar forma' }));
+    const noteButton = document.querySelector('.chord-degree-mode .fretboard-note.path-note');
+    fireEvent.click(noteButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar forma' }));
+
+    saved = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0];
+    expect(saved.customPosition.frets).toHaveLength(4);
+    expect(saved.customPosition.frets.every(fret => fret >= -1 && fret <= 12)).toBe(true);
+    expect(saved.sourceSymbol).toBe('F#13');
+    expect(saved.suffix).toBe('13');
+    expect(saved.shapeSuffix).toBe(chosenShapeSuffix);
+    expect(screen.getByText('Forma salva nesta sequência.')).toBeInTheDocument();
+  });
+
+  test('compartilha a forma escolhida entre acordes repetidos sem alterar a sequência nem as durações', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'repeated-shape', title: 'Repetições', steps: [
+        { id: 'g7-first', key: 'G', suffix: '7', practiceBeats: 2 },
+        { id: 'dm', key: 'D', suffix: 'minor', practiceBeats: 3 },
+        { id: 'g7-repeat', key: 'G', suffix: '7', practiceBeats: 5 }
+      ]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'repeated-shape');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    await selectPracticeTab('Sequência');
+
+    const navigator = screen.getByRole('list', { name: 'Acordes da sequência' });
+    expect(within(navigator).getAllByRole('button')).toHaveLength(2);
+    expect(within(navigator).getByRole('button', { name: 'G7, 2 ocorrências' })).toBeInTheDocument();
+    expect(within(navigator).getByRole('button', { name: 'Dm, 1 ocorrência' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima forma' }));
+
+    const savedSteps = () => JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps;
+    const [first, middle, repeat] = savedSteps();
+    expect(first.positionIndex).toBe(repeat.positionIndex);
+    expect(first.customPosition).toEqual(repeat.customPosition);
+    expect([first.practiceBeats, middle.practiceBeats, repeat.practiceBeats]).toEqual([2, 3, 5]);
+    expect([first.key, middle.key, repeat.key]).toEqual(['G', 'D', 'G']);
+
+    fireEvent.click(within(navigator).getByRole('button', { name: 'G7, 2 ocorrências' }));
+    const selectedNotes = [...document.querySelectorAll('.fretboard-stage .path-note')]
+      .map(note => note.getAttribute('data-position')).sort();
+    expect(selectedNotes.length).toBeGreaterThan(0);
+    fireEvent.click(within(navigator).getByRole('button', { name: 'G7, 2 ocorrências' }));
+    expect([...document.querySelectorAll('.fretboard-stage .path-note')]
+      .map(note => note.getAttribute('data-position')).sort()).toEqual(selectedNotes);
+  });
+
+  test('prioriza o mesmo desenho de Dm7 depois da forma escolhida de Em7', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'chromatic-grip-transition', title: 'Em7 para Dm7', steps: [
+        { id: 'em7', key: 'E', suffix: 'm7', customPosition: { frets: [5, 4, 3, 2], fingers: [4, 3, 2, 1] }, positionIndex: null },
+        { id: 'dm7', key: 'D', suffix: 'm7', customPosition: { frets: [3, 2, 1, 0], fingers: [4, 3, 2, 0] }, positionIndex: null },
+        { id: 'dmaj7', key: 'D', suffix: 'maj7', positionIndex: null }
+      ]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'chromatic-grip-transition');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    const navigator = screen.getByRole('list', { name: 'Acordes da sequência' });
+    fireEvent.click(within(navigator).getByRole('button', { name: 'Dm7, 1 ocorrência' }));
+
+    const counter = screen.getByLabelText('Formas compatíveis').querySelector('[aria-live="polite"]');
+    expect(counter).toHaveTextContent(/^1\//);
+    expect([...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')]
+      .map(note => note.dataset.position.split(':')[1]).sort()).toEqual(['0', '1', '2', '3']);
+  });
+
+  test('marca como tocadas apenas as notas presentes na forma de Dmaj7', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'dmaj7-note-match', title: 'Dmaj7', steps: [{
+        id: 'dmaj7-shape', key: 'D', suffix: 'maj7',
+        customPosition: { frets: [0, 2, 3, 4], fingers: [0, 1, 2, 3] }, positionIndex: null
+      }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'dmaj7-note-match');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    const playedPills = [...document.querySelectorAll('.sequence-note-pills > span[data-played="true"]')];
+    const playedPillNotes = new Set(playedPills.map(pill => pill.querySelector('b').textContent));
+    const fretboardNotes = new Set([...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')].map(note => note.dataset.note));
+    expect(playedPillNotes).toEqual(new Set(['D', 'F#', 'A']));
+    expect(fretboardNotes).toEqual(playedPillNotes);
+
+    const cSharpPill = [...document.querySelectorAll('.sequence-note-pills > span')]
+      .find(pill => pill.querySelector('b').textContent === 'C#');
+    expect(cSharpPill).toHaveClass('is-essential');
+    expect(cSharpPill).not.toHaveClass('is-played');
+    expect(document.querySelector('.chord-degree-mode .fretboard-note.path-note[data-note="C#"]')).toBeNull();
+    expect(document.querySelector('.chord-degree-mode .fretboard-note.chord-tone-essential[data-note="C#"]')).not.toBeNull();
+  });
+
+  test('mostra somente formas B9 tocáveis ao percorrer as sugestões', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'b9-playable-shapes', title: 'B9', steps: [{ id: 'b9', key: 'B', suffix: '9', positionIndex: null }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'b9-playable-shapes');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    const counter = screen.getByLabelText('Formas compatíveis').querySelector('[aria-live="polite"]');
+    const suggestionCount = Number(counter.textContent.split('/')[1]);
+    const expectedCandidates = getChordShapeCandidates({ key: 'B', suffix: '9' }, cavaquinhoChords);
+    expect(suggestionCount).toBeLessThanOrEqual(15);
+    expect(suggestionCount).toBeGreaterThan(0);
+    expect(groupChordShapeCandidates(expectedCandidates).length).toBeGreaterThan(suggestionCount);
+    expect(expectedCandidates.every(candidate => hasPlayableFretSpan(candidate.position))).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima forma' }));
+    const playedFrets = [...document.querySelectorAll('.fretboard-note.path-note')]
+      .map(note => Number(note.dataset.position.split(':')[1]))
+      .filter(fret => fret > 0);
+    const fretSpan = playedFrets.length < 2 ? 0 : Math.max(...playedFrets) - Math.min(...playedFrets);
+    expect(fretSpan).toBeLessThanOrEqual(4);
+  });
+
+  test('mostra a nota da corda solta de E7 sem oferecer a versão abafada como variação', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'e7-variant-group', title: 'E7', steps: [{
+        id: 'e7', key: 'E', suffix: '7', positionIndex: null,
+        customPosition: { frets: [2, 1, 3, -1], fingers: [2, 1, 3, 0] }
+      }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'e7-variant-group');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+    await selectPracticeTab('Sequência');
+
+    expect(screen.queryByText(/Variações deste desenho/)).not.toBeInTheDocument();
+    expect(document.querySelector('.fretboard-open-strings [data-position="3:0"]')).toHaveTextContent('D');
+    expect(document.querySelector('.fretboard-open-strings .open-string-muted')).toBeNull();
+  });
+
+  test('exibe a forma C7 móvel em Bb7 e salva as casas escolhidas na sequência', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'bb7-movable-shape', title: 'Bb7', steps: [{ id: 'bb7', key: 'Bb', suffix: '7', positionIndex: null }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'bb7-movable-shape');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    const expectedFrets = '8,7,6,6';
+    const expectedCandidates = getChordShapeCandidates({ key: 'Bb', suffix: '7' }, cavaquinhoChords);
+    expect(expectedCandidates.some(candidate => candidate.fretKey === expectedFrets)).toBe(true);
+    const rankedCandidates = [...expectedCandidates].sort((left, right) =>
+      getShapeCandidateRankingScore(left) - getShapeCandidateRankingScore(right)
+      || right.playedCount - left.playedCount
+      || left.fretKey.localeCompare(right.fretKey));
+    const expectedGroupIndex = groupChordShapeCandidates(rankedCandidates)
+      .findIndex(group => group.variants.some(candidate => candidate.fretKey === expectedFrets));
+    expect(expectedGroupIndex).toBeGreaterThanOrEqual(0);
+    const controls = screen.getByLabelText('Formas compatíveis');
+    const next = within(controls).getByRole('button', { name: 'Próxima forma' });
+    const counter = controls.querySelector('[aria-live="polite"]');
+    const currentIndex = Number(counter.textContent.split('/')[0]) - 1;
+    const groupCount = Number(counter.textContent.split('/')[1]);
+    for (let step = 0; step < (expectedGroupIndex - currentIndex + groupCount) % groupCount; step += 1) fireEvent.click(next);
+    const currentFrets = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')]
+      .map(note => Number(note.dataset.position.split(':')[1])).join(',');
+    if (currentFrets !== expectedFrets) {
+      const variantsSummary = within(controls).queryByText(/Variações deste desenho/);
+      if (variantsSummary) fireEvent.click(variantsSummary);
+      fireEvent.click(within(controls).getByRole('button', { name: `Usar variação nas casas ${expectedFrets.replaceAll(',', ', ')}` }));
+    } else {
+      fireEvent.click(next);
+      fireEvent.click(within(controls).getByRole('button', { name: 'Forma anterior' }));
+    }
+    const selected = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')]
+      .map(note => note.dataset.position).sort().join(',');
+    expect(selected).toBe(['0:8', '1:7', '2:6', '3:6'].sort().join(','));
+    const selectedMarkers = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')];
+    expect(selectedMarkers).toHaveLength(4);
+    expect(selectedMarkers.every(note => note.classList.contains('highlighted'))).toBe(true);
+    const saved = JSON.parse(window.localStorage.getItem('cavaquinhoLabSequences'))[0].steps[0];
+    if (saved.customPosition) expect(saved.customPosition.frets).toEqual([8, 7, 6, 6]);
+    else expect(Number.isInteger(saved.positionIndex)).toBe(true);
+    const positionCounter = controls.querySelector('[aria-live="polite"]');
+    const [indexText, totalText] = positionCounter.textContent.split('/');
+    const nextIndex = Number(indexText) % Number(totalText) + 1;
+    fireEvent.click(positionCounter);
+    expect(controls).toHaveFocus();
+    fireEvent.keyDown(controls, { key: 'ArrowRight' });
+    expect(positionCounter).toHaveTextContent(`${nextIndex}/${totalText}`);
+  });
+
+  test('mantém as quatro notas tocadas destacadas ao reabrir uma forma escolhida de Gm6', async () => {
+    const candidates = getChordShapeCandidates({ key: 'G', suffix: 'm6' }, cavaquinhoChords);
+    const selected = candidates.find(candidate => candidate.playedCount === 4);
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'gm6-shape-highlight', title: 'Gm6', steps: [{
+        id: 'gm6', key: 'G', suffix: 'm6', shapeSuffix: selected.shapeSuffix, positionIndex: null,
+        customPosition: { frets: getAbsoluteFrets(selected.position), fingers: [...selected.position.fingers] }
+      }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'gm6-shape-highlight');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    const played = [...document.querySelectorAll('.chord-degree-mode .fretboard-note.path-note')];
+    expect(played).toHaveLength(4);
+    expect(played.every(note => note.classList.contains('highlighted'))).toBe(true);
+    expect(played.map(note => Number(note.dataset.position.split(':')[1])).join(','))
+      .toBe(getAbsoluteFrets(selected.position).join(','));
+  });
+
+  test('ativa a troca de forma pelo espaço do acorde e edita o braço pelo teclado', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'keyboard-shape', title: 'B7b9 no teclado', steps: [{
+        id: 'b7b9', key: 'B', suffix: '7b9', positionIndex: null,
+        customPosition: { frets: [1, 2, 1, 4], fingers: [1, 2, 3, 4] }
+      }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'keyboard-shape');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    const workspace = document.querySelector('.sequence-chord-workspace');
+    const counter = screen.getByLabelText('Formas compatíveis').querySelector('[aria-live="polite"]');
+    const originalCounter = counter.textContent;
+    fireEvent.click(screen.getByRole('heading', { name: 'B7b9' }));
+    expect(workspace).toHaveFocus();
+    fireEvent.keyDown(workspace, { key: 'ArrowRight' });
+    expect(counter.textContent).not.toBe(originalCounter);
+
+    const afterHeading = counter.textContent;
+    fireEvent.click(document.querySelector('.sequence-note-pills > span'));
+    expect(workspace).toHaveFocus();
+    fireEvent.keyDown(workspace, { key: 'ArrowLeft' });
+    expect(counter.textContent).not.toBe(afterHeading);
+
+    const nextShape = screen.getByRole('button', { name: 'Próxima forma' });
+    nextShape.focus();
+    const beforeArrowControl = counter.textContent;
+    fireEvent.keyDown(nextShape, { key: 'ArrowRight' });
+    expect(counter.textContent).not.toBe(beforeArrowControl);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar forma' }));
+    await waitFor(() => expect(document.activeElement).toHaveClass('fretboard-note'));
+    const focusedBeforeMove = document.activeElement;
+    const [stringIndex, fret] = focusedBeforeMove.getAttribute('data-position').split(':').map(Number);
+    const availableFrets = [...document.querySelectorAll('button.fretboard-note')]
+      .map(button => button.getAttribute('data-position').split(':').map(Number))
+      .filter(([candidateString]) => candidateString === stringIndex)
+      .map(([, candidateFret]) => candidateFret);
+    const direction = availableFrets.some(candidateFret => candidateFret > fret) ? 'ArrowRight' : 'ArrowLeft';
+    fireEvent.keyDown(focusedBeforeMove, { key: direction });
+    expect(document.activeElement).toHaveClass('fretboard-note');
+    expect(document.activeElement).not.toBe(focusedBeforeMove);
+    const focusedPosition = document.activeElement.getAttribute('data-position');
+    fireEvent.keyDown(document.activeElement, { key: 'Enter' });
+    await waitFor(() => expect(document.querySelector('.fretboard-note.path-note[data-position="' + focusedPosition + '"]')).not.toBeNull());
+  });
+
+  test('ordena a fórmula de D9, identifica A como nota escolhida e salva a forma preferida', async () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{
+      id: 'd9-test', title: 'D9', steps: [{ id: 'd9', key: 'D', suffix: '9', positionIndex: 0 }]
+    }]));
+    window.localStorage.setItem('cavaquinhoLabActiveSequenceId', 'd9-test');
+    window.history.pushState(null, '', '/practice');
+    render(<App />);
+
+    await selectPracticeTab('Sequência');
+    expect([...document.querySelectorAll('.sequence-note-pills small')].map(note => note.textContent))
+      .toEqual(['1', '3', '5', '♭7', '9']);
+    expect(document.querySelector('.sequence-chord-workspace')).not.toHaveTextContent('notas ·');
+    const selectedA = document.querySelector('.chord-degree-mode .fretboard-note.path-note[data-note="A"]');
+    expect(selectedA).not.toBeNull();
+    expect(selectedA).toHaveAttribute('aria-label', expect.stringContaining('Na forma'));
+    expect(selectedA.querySelector('small')).toHaveTextContent('5');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima forma' }));
+    expect(window.localStorage.getItem('cavaquinhoLabRecentChordShapes:v1')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar forma como preferida' }));
+    expect(screen.getByRole('button', { name: 'Remover forma dos preferidos' })).toHaveAttribute('aria-pressed', 'true');
+    expect(window.localStorage.getItem('cavaquinhoLabPreferredChordShapes:v1')).toContain('D:9');
+    expect(screen.queryByText('Formas salvas')).not.toBeInTheDocument();
+    expect(screen.queryByText('Preferidas')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recentes')).not.toBeInTheDocument();
   });
 
   test('exporta formas de acorde já ordenadas por primeira casa sem mutar a base original', () => {

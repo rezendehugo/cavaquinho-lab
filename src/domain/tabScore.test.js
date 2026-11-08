@@ -16,6 +16,7 @@ describe('partitura com tablatura', () => {
   test('mapeia cordas soltas e casas de dois dígitos', () => {
     expect(getPlayablePositions(pitch('D', 4))).toContainEqual({ stringIndex: 0, fret: 0, midi: 62 });
     expect(getPlayablePositions(pitch('C', 5))).toContainEqual({ stringIndex: 0, fret: 10, midi: 72 });
+    expect(getPlayablePositions(pitch('A', 5))).toContainEqual({ stringIndex: 1, fret: 14, midi: 81 });
   });
 
   test.each([[2, 4], [3, 4], [4, 4]])('preserva compasso %s/%s e alinha duas pautas', (beats, beatType) => {

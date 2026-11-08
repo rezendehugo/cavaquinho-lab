@@ -26,6 +26,7 @@ const confidentMeasure = {
 };
 const uncertainMeasure = {
   ...confidentMeasure, number: 2,
+  issues: [{ code: 'melody_timing', severity: 'critical', message: 'Revise o ritmo quando quiser.' }],
   chords: [{ ...confidentMeasure.chords[0], id: crypto.randomUUID(), symbol: 'G7', confidence: .62 }],
   events: [{ ...confidentMeasure.events[0], id: crypto.randomUUID(), confidence: .7 }]
 };
@@ -55,18 +56,46 @@ describe('fluxo guiado de importação', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Escolha um arquivo PDF, MusicXML ou MXL');
   });
 
-  test('prioriza medidas incertas e mantém as confiáveis recolhidas', async () => {
-    importMusicXml.mockResolvedValue(imported);
+  test('prioriza criar a sequência mesmo com correções críticas de melodia', async () => {
+    importMusicXml.mockResolvedValue({
+      ...imported,
+      draft: {
+        ...imported.draft,
+        measures: [confidentMeasure, {
+          ...uncertainMeasure,
+          chords: [{ ...uncertainMeasure.chords[0], confidence: 1 }]
+        }]
+      }
+    });
     render(<ScoreImportPage embedded />);
     const file = new File(['<score-partwise/>'], 'estudo.musicxml', { type: 'application/vnd.recordare.musicxml+xml' });
     fireEvent.change(screen.getByLabelText('Escolher PDF, MusicXML ou MXL'), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole('button', { name: 'Enviar partitura' }));
-    expect(await screen.findByText('1 medidas precisam de revisão')).toBeInTheDocument();
+    expect(await screen.findByText('Cifras prontas para sequência')).toBeInTheDocument();
     const confident = screen.getByRole('button', { name: /Medida 1/ });
     const uncertain = screen.getByRole('button', { name: /Medida 2/ });
     expect(confident).toHaveAttribute('aria-expanded', 'false');
-    expect(uncertain).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: 'Validar e criar prática' })).toBeEnabled();
+    expect(uncertain).toHaveAttribute('aria-expanded', 'false');
+    expect(uncertain).toHaveTextContent('Confiável');
+    expect(screen.getByLabelText('Práticas a criar').querySelector('input')).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Criar sequência de acordes' })).toBeEnabled();
+    fireEvent.click(within(screen.getByLabelText('Práticas a criar')).getByText('Solo com melodia'));
+    expect(await screen.findByText(/medidas com melodia para conferir/i)).toBeInTheDocument();
+    expect(uncertain).toHaveTextContent('Revisar');
+  });
+
+  test('pede cifras quando o trecho importado não contém símbolos de acorde', async () => {
+    importMusicXml.mockResolvedValue({
+      ...imported,
+      draft: { ...imported.draft, measures: [{ ...confidentMeasure, chords: [] }] }
+    });
+    render(<ScoreImportPage embedded />);
+    const file = new File(['<score-partwise/>'], 'sem-cifras.musicxml', { type: 'application/vnd.recordare.musicxml+xml' });
+    fireEvent.change(screen.getByLabelText('Escolher PDF, MusicXML ou MXL'), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Enviar partitura' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nenhuma cifra foi reconhecida no trecho selecionado');
+    expect(screen.getByRole('button', { name: 'Criar sequência de acordes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Medida 1/ })).toHaveTextContent('Sem cifras reconhecidas');
   });
 
   test('mostra o resultado e abre diretamente a prática criada', async () => {
@@ -81,9 +110,9 @@ describe('fluxo guiado de importação', () => {
     const file = new File(['<score-partwise/>'], 'estudo.musicxml', { type: 'application/vnd.recordare.musicxml+xml' });
     fireEvent.change(screen.getByLabelText('Escolher PDF, MusicXML ou MXL'), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole('button', { name: 'Enviar partitura' }));
-    await screen.findByText('Todas as medidas estão confiáveis');
+    await screen.findByText('Cifras prontas para sequência');
     const targets = screen.getByLabelText('Práticas a criar');
-    fireEvent.click(within(targets).getByText('Sequência de acordes'));
+    fireEvent.click(within(targets).getByText('Solo com melodia'));
     fireEvent.click(screen.getByRole('button', { name: 'Validar e criar prática' }));
     expect(await screen.findByText('Sua prática está pronta')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Praticar solo' }));
@@ -125,7 +154,8 @@ describe('fluxo guiado de importação', () => {
     fireEvent.change(screen.getByLabelText('Escolher PDF, MusicXML ou MXL'), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole('button', { name: 'Enviar partitura' }));
     expect(await screen.findByText('Estudo')).toBeInTheDocument();
-    expect(screen.getByText(/prévia do PDF original não está disponível/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Validar e criar prática' })).toBeEnabled();
+    fireEvent.click(screen.getByText('Conferir arquivos de referência'));
+    expect(await screen.findByText(/prévia do PDF original não está disponível/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Criar sequência de acordes' })).toBeEnabled();
   });
 });

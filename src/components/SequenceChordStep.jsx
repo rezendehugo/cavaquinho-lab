@@ -12,9 +12,10 @@ const interactiveSelector = 'button, input, select, textarea, a, [role="button"]
 
 const isInteractiveDragSource = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
 
-function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, setShape, availableSuffixes, setChordIdentity, setChordSuffix, selected, onSelect, onSelectAdjacent, shapePickerOpen, onShapePickerChange }) {
+function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, setShape, setCustomShape, availableSuffixes, shapeSourceOptions, setShapeSource, setChordIdentity, setChordSuffix, selected, onSelect, onSelectAdjacent, shapePickerOpen, onShapePickerChange }) {
   const [dragState, setDragState] = useState('idle');
   const chordName = formatSequenceChord(step);
+  const regionLabel = ({ low: 'Região baixa', middle: 'Região média', high: 'Região aguda' })[step.regionId];
   const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
 
   const handleDragStart = (event) => {
@@ -84,6 +85,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
       <header className="lab-card-header">
         <div>
           <span className="scale-degree">{analysisChord?.numeral || 'acorde ' + (index + 1)}</span>
+          {regionLabel ? <span className="sequence-region-label">{regionLabel}</span> : null}
           {isLoopStart ? <span className="sequence-loop-marker">Início da repetição</span> : null}
         </div>
         <div className="card-actions">
@@ -135,7 +137,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
               onPrevious: () => cycleShape(index, -1),
               onNext: () => cycleShape(index, 1)
             }}
-          /><div className="shape-selection-summary"><button type="button" data-ui-text-reason="domain-choice" onClick={() => onShapePickerChange(index)}>Escolher forma</button><span>{Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} selectedIndex={step.positionIndex} onSelect={positionIndex => setShape(index, positionIndex)} onClose={() => onShapePickerChange(null)} /></>
+          /><div className="shape-selection-summary"><button type="button" data-ui-text-reason="domain-choice" onClick={() => onShapePickerChange(index)}>Escolher forma</button><span>{step.customPosition ? 'Forma personalizada' : Number.isInteger(step.positionIndex) ? 'Forma ' + (step.positionIndex + 1) + ' fixada' : 'Forma automática'}</span></div><SequenceShapePicker open={shapePickerOpen} step={step} chord={optimizedStep.chord} shapeSuffix={optimizedStep.shapeSuffix} shapeOptions={shapeSourceOptions} selectedIndex={step.positionIndex} onSourceChange={suffix => setShapeSource(index, suffix)} onSelect={(positionIndex, suffix) => setShape(index, positionIndex, suffix)} onCustomSave={(position, suffix) => setCustomShape(index, position, suffix)} onClose={() => onShapePickerChange(null)} /></>
         ) : null}
       </div>
     </article>

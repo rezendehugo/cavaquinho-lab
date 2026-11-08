@@ -40,6 +40,7 @@ export interface ScoreMeasure {
   expectedTicks: number;
   page?: number;
   system?: number;
+  layoutWidth?: number;
   newSystem?: boolean;
   newPage?: boolean;
   events: ScoreEvent[];

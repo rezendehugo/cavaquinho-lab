@@ -1,39 +1,49 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { formatSequenceChord } from '../chordDisplay';
+import { getSequenceChordCatalog } from '../domain/sequenceChordCatalog';
 
-export default function SequenceChordNavigator({
+const SequenceChordNavigator = memo(function SequenceChordNavigator({
   sequence,
-  resolvedSteps,
   currentIndex,
   onSelectOccurrence,
-  onSelectShape
+  showOccurrences = false
 }) {
   const itemRefs = useRef([]);
+  const focusSelectedRef = useRef(false);
+  const catalog = useMemo(() => showOccurrences
+    ? (sequence?.steps || []).map((step, index) => ({ step, firstIndex: index, indexes: [index] }))
+    : getSequenceChordCatalog(sequence?.steps || []), [sequence?.steps, showOccurrences]);
+  const selectedCatalogIndex = catalog.findIndex(item => item.indexes.includes(currentIndex));
 
   useEffect(() => {
-    const item = itemRefs.current[currentIndex];
+    const item = itemRefs.current[selectedCatalogIndex];
     if (typeof item?.scrollIntoView === 'function') {
       item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
-  }, [currentIndex]);
+    if (focusSelectedRef.current) {
+      item?.querySelector('button')?.focus({ preventScroll: true });
+      focusSelectedRef.current = false;
+    }
+  }, [selectedCatalogIndex]);
 
   if (!sequence?.steps.length) return null;
 
-  return <div className="sequence-chord-navigator" role="list" aria-label="Acordes da sequência">
-    {sequence.steps.map((step, index) => {
-      const resolved = resolvedSteps[index];
-      const total = resolved?.chord?.positions?.length || 0;
-      const activeShape = Number.isInteger(step.positionIndex)
-        ? step.positionIndex
-        : (resolved?.positionIndex ?? 0);
-      const selected = index === currentIndex;
-      const selectShape = (direction) => {
-        if (!total) return;
-        onSelectShape(index, (activeShape + direction + total) % total);
-      };
+  const handleKeyDown = event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    focusSelectedRef.current = true;
+    const delta = event.key === 'ArrowRight' ? 1 : -1;
+    const nextCatalogIndex = (selectedCatalogIndex + delta + catalog.length) % catalog.length;
+    onSelectOccurrence(catalog[nextCatalogIndex].firstIndex);
+  };
+
+  return <div className="sequence-chord-navigator" role="list" aria-label="Acordes da sequência" onKeyDown={handleKeyDown}>
+    {catalog.map(({ step, firstIndex, indexes }, catalogIndex) => {
+      const selected = indexes.includes(currentIndex);
+      const chordName = formatSequenceChord(step);
+      const occurrenceLabel = indexes.length === 1 ? '1 ocorrência' : `${indexes.length} ocorrências`;
       return <div
-        ref={element => { itemRefs.current[index] = element; }}
+        ref={element => { itemRefs.current[catalogIndex] = element; }}
         key={step.id}
         className={`sequence-chord-occurrence ${selected ? 'is-selected' : ''}`}
         role="listitem"
@@ -42,19 +52,15 @@ export default function SequenceChordNavigator({
           type="button"
           className="sequence-chord-occurrence-main"
           aria-current={selected ? 'step' : undefined}
-          aria-label={`Acorde ${index + 1} de ${sequence.steps.length}: ${formatSequenceChord(step)}`}
-          title={`Acorde ${index + 1} de ${sequence.steps.length}: ${formatSequenceChord(step)}`}
-          onClick={() => onSelectOccurrence(index)}
+          aria-label={showOccurrences ? `Acorde ${firstIndex + 1} de ${catalog.length}: ${chordName}` : `${chordName}, ${occurrenceLabel}`}
+          title={showOccurrences ? `${chordName} · acorde ${firstIndex + 1} de ${catalog.length}` : `${chordName} · ${occurrenceLabel}`}
+          onClick={() => onSelectOccurrence(firstIndex)}
         >
-          <span>{index + 1}</span>
-          <strong>{formatSequenceChord(step)}</strong>
+          <strong>{chordName}</strong>
         </button>
-        {selected && total ? <div className="sequence-inline-shapes" aria-label={`Forma de ${formatSequenceChord(step)}`}>
-          <button type="button" aria-label="Forma anterior" title="Forma anterior" onClick={() => selectShape(-1)}><ChevronLeft size={15} /></button>
-          <span title={Number.isInteger(step.positionIndex) ? 'Forma escolhida para esta ocorrência' : 'Forma automática'}>{activeShape + 1}/{total}</span>
-          <button type="button" aria-label="Próxima forma" title="Próxima forma" onClick={() => selectShape(1)}><ChevronRight size={15} /></button>
-        </div> : null}
       </div>;
     })}
   </div>;
-}
+});
+
+export default SequenceChordNavigator;
