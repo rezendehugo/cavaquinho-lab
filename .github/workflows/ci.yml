@@ -32,6 +32,11 @@ jobs:
         run: npm test
       - name: API contracts
         run: npm run test:api
+      - name: Install pinned OMR test dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/omr-venv"
+          "$RUNNER_TEMP/omr-venv/bin/python" -m pip install -r workers/omr/requirements.txt
+          echo "$RUNNER_TEMP/omr-venv/bin" >> "$GITHUB_PATH"
       - name: OMR unit tests
         run: npm run test:omr
       - name: Browser layout tests
