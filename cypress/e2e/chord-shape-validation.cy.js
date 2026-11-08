@@ -1,4 +1,19 @@
 describe('validação e geração de shapes de acordes', () => {
+  it('reduz a sequência principal de formas E7 agrupando opções quase idênticas', () => {
+    cy.visit('/practice', { onBeforeLoad(window) {
+      window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{ id: 'e7-grouped', title: 'E7', steps: [
+        { id: 'e7', key: 'E', suffix: '7', positionIndex: null }
+      ] }]));
+    } });
+    cy.contains('[role="tab"]', 'Sequência').click();
+    cy.get('.sequence-shape-navigation [aria-live="polite"]').invoke('text').then(value => {
+      const [, total] = value.split('/').map(Number);
+      expect(total).to.be.lessThan(119);
+    });
+    cy.get('.sequence-chord-workspace').click().type('{rightarrow}');
+    cy.get('.sequence-shape-navigation [aria-live="polite"]').should('exist');
+  });
+
   it('ignora o custom Gm6 inválido e destaca somente notas físicas do acorde', () => {
     cy.visit('/practice', { onBeforeLoad(window) {
       window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{ id: 'invalid-gm6', title: 'Gm6 inválido', steps: [
@@ -15,6 +30,7 @@ describe('validação e geração de shapes de acordes', () => {
 
   it('gera, salva e restaura B7b9 1-2-1-4 com os tons escritos', () => {
     cy.visit('/practice', { onBeforeLoad(window) {
+      window.localStorage.clear();
       window.localStorage.setItem('cavaquinhoLabSequences', JSON.stringify([{ id: 'generated-b7b9', title: 'B7b9 gerado', steps: [
         { id: 'b7b9', key: 'B', suffix: '7b9', positionIndex: null, customPosition: { frets: [1, 2, 0, 4], fingers: [1, 2, 0, 4] } }
       ] }]));
@@ -22,8 +38,14 @@ describe('validação e geração de shapes de acordes', () => {
     cy.contains('[role="tab"]', 'Sequência').click();
     const expected = ['0:1', '1:2', '2:1', '3:4'];
     cy.get('.sequence-shape-navigation [aria-live="polite"]').then($counter => {
-      const index = Number($counter.text().split('/')[0]);
-      Cypress._.times(index - 1, () => cy.get('[aria-label="Forma anterior"]').click());
+      const [current, total] = $counter.text().split('/').map(Number);
+      const targetGroupIndex = 5;
+      Cypress._.times((targetGroupIndex - current + total) % total, () => cy.get('[aria-label="Próxima forma"]').click());
+    });
+    cy.contains('.sequence-shape-variants summary', 'Variações deste desenho').click();
+    cy.get('[aria-label="Usar variação nas casas 1, 2, 1, 4"]').click();
+    cy.get('.fretboard-stage .path-note').then($notes => {
+      expect([...$notes].map(note => note.getAttribute('data-position')).sort()).to.deep.equal([...expected].sort());
     });
     cy.get('.fretboard-stage .path-note').then($notes => {
       expect([...$notes].map(note => note.getAttribute('data-position')).sort()).to.deep.equal([...expected].sort());

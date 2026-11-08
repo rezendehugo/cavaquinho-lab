@@ -3,8 +3,10 @@ import { createElement } from 'react';
 import { expect, it } from 'vitest';
 import ChordDiagram from '../components/ChordDiagram';
 import { createChordDiagramSvg } from './chordDiagramPdf';
-import { cavaquinhoChords } from './chords';
+import { getCavaquinhoChords } from './chords';
 import { buildSequencePdfModel } from './sequencePdf';
+
+const cavaquinhoChords = getCavaquinhoChords();
 
 it('exports the identical SVG geometry and note labels for every library shape', () => {
   for (const [key, chords] of Object.entries(cavaquinhoChords.chords)) {

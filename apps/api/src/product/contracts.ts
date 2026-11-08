@@ -13,6 +13,9 @@ export const sequenceStepSchema = z.object({
   suffix: chordSuffix,
   shapeSuffix: chordSuffix.optional(),
   customPosition,
+  regionId: z.enum(['low', 'middle', 'high']).optional(),
+  regionBlockId: z.string().max(120).optional(),
+  regionSourceStepId: z.string().max(120).optional(),
   sourceSymbol: z.string().trim().min(1).max(24).optional(),
   bassNote: pitchClass.optional(),
   displayKey: z.string().trim().min(1).max(8).optional(),
@@ -26,12 +29,13 @@ export const sequenceCreateSchema = z.object({
   title: z.string().trim().min(1).max(120),
   practiceBpm: z.number().int().min(40).max(220),
   loopStartIndex: z.number().int().nonnegative(),
+  regionMode: z.literal('blocks').optional(),
   steps: z.array(sequenceStepSchema).max(500)
 }).refine(value => value.steps.length === 0 ? value.loopStartIndex === 0 : value.loopStartIndex < value.steps.length, 'Invalid loop start');
 
 export const sequenceUpdateSchema = z.object({
   title: z.string().trim().min(1).max(120), practiceBpm: z.number().int().min(40).max(220),
-  loopStartIndex: z.number().int().nonnegative(), steps: z.array(sequenceStepSchema).max(500), revision: z.number().int().positive()
+  loopStartIndex: z.number().int().nonnegative(), regionMode: z.literal('blocks').optional(), steps: z.array(sequenceStepSchema).max(500), revision: z.number().int().positive()
 }).refine(value => value.steps.length === 0 ? value.loopStartIndex === 0 : value.loopStartIndex < value.steps.length, 'Invalid loop start');
 
 export const localMigrationSchema = z.object({

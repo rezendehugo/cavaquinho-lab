@@ -57,6 +57,9 @@ export const normalizeSteps = (value) => {
       ...(Number.isInteger(step.measure) ? { measure: step.measure } : {}),
       ...(Number.isInteger(step.offsetTicks) ? { offsetTicks: step.offsetTicks } : {}),
       ...(typeof step.sourceSymbol === 'string' ? { sourceSymbol: step.sourceSymbol } : {}),
+      ...(['low', 'middle', 'high'].includes(step.regionId) ? { regionId: step.regionId } : {}),
+      ...(typeof step.regionBlockId === 'string' && step.regionBlockId.length <= 120 ? { regionBlockId: step.regionBlockId } : {}),
+      ...(typeof step.regionSourceStepId === 'string' && step.regionSourceStepId.length <= 120 ? { regionSourceStepId: step.regionSourceStepId } : {}),
       ...(suffixCycle.includes(step.shapeSuffix) ? { shapeSuffix: step.shapeSuffix } : {}),
       ...normalizeCustom(step),
       suffix: suffixCycle.includes(step.suffix) ? step.suffix : 'major',
@@ -80,6 +83,7 @@ export const normalizeSequences = (value) => {
       practiceBpm: normalizePracticeBpm(sequence.practiceBpm),
       loopStartIndex: normalizeLoopStartIndex(sequence.loopStartIndex, steps.length),
       ...(typeof sequence.presetId === 'string' ? { presetId: sequence.presetId } : {}),
+      ...(sequence.regionMode === 'blocks' ? { regionMode: 'blocks' } : {}),
       ...(chromaticKeys.includes(sequence.tonic) ? { tonic: sequence.tonic } : {})
     };
   });

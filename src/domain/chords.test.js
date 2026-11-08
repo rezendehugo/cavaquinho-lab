@@ -1,8 +1,15 @@
-import { analyzeChordVoicing } from './chordTheory';
-import { cavaquinhoChords, getAvailableSuffixes } from './chords';
+import { analyzeChordVoicing, getVoicingPreferenceRank } from './chordTheory';
+import { getAvailableSuffixes, getCavaquinhoChords } from './chords';
+import { getShapeHandCost } from './chordShapeKnowledge';
 import { findShapeChord, getAbsoluteFrets, getChordShapeCandidates, getShapeCandidateRankingScore, getShapeComplexity, hasPlayableFretSpan, optimizeSequence } from '../progressionOptimizer';
 
+const cavaquinhoChords = getCavaquinhoChords();
+
 describe('biblioteca expandida de acordes', () => {
+  test('prepara e ordena a biblioteca uma única vez, quando o domínio de acordes é usado', () => {
+    expect(getCavaquinhoChords()).toBe(cavaquinhoChords);
+  });
+
   test('consome o corpus publicado de Bm', () => {
     const chord = cavaquinhoChords.chords.B.find(item => item.suffix === 'minor');
     const analyses = chord.positions.map(position => analyzeChordVoicing({ key: 'B', suffix: 'minor' }, position));
@@ -155,7 +162,10 @@ describe('biblioteca expandida de acordes', () => {
     const expectedScore = candidate => Math.max(0, candidate.definingCount - candidate.definingToneCount) * 10000
       + Math.max(0, candidate.requiredCount - candidate.essentialCount) * 1000
       + candidate.movementScore + candidate.regionDistance * 1.5
-      - (candidate.isPreferred ? 4 : 0)
+      + getShapeHandCost(candidate.position) * 2
+      + getVoicingPreferenceRank(candidate.analysis) * 80
+      - (candidate.isPreferred ? 18 : 0)
+      - (candidate.favoriteSimilarity || 0)
       + getAbsoluteFrets(candidate.position).reduce((sum, fret) => sum + Math.max(0, fret - 12) * 2, 0)
       + (candidate.sourceDistance || 0) * 0.2;
     expect(getShapeCandidateRankingScore(favorite)).toBe(expectedScore(favorite));

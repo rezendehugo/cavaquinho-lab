@@ -2,12 +2,16 @@ import { noteNames } from './chordDisplay';
 import { analyzeChordVoicing, chordQualities, getChordPitchClasses, getChordRootPitchClass, getVoicingPreferenceRank } from './domain/chordTheory';
 import { normalizeCustomPosition } from './domain/customChordShape';
 import { MAX_FRET } from './domain/scalePaths';
+import { getChordShapeRegion, getShapeHandCost } from './domain/chordShapeKnowledge';
 
 const DEFAULT_SHAPE_WEIGHT = 0.08;
 const VOICING_PREFERENCE_WEIGHT = 20;
 const DEFINING_TONE_COVERAGE_WEIGHT = 10000;
 const REQUIRED_TONE_COVERAGE_WEIGHT = 1000;
+const VOICING_COMPLETENESS_WEIGHT = 80;
+const FAVORITE_SIMILARITY_WEIGHT = 1;
 export const MAX_VISIBLE_FRET = MAX_FRET;
+export const MAX_PLAYABLE_FRET_SPAN = 4;
 const tuningMidi = [62, 67, 71, 74];
 const MAX_CACHED_PALETTES_PER_LIBRARY = 32;
 const chordShapePaletteCache = new WeakMap();
@@ -20,7 +24,48 @@ export const getAbsoluteFrets = (position) => {
   return position.frets.map(fret => fret <= 0 ? fret : baseFret + fret - 1);
 };
 
-export const hasPlayableFretSpan = (position, maximumSpan = 4) => {
+// Transposition-invariant physical grip signatures. Open and muted strings
+// remain distinct because neither can be shifted like a fretted note.
+export const getShapeFamilySignature = position => {
+  if (!position?.frets || position.frets.length !== 4) return '';
+  const frets = getAbsoluteFrets(position);
+  const positive = frets.filter(fret => fret > 0);
+  const lowest = positive.length ? Math.min(...positive) : 1;
+  return frets.map(fret => fret < 0 ? 'x' : fret === 0 ? 'o' : String(fret - lowest + 1)).join('.');
+};
+
+export const userValidatedFretKeys = Object.freeze([
+  '5,4,5,5', '2,1,3,3', '5,7,5,8', '5,9,5,5', '7,11,7,7', '2,6,2,5'
+]);
+export const defaultImpossibleShapeSignatures = Object.freeze(['1.5.1.4', '1.5.1.1']);
+
+const preferenceFeatures = frets => {
+  const positive = frets.filter(fret => fret > 0);
+  return [
+    frets.filter(fret => fret === 0).length,
+    frets.filter(fret => fret < 0).length,
+    new Set(positive).size,
+    positive.length > 1 ? Math.max(...positive) - Math.min(...positive) : 0,
+    frets.filter(fret => fret >= 0).length
+  ];
+};
+
+export const getFavoriteShapeSimilarity = (position, favoriteFretKeys = []) => {
+  if (!favoriteFretKeys.length) return 0;
+  const frets = getAbsoluteFrets(position);
+  const signature = getShapeFamilySignature(position);
+  const features = preferenceFeatures(frets);
+  return Math.max(...favoriteFretKeys.map(key => {
+    const favoriteFrets = String(key).split(',').map(Number);
+    if (favoriteFrets.length !== 4 || favoriteFrets.some(fret => !Number.isFinite(fret))) return 0;
+    if (getShapeFamilySignature({ frets: favoriteFrets, baseFret: 1 }) === signature) return 30;
+    const favoriteFeatures = preferenceFeatures(favoriteFrets);
+    const distance = features.reduce((sum, value, index) => sum + Math.abs(value - favoriteFeatures[index]) * [3, 4, 3, 2, 1][index], 0);
+    return Math.max(0, 12 - distance);
+  }));
+};
+
+export const hasPlayableFretSpan = (position, maximumSpan = MAX_PLAYABLE_FRET_SPAN) => {
   const fretted = getAbsoluteFrets(position).filter(fret => fret > 0);
   return fretted.length < 2 || Math.max(...fretted) - Math.min(...fretted) <= maximumSpan;
 };
@@ -32,17 +77,89 @@ export const getPhysicalPitchClasses = position => {
   ))];
 };
 
+const deriveFingering = absoluteFrets => {
+  const groups = [];
+  for (let index = 0; index < absoluteFrets.length; index += 1) {
+    const fret = absoluteFrets[index];
+    if (fret <= 0) continue;
+    const previous = [...groups].reverse().find(group => group.fret === fret && group.end < index
+      && absoluteFrets.slice(group.end + 1, index).every(intermediate => intermediate >= fret));
+    if (previous) previous.end = index;
+    else groups.push({ fret, start: index, end: index });
+  }
+  const byFret = [...groups].sort((left, right) => left.fret - right.fret || left.start - right.start);
+  const fingers = [0, 0, 0, 0];
+  byFret.forEach((group, groupIndex) => {
+    for (let index = group.start; index <= group.end; index += 1) fingers[index] = groupIndex + 1;
+  });
+  const positiveFrets = absoluteFrets.filter(fret => fret > 0);
+  const baseFret = positiveFrets.length ? Math.min(...positiveFrets) : 1;
+  const barres = groups.filter(group => group.end > group.start).map(group => group.fret - baseFret + 1);
+  return groups.length <= 4 ? { fingers, barres } : null;
+};
+
+export const hasPlausibleFingerAssignment = position => {
+  if (!position?.frets || position.frets.length !== 4) return false;
+  const frets = getAbsoluteFrets(position);
+  const fretted = frets.map((fret, index) => ({ fret, index })).filter(note => note.fret > 0);
+  if (!fretted.length) return true;
+  const fingers = Array.isArray(position.fingers) && position.fingers.length === 4 ? position.fingers : [];
+  if (!fingers.some(Boolean)) return Boolean(deriveFingering(frets));
+  const locations = new Map();
+  for (const { fret, index } of fretted) {
+    const finger = fingers[index];
+    if (!Number.isInteger(finger) || finger < 1 || finger > 4) return false;
+    const existing = locations.get(finger) || { fret, indexes: [] };
+    if (existing.fret !== fret) return false;
+    existing.indexes.push(index);
+    locations.set(finger, existing);
+  }
+  for (const { fret, indexes } of locations.values()) {
+    for (let index = Math.min(...indexes); index <= Math.max(...indexes); index += 1) {
+      if (frets[index] === 0 || (frets[index] > 0 && frets[index] < fret)) return false;
+    }
+  }
+  return true;
+};
+
 export const isValidChordShape = (step, position) => {
   if (!step || !position?.frets || position.frets.length !== 4) return false;
   const frets = getAbsoluteFrets(position);
   if (frets.some(fret => !Number.isInteger(fret) || fret < -1 || fret > MAX_VISIBLE_FRET)) return false;
-  if (!frets.some(fret => fret >= 0) || !hasPlayableFretSpan({ ...position, baseFret: 1, frets })) return false;
+  if (!frets.some(fret => fret >= 0) || !hasPlayableFretSpan({ ...position, baseFret: 1, frets }) || !hasPlausibleFingerAssignment({ ...position, baseFret: 1, frets })) return false;
   const played = getPhysicalPitchClasses({ ...position, baseFret: 1, frets });
   const chordTones = new Set(getChordPitchClasses(step.displayKey || step.key, step.suffix));
   return played.length > 0 && played.every(pitch => chordTones.has(pitch));
 };
 
-const positionFromFrets = (frets, fingers = [0, 0, 0, 0]) => normalizeCustomPosition({ frets, fingers });
+const positionFromFrets = (frets, fingers = null) => {
+  const derived = deriveFingering(frets);
+  if (!derived) return null;
+  const supplied = { frets, fingers, baseFret: 1 };
+  const selectedFingers = fingers?.some(Boolean) && hasPlausibleFingerAssignment(supplied) ? fingers : derived.fingers;
+  const position = normalizeCustomPosition({ frets, fingers: selectedFingers });
+  return position ? { ...position, barres: derived.barres } : null;
+};
+
+const preferOpenDoubledStrings = (step, position) => {
+  let preferred = position;
+  for (let index = 0; index < 4; index += 1) {
+    const frets = getAbsoluteFrets(preferred);
+    if (frets[index] !== -1) continue;
+    const openFrets = [...frets];
+    openFrets[index] = 0;
+    const openPosition = positionFromFrets(openFrets);
+    if (!openPosition || !isValidChordShape(step, openPosition)) continue;
+    const existingTones = getPhysicalPitchClasses(preferred).sort((left, right) => left - right);
+    const openTones = getPhysicalPitchClasses(openPosition).sort((left, right) => left - right);
+    if (existingTones.length === openTones.length && existingTones.every((tone, toneIndex) => tone === openTones[toneIndex])) preferred = openPosition;
+  }
+  return preferred;
+};
+
+export const normalizePlayablePosition = position => position?.frets
+  ? positionFromFrets(getAbsoluteFrets(position), position.fingers)
+  : null;
 
 const getFingerAnchors = (position) => {
   const absoluteFrets = getAbsoluteFrets(position);
@@ -69,7 +186,11 @@ export const getShapeCandidateRankingScore = candidate =>
   + Math.max(0, candidate.requiredCount - candidate.essentialCount) * REQUIRED_TONE_COVERAGE_WEIGHT
   + candidate.movementScore
   + candidate.regionDistance * 1.5
-  - (candidate.isPreferred ? 4 : 0)
+  + getShapeHandCost(candidate.position) * 2
+  + (candidate.feedbackPenalty || 0)
+  + (candidate.voicingRank ?? (candidate.analysis ? getVoicingPreferenceRank(candidate.analysis) : 0)) * VOICING_COMPLETENESS_WEIGHT
+  - (candidate.isPreferred ? 18 : 0)
+  - (candidate.favoriteSimilarity || 0) * FAVORITE_SIMILARITY_WEIGHT
   + getAbsoluteFrets(candidate.position).reduce((sum, fret) => sum + Math.max(0, fret - 12) * 2, 0)
   + (candidate.sourceDistance || 0) * 0.2;
 
@@ -85,11 +206,20 @@ export const getShapeComplexity = (position) => {
 
 export const getTransitionScore = (fromPosition, toPosition) => {
   if (!fromPosition || !toPosition) return 0;
+  const fromFrets = getAbsoluteFrets(fromPosition);
+  const toFrets = getAbsoluteFrets(toPosition);
+  const sameStringsSound = fromFrets.every((fret, index) => (fret < 0) === (toFrets[index] < 0));
+  const fretDeltas = fromFrets.map((fret, index) => toFrets[index] - fret);
+  const parallelFretShift = sameStringsSound && fretDeltas.every(delta => delta === fretDeltas[0]);
+  if (parallelFretShift) {
+    // A movable grip shifted along the neck is usually a predictable, low-effort
+    // change. Finger-number labels in source data vary, so compare its physical
+    // fret pattern before applying the more expensive finger-anchor estimate.
+    return Math.abs(fretDeltas[0]) * 3;
+  }
   const fromAnchors = getFingerAnchors(fromPosition);
   const toAnchors = getFingerAnchors(toPosition);
   const fingers = new Set([...Object.keys(fromAnchors), ...Object.keys(toAnchors)]);
-  const fromFrets = getAbsoluteFrets(fromPosition);
-  const toFrets = getAbsoluteFrets(toPosition);
   const fromBarres = Array.isArray(fromPosition.barres) ? fromPosition.barres : (fromPosition.barres ? [fromPosition.barres] : []);
   const toBarres = Array.isArray(toPosition.barres) ? toPosition.barres : (toPosition.barres ? [toPosition.barres] : []);
   let score = 0;
@@ -132,11 +262,12 @@ export const resolveSelectedShape = (step, chordDb) => {
   const chord = findShapeChord(chordDb, step);
   if (!chord) return null;
 
-  const customPosition = step.customPosition ? normalizeCustomPosition(step.customPosition) : null;
+  const customPosition = step.customPosition ? normalizePlayablePosition(step.customPosition) : null;
   if (customPosition && isValidChordShape(step, customPosition)) {
+    const preferredPosition = preferOpenDoubledStrings(step, customPosition);
     return {
       chord,
-      position: customPosition,
+      position: preferredPosition,
       positionIndex: null,
       shapeSuffix: step.shapeSuffix || chord.suffix,
       custom: true
@@ -147,9 +278,10 @@ export const resolveSelectedShape = (step, chordDb) => {
   const sourcePosition = chord.positions[step.positionIndex];
   const position = positionFromFrets(getAbsoluteFrets(sourcePosition), sourcePosition.fingers);
   if (!isValidChordShape(step, position)) return null;
+  const preferredPosition = preferOpenDoubledStrings(step, position);
   return {
     chord,
-    position,
+    position: preferredPosition,
     positionIndex: step.positionIndex,
     shapeSuffix: step.shapeSuffix || chord.suffix,
     custom: false
@@ -332,11 +464,15 @@ const buildBaseChordShapeCandidates = (step, chordDb) => {
   return candidates;
 };
 
-export const getChordShapeCandidates = (step, chordDb, { previousPosition = null, preferredFretKeys = [] } = {}) => {
+export const getChordShapeCandidates = (step, chordDb, { previousPosition = null, nextPosition = null, preferredFretKeys = [], favoriteFretKeys = userValidatedFretKeys, rejectedShapeSignatures = [], regionId = null } = {}) => {
   if (!step || !chordDb?.chords) return [];
   const previousRegion = previousPosition ? getPositionRegion(previousPosition) : null;
   const preferred = new Set(preferredFretKeys);
-  const candidates = getCachedBasePalette(step, chordDb).map(candidate => ({
+  const rejected = new Set(rejectedShapeSignatures);
+  const candidates = getCachedBasePalette(step, chordDb)
+    .filter(candidate => !rejected.has(getShapeFamilySignature(candidate.position)))
+    .filter(candidate => !regionId || getChordShapeRegion(candidate.position) === regionId)
+    .map(candidate => ({
     ...candidate,
     position: {
       ...candidate.position,
@@ -346,7 +482,9 @@ export const getChordShapeCandidates = (step, chordDb, { previousPosition = null
       midi: [...(candidate.position.midi || [])]
     },
     isPreferred: preferred.has(candidate.fretKey),
-    movementScore: previousPosition ? getTransitionScore(previousPosition, candidate.position) : 0,
+    favoriteSimilarity: getFavoriteShapeSimilarity(candidate.position, favoriteFretKeys),
+    movementScore: (previousPosition ? getTransitionScore(previousPosition, candidate.position) : 0)
+      + (nextPosition ? getTransitionScore(candidate.position, nextPosition) : 0),
     regionDistance: previousRegion === null ? 0 : Math.abs(previousRegion - getPositionRegion(candidate.position))
   }));
   return candidates.sort((left, right) =>
@@ -357,16 +495,64 @@ export const getChordShapeCandidates = (step, chordDb, { previousPosition = null
   );
 };
 
-const getAllowedPositions = (step) => {
-  if (step.customPosition?.frets?.length === 4 && isValidChordShape(step, step.customPosition)) return [{ position: step.customPosition, positionIndex: step.positionIndex ?? null, custom: true }];
+const shapeRegion = position => {
+  const fretted = getAbsoluteFrets(position).filter(fret => fret > 0);
+  const lowest = fretted.length ? Math.min(...fretted) : 0;
+  return lowest <= 4 ? 'low' : lowest <= 8 ? 'middle' : lowest <= 12 ? 'high' : 'upper';
+};
+
+const soundingToneSignature = position => getPhysicalPitchClasses(position).sort((left, right) => left - right).join(',');
+
+const coreGripSignature = position => {
+  const frets = getAbsoluteFrets(position);
+  const positive = frets.filter(fret => fret > 0);
+  const lowest = positive.length ? Math.min(...positive) : 0;
+  return frets.map(fret => fret > 0 ? fret - lowest : '_').join(',');
+};
+
+const differsOnlyByOpenOrMutedStrings = (left, right) => {
+  const leftFrets = getAbsoluteFrets(left);
+  const rightFrets = getAbsoluteFrets(right);
+  let changed = false;
+  for (let index = 0; index < leftFrets.length; index += 1) {
+    if (leftFrets[index] === rightFrets[index]) continue;
+    if (!((leftFrets[index] === 0 && rightFrets[index] < 0) || (rightFrets[index] === 0 && leftFrets[index] < 0))) return false;
+    changed = true;
+  }
+  return changed;
+};
+
+export const groupChordShapeCandidates = candidates => {
+  const byGrip = new Map();
+  for (const candidate of candidates) {
+    const baseKey = [soundingToneSignature(candidate.position), coreGripSignature(candidate.position), shapeRegion(candidate.position)].join('|');
+    const group = byGrip.get(baseKey) || [];
+    group.push(candidate);
+    byGrip.set(baseKey, group);
+  }
+  return [...byGrip.values()].flatMap(group => {
+    const preferred = group.filter(candidate => !group.some(other => {
+      if (candidate === other || !differsOnlyByOpenOrMutedStrings(candidate.position, other.position)) return false;
+      const candidateFrets = getAbsoluteFrets(candidate.position);
+      const otherFrets = getAbsoluteFrets(other.position);
+      return candidateFrets.some((fret, index) => fret < 0 && otherFrets[index] === 0);
+    }));
+    return preferred.length ? [{ ...preferred[0], variants: preferred }] : [];
+  });
+};
+
+const getAllowedPositions = (step, regionId = step.regionId || null) => {
+  if (step.customPosition?.frets?.length === 4 && isValidChordShape(step, step.customPosition)) {
+    return !regionId || getChordShapeRegion(step.customPosition) === regionId ? [{ position: step.customPosition, positionIndex: step.positionIndex ?? null, custom: true }] : [];
+  }
   const positions = step.chord.positions.map((sourcePosition, positionIndex) => ({
     sourcePosition, positionIndex,
     position: positionFromFrets(getAbsoluteFrets(sourcePosition), sourcePosition.fingers)
   })).filter(candidate => isValidChordShape(step, candidate.position));
   const selectedPosition = positions.find(candidate => candidate.positionIndex === step.positionIndex);
-  if (Number.isInteger(step.positionIndex) && selectedPosition) return [selectedPosition];
-  if (step.generatedPositions?.length) return step.generatedPositions;
-  const candidates = positions;
+  if (Number.isInteger(step.positionIndex) && selectedPosition && !regionId) return [selectedPosition];
+  if (step.generatedPositions?.length && !regionId) return step.generatedPositions;
+  const candidates = regionId ? positions.filter(candidate => getChordShapeRegion(candidate.position) === regionId) : positions;
   if (!step.bassNote) return candidates;
   const bassPitchClass = noteNames.indexOf(step.bassNote);
   const matchingBass = candidates.filter(({ position }) => {
@@ -381,7 +567,7 @@ export const optimizeSequence = (sequence, chordDb, options = {}) => {
   const shapeWeight = options.shapeWeight === undefined ? DEFAULT_SHAPE_WEIGHT : options.shapeWeight;
   const chordSteps = sequence.map(item => {
     const chord = findShapeChord(chordDb, item);
-    const normalizedCustomPosition = item.customPosition ? normalizeCustomPosition(item.customPosition) : null;
+    const normalizedCustomPosition = item.customPosition ? normalizePlayablePosition(item.customPosition) : null;
     const customPositionIsValid = normalizedCustomPosition && isValidChordShape(item, normalizedCustomPosition);
     const selectedPositionIsValid = Number.isInteger(item.positionIndex) && chord?.positions[item.positionIndex] && isValidChordShape(item, chord.positions[item.positionIndex]);
     const hasValidLibraryShape = chord?.positions.some(position => isValidChordShape(item, position));
@@ -406,7 +592,7 @@ export const optimizeSequence = (sequence, chordDb, options = {}) => {
     ? Math.max(0, (chordQualities[step.suffix]?.characteristicIntervals.length || 0) - (candidate.definingToneCount || 0)) * DEFINING_TONE_COVERAGE_WEIGHT
       + Math.max(0, (chordQualities[step.suffix]?.required.length || 0) - candidate.essentialCount) * REQUIRED_TONE_COVERAGE_WEIGHT
     : 0;
-  let states = getAllowedPositions(chordSteps[0]).map(candidate => {
+  let states = getAllowedPositions(chordSteps[0], options.regionId || chordSteps[0].regionId).map(candidate => {
     const { position, positionIndex } = candidate;
     return {
       score: getShapeComplexity(position) * shapeWeight + getVoicingPreferencePenalty(chordSteps[0], position) + generatedShapePenalty(chordSteps[0], candidate),
@@ -414,8 +600,11 @@ export const optimizeSequence = (sequence, chordDb, options = {}) => {
       transitions: []
     };
   });
-  chordSteps.slice(1).forEach(step => {
-    states = getAllowedPositions(step).map(candidate => {
+  if (!states.length) return { totalScore: 0, steps: [], transitions: [], missing: [chordSteps[0]] };
+  for (const step of chordSteps.slice(1)) {
+    const availablePositions = getAllowedPositions(step, options.regionId || step.regionId);
+    if (!availablePositions.length) return { totalScore: 0, steps: [], transitions: [], missing: [step] };
+    states = availablePositions.map(candidate => {
       const { position, positionIndex } = candidate;
       const candidates = states.map(state => {
         const previous = state.path[state.path.length - 1].position;
@@ -428,7 +617,7 @@ export const optimizeSequence = (sequence, chordDb, options = {}) => {
       });
       return candidates.reduce((best, candidate) => candidate.score < best.score ? candidate : best);
     });
-  });
+  }
   const best = states.reduce((currentBest, state) => state.score < currentBest.score ? state : currentBest);
   return { totalScore: best.score, steps: best.path, transitions: best.transitions, missing: [] };
 };

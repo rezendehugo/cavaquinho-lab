@@ -87,7 +87,9 @@ export const getSequenceStructureKey = (steps = []) => JSON.stringify(steps.map(
   suffix: step.suffix,
   bassNote: step.bassNote,
   sourceSymbol: step.sourceSymbol,
-  measure: step.measure
+  measure: step.measure,
+  regionId: step.regionId,
+  regionBlockId: step.regionBlockId
 })));
 
 export const getSequenceStructureSteps = (steps = []) => steps.map(step => {

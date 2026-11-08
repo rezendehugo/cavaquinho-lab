@@ -1,6 +1,6 @@
 import { ArrowRight, Library, ListMusic, Play } from 'lucide-react';
 import ChordDiagram from '../components/ChordDiagram';
-import { cavaquinhoChords } from '../domain/chords';
+import { getCavaquinhoChords } from '../domain/chords';
 import { findChord } from '../progressionOptimizer';
 
 function go(path) {
@@ -9,6 +9,7 @@ function go(path) {
 }
 
 function LandingPage() {
+  const cavaquinhoChords = getCavaquinhoChords();
   const chord = findChord(cavaquinhoChords, 'C', 'major');
   return <div className="landing-page">
     <section className="landing-hero">

@@ -3,7 +3,7 @@ import { formatChordName, formatQualityOption, formatRootOption, qualityLabels }
 import ChordLegendStrip from '../components/ChordLegendStrip';
 import ChordShapeCard from '../components/ChordShapeCard';
 import ShapeStudyPanel from '../components/ShapeStudyPanel';
-import { getAvailableSuffixes, cavaquinhoChords } from '../domain/chords';
+import { getAvailableSuffixes, getCavaquinhoChords } from '../domain/chords';
 import { analyzeChordVoicing, getVoicingCompleteness } from '../domain/chordTheory';
 import { findChord } from '../progressionOptimizer';
 import { chromaticKeys } from '../sequences';
@@ -19,6 +19,7 @@ function getVisibleStatuses(chord, key) {
 }
 
 function ShapesPage() {
+  const cavaquinhoChords = getCavaquinhoChords();
   const [key, setKey] = useState('C');
   const [suffix, setSuffix] = useState('major');
   const [selectedIndex, setSelectedIndex] = useState(0);

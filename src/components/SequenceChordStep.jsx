@@ -15,6 +15,7 @@ const isInteractiveDragSource = (target) => target instanceof Element && Boolean
 function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep, analysisChord, color, moveStepById, moveStep, removeStep, cycleRoot, cycleSuffix, cycleShape, setShape, setCustomShape, availableSuffixes, shapeSourceOptions, setShapeSource, setChordIdentity, setChordSuffix, selected, onSelect, onSelectAdjacent, shapePickerOpen, onShapePickerChange }) {
   const [dragState, setDragState] = useState('idle');
   const chordName = formatSequenceChord(step);
+  const regionLabel = ({ low: 'Região baixa', middle: 'Região média', high: 'Região aguda' })[step.regionId];
   const cardClasses = ['lab-card', dragState === 'dragging' ? 'is-dragging' : '', dragState === 'over' ? 'is-drag-over' : ''].filter(Boolean).join(' ');
 
   const handleDragStart = (event) => {
@@ -84,6 +85,7 @@ function SequenceChordStep({ step, index, stepCount, isLoopStart, optimizedStep,
       <header className="lab-card-header">
         <div>
           <span className="scale-degree">{analysisChord?.numeral || 'acorde ' + (index + 1)}</span>
+          {regionLabel ? <span className="sequence-region-label">{regionLabel}</span> : null}
           {isLoopStart ? <span className="sequence-loop-marker">Início da repetição</span> : null}
         </div>
         <div className="card-actions">

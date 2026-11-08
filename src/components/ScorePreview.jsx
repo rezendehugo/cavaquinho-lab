@@ -5,6 +5,7 @@ const ignoreRendered = () => undefined;
 export default function ScorePreview({
   musicXml,
   ariaLabel = 'Partitura MusicXML original',
+  errorMessage = 'A prévia reconhecida não abriu. As cifras importadas continuam disponíveis para revisão.',
   preserveLayout = false,
   onRendered = ignoreRendered
 }) {
@@ -31,8 +32,13 @@ export default function ScorePreview({
         onRendered({ pageCount });
       }
     }
-    renderScore().catch(() => { if (containerRef.current) containerRef.current.textContent = 'Não foi possível renderizar a partitura original.'; });
+    renderScore().catch(() => {
+      if (!disposed && containerRef.current) {
+        containerRef.current.textContent = errorMessage;
+        containerRef.current.setAttribute('role', 'status');
+      }
+    });
     return () => { disposed = true; if (containerRef.current) containerRef.current.replaceChildren(); };
-  }, [musicXml, onRendered, preserveLayout]);
-  return <div ref={containerRef} className="score-original-preview" aria-label={ariaLabel} />;
+  }, [errorMessage, musicXml, onRendered, preserveLayout]);
+  return <div ref={containerRef} className="score-original-preview" aria-label={ariaLabel} aria-live="polite" />;
 }

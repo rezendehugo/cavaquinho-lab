@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { earTrainingLevels, createEarTrainingExercise, createSequenceRecallExercise, earTrainingProgressKey, sequenceEarReviewKey, normalizeEarTrainingProgress, normalizeSequenceEarReviews, updateEarTrainingProgress, updateSequenceEarReview, getRecommendedEarTrainingLevel } from '../domain/earTraining';
-import { loadSequences, readStorage, writeStorage } from '../storage';
+import { loadSequences } from '../storage/sequences';
+import { readStorage, writeStorage } from '../storage';
 import { playEarTrainingRounds } from '../features/ear-training/audio';
 
 function loadProgress() {

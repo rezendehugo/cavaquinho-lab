@@ -62,7 +62,18 @@ const detailForInterval = (interval, suffix) => {
   return degreeDetails[interval];
 };
 
-const getPitchClass = (key) => pitchNames.indexOf(key) >= 0 ? pitchNames.indexOf(key) : enharmonicPitchClasses[key] ?? -1;
+const getPitchClass = (key) => {
+  if (pitchNames.indexOf(key) >= 0) return pitchNames.indexOf(key);
+  if (Object.hasOwn(enharmonicPitchClasses, key)) return enharmonicPitchClasses[key];
+  // Diatonic spelling can require double accidentals (for example Bbb in
+  // Db harmonic minor). Resolve the written note to its chromatic identity so
+  // the fretboard and shape search still use the same physical pitch class.
+  const match = /^([A-G])(bb|##|b|#)?$/.exec(key || '');
+  if (!match) return -1;
+  const natural = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[match[1]];
+  const alteration = { bb: -2, b: -1, '#': 1, '##': 2 }[match[2]] || 0;
+  return (natural + alteration + 12) % 12;
+};
 export const getChordRootPitchClass = getPitchClass;
 const getSpokenName = (key, pitchClass) => spokenNamesByPitch[key] || spokenPitchNames[pitchClass];
 
@@ -163,21 +174,17 @@ export const getVoicingCompleteness = (analysis) => {
   if (analysis.extraNotes.length) {
     return { id: 'additional', label: `Voicing com notas adicionais: ${analysis.extraNotes.join(', ')}.` };
   }
-  if (analysis.acceptedDim7Omission) {
-    return { id: 'incomplete', label: `Voicing incompleto: omite ${analysis.missingNotes.join(', ')}. Válido no cavaquinho.` };
-  }
   if (analysis.blocked) {
     return {
       id: 'blocked',
       label: 'Voicing bloqueado: não contém uma nota obrigatória para esta forma.'
     };
   }
-  if (analysis.rootMissing && !analysis.rootRequired) {
+  if (analysis.rootMissing && !analysis.rootRequired && analysis.missingRequiredNotes.length === 0) {
+    const tones = analysis.playedNotes.join(', ');
     return {
       id: 'rootless',
-      label: analysis.suffix === '9'
-        ? 'Voicing sem raiz: contém terça, sétima menor e nona. Recomendado com baixo ou acompanhamento.'
-        : 'Voicing sem raiz: contém terça, sétima e nona. Recomendado com baixo ou acompanhamento.'
+      label: `Voicing sem raiz: toca ${tones}${analysis.missingNotes.length ? ` e omite ${analysis.missingNotes.join(', ')}` : ''}. Use com baixo ou acompanhamento que sustente a raiz.`
     };
   }
   if (analysis.missingNotes.length) {
@@ -188,15 +195,24 @@ export const getVoicingCompleteness = (analysis) => {
 
 export const getVoicingPreferenceRank = (analysis) => {
   const state = getVoicingCompleteness(analysis)?.id;
-  return { complete: 0, incomplete: 1, rootless: 2, blocked: 3, additional: 4 }[state] ?? 4;
+  return { complete: 0, rootless: 1, incomplete: 2, blocked: 3, additional: 4 }[state] ?? 4;
 };
 
+const equivalentChordCache = new Map();
+
 export const getEquivalentChords = (key, suffix) => {
+  const cacheKey = `${key}:${suffix}`;
+  if (equivalentChordCache.has(cacheKey)) return equivalentChordCache.get(cacheKey);
   const target = getChordPitchClasses(key, suffix);
-  if (!target.length) return [];
-  return pitchNames.flatMap(candidateKey => Object.keys(chordQualities).map(candidateSuffix => ({ key: candidateKey, suffix: candidateSuffix })))
+  if (!target.length) {
+    equivalentChordCache.set(cacheKey, []);
+    return equivalentChordCache.get(cacheKey);
+  }
+  const equivalents = pitchNames.flatMap(candidateKey => Object.keys(chordQualities).map(candidateSuffix => ({ key: candidateKey, suffix: candidateSuffix })))
     .filter(candidate => !(candidate.key === key && candidate.suffix === suffix))
     .filter(candidate => sameSet(getChordPitchClasses(candidate.key, candidate.suffix), target));
+  equivalentChordCache.set(cacheKey, equivalents);
+  return equivalents;
 };
 
 export const analyzeChordVoicing = (step, position) => {
@@ -220,8 +236,6 @@ export const analyzeChordVoicing = (step, position) => {
   const spellIntervals = intervals => intervals.map(interval =>
     getChordToneDetail(spellingKey, step.suffix, root + interval)?.note || pitchNames[(root + interval) % 12]
   );
-  const missingEssential = missingRequiredIntervals.map(interval => (root + interval) % 12);
-  const acceptedDim7Omission = step.suffix === 'dim7' && missingEssential.length === 1 && extra.length === 0;
   const notes = quality.intervals.map(interval => spellChordTone(spellingKey, interval, step.suffix));
   const playedInStringOrder = [...new Set((position?.midi || []).map(note => note % 12))];
   const lowestMidi = position?.midi?.length ? Math.min(...position.midi) : null;
@@ -249,7 +263,6 @@ export const analyzeChordVoicing = (step, position) => {
     extraNotes: extra.map(note => pitchNames[note]),
     rootMissing: !played.includes(root),
     rootRequired: Boolean(quality.rootRequired),
-    acceptedDim7Omission,
     blocked:
       extra.length > 0 ||
       (Boolean(quality.rootRequired) && !played.includes(root)),

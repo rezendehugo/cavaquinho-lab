@@ -1,16 +1,22 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { formatSequenceChord } from '../chordDisplay';
+import { getSequenceChordCatalog } from '../domain/sequenceChordCatalog';
 
 const SequenceChordNavigator = memo(function SequenceChordNavigator({
   sequence,
   currentIndex,
-  onSelectOccurrence
+  onSelectOccurrence,
+  showOccurrences = false
 }) {
   const itemRefs = useRef([]);
   const focusSelectedRef = useRef(false);
+  const catalog = useMemo(() => showOccurrences
+    ? (sequence?.steps || []).map((step, index) => ({ step, firstIndex: index, indexes: [index] }))
+    : getSequenceChordCatalog(sequence?.steps || []), [sequence?.steps, showOccurrences]);
+  const selectedCatalogIndex = catalog.findIndex(item => item.indexes.includes(currentIndex));
 
   useEffect(() => {
-    const item = itemRefs.current[currentIndex];
+    const item = itemRefs.current[selectedCatalogIndex];
     if (typeof item?.scrollIntoView === 'function') {
       item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
@@ -18,7 +24,7 @@ const SequenceChordNavigator = memo(function SequenceChordNavigator({
       item?.querySelector('button')?.focus({ preventScroll: true });
       focusSelectedRef.current = false;
     }
-  }, [currentIndex]);
+  }, [selectedCatalogIndex]);
 
   if (!sequence?.steps.length) return null;
 
@@ -27,14 +33,17 @@ const SequenceChordNavigator = memo(function SequenceChordNavigator({
     event.preventDefault();
     focusSelectedRef.current = true;
     const delta = event.key === 'ArrowRight' ? 1 : -1;
-    onSelectOccurrence((currentIndex + delta + sequence.steps.length) % sequence.steps.length);
+    const nextCatalogIndex = (selectedCatalogIndex + delta + catalog.length) % catalog.length;
+    onSelectOccurrence(catalog[nextCatalogIndex].firstIndex);
   };
 
   return <div className="sequence-chord-navigator" role="list" aria-label="Acordes da sequência" onKeyDown={handleKeyDown}>
-    {sequence.steps.map((step, index) => {
-      const selected = index === currentIndex;
+    {catalog.map(({ step, firstIndex, indexes }, catalogIndex) => {
+      const selected = indexes.includes(currentIndex);
+      const chordName = formatSequenceChord(step);
+      const occurrenceLabel = indexes.length === 1 ? '1 ocorrência' : `${indexes.length} ocorrências`;
       return <div
-        ref={element => { itemRefs.current[index] = element; }}
+        ref={element => { itemRefs.current[catalogIndex] = element; }}
         key={step.id}
         className={`sequence-chord-occurrence ${selected ? 'is-selected' : ''}`}
         role="listitem"
@@ -43,11 +52,11 @@ const SequenceChordNavigator = memo(function SequenceChordNavigator({
           type="button"
           className="sequence-chord-occurrence-main"
           aria-current={selected ? 'step' : undefined}
-          aria-label={`Acorde ${index + 1} de ${sequence.steps.length}: ${formatSequenceChord(step)}`}
-          title={`Acorde ${index + 1} de ${sequence.steps.length}: ${formatSequenceChord(step)}`}
-          onClick={() => onSelectOccurrence(index)}
+          aria-label={showOccurrences ? `Acorde ${firstIndex + 1} de ${catalog.length}: ${chordName}` : `${chordName}, ${occurrenceLabel}`}
+          title={showOccurrences ? `${chordName} · acorde ${firstIndex + 1} de ${catalog.length}` : `${chordName} · ${occurrenceLabel}`}
+          onClick={() => onSelectOccurrence(firstIndex)}
         >
-          <strong>{formatSequenceChord(step)}</strong>
+          <strong>{chordName}</strong>
         </button>
       </div>;
     })}

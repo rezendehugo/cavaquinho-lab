@@ -16,6 +16,9 @@ export interface SequenceStepRecord {
   suffix: string;
   shapeSuffix?: string;
   customPosition?: { frets: number[]; fingers: number[] };
+  regionId?: 'low' | 'middle' | 'high';
+  regionBlockId?: string;
+  regionSourceStepId?: string;
   sourceSymbol?: string;
   bassNote?: string;
   displayKey?: string;
@@ -30,6 +33,7 @@ export interface SequenceRecord {
   title: string;
   practiceBpm: number;
   loopStartIndex: number;
+  regionMode?: 'blocks';
   revision: number;
   steps: SequenceStepRecord[];
   createdAt: string;

@@ -26,4 +26,21 @@ describe('direct MusicXML imports', () => {
 
     expect(repository.jobs.size).toBe(1);
   });
+
+  test('uses timeline coverage when saving simultaneous notes in a corrected measure', async () => {
+    const repository = new InMemoryScoreImportRepository();
+    const service = new ScoreImportService(repository);
+    const chordMusicXml = `<score-partwise><part id="P1"><measure number="1"><attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>4</duration></note>
+      <note><chord/><pitch><step>F</step><octave>4</octave></pitch><duration>4</duration></note>
+      </measure></part></score-partwise>`;
+    const imported = await service.importMusicXml('dev-owner', 'chord.musicxml', chordMusicXml);
+    expect(imported.draft.measures[0].issues).toEqual([]);
+    const saved = await service.updateMeasure(
+      'dev-owner', imported.item.id, 1, imported.draft.revision,
+      imported.draft.measures[0].events, imported.draft.measures[0].chords
+    );
+    expect(saved.measures[0].issues).toEqual([]);
+    expect(saved.measures[0].events.reduce((sum, event) => sum + event.durationTicks, 0)).toBe(8);
+  });
 });

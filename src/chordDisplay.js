@@ -1,11 +1,11 @@
-import cavaquinho from '@tombatossals/chords-db/lib/cavaquinho.json';
+import { chordSuffixMetadata } from './domain/chordSuffixMetadata';
 
 export const suffixLabels = Object.fromEntries(
-  Object.entries(cavaquinho.suffixMetadata || {}).map(([suffix, metadata]) => [suffix, metadata.symbol])
+  Object.entries(chordSuffixMetadata).map(([suffix, metadata]) => [suffix, metadata.symbol])
 );
 
 export const qualityLabels = Object.fromEntries(
-  Object.entries(cavaquinho.suffixMetadata || {}).map(([suffix, metadata]) => [suffix, metadata.label])
+  Object.entries(chordSuffixMetadata).map(([suffix, metadata]) => [suffix, metadata.label])
 );
 
 export const formatSuffix = (suffix) => ({ '13': '13', '7b13': '7b13', '7b9': '7b9' })[suffix] ?? suffixLabels[suffix] ?? suffix;

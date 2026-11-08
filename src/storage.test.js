@@ -1,5 +1,9 @@
 import { generateScalePath } from './domain/scalePaths';
-import { freeSolosStorageKey, loadFreeSolos, loadScalePaths, loadSequences, readStorage, saveFreeSolos, saveScalePaths, scalePathsStorageKey, sequencesStorageKey, storageErrorMessage, writeStorage } from './storage';
+import { freeSolosStorageKey, readStorage, scalePathsStorageKey, sequencesStorageKey, storageErrorMessage, writeStorage } from './storage';
+import { loadScalePaths, saveScalePaths } from './storage/scalePaths';
+import { loadFreeSolos, saveFreeSolos } from './storage/freeSolos';
+import { loadSequences } from './storage/sequences';
+import { createPresetSequence, sequencePresetDefinitions } from './domain/sequencePresets';
 
 describe('armazenamento seguro', () => {
   test('retorna resultado explícito quando a leitura ou escrita falha', () => {
@@ -42,5 +46,32 @@ describe('armazenamento seguro', () => {
     }]));
 
     expect(loadSequences()[0].steps.map(step => step.positionIndex)).toEqual([2, null]);
+  });
+
+  test('corrige nomes de acordes duplicados em Noites Cariocas salvo', () => {
+    const savedSequence = createPresetSequence({ presetId: 'noitesCariocasB', tonic: 'G', bpm: 60, beats: 4, sequenceId: 'noites-cariocas-b' });
+    for (const [index, displayKey] of [[7, 'F#dim'], [9, 'F#m7'], [12, 'C#m'], [31, 'C#dim']]) {
+      savedSequence.steps[index].displayKey = displayKey;
+    }
+    window.localStorage.setItem(sequencesStorageKey, JSON.stringify([savedSequence]));
+
+    const migrated = loadSequences()[0];
+
+    expect([7, 9, 12, 31].map(index => migrated.steps[index].displayKey)).toEqual(['F#', 'F#', 'C#', 'C#']);
+    const persisted = JSON.parse(window.localStorage.getItem(sequencesStorageKey))[0];
+    expect([7, 9, 12, 31].map(index => persisted.steps[index].displayKey)).toEqual(['F#', 'F#', 'C#', 'C#']);
+  });
+
+  test('mantém os exercícios prontos no catálogo sem adicioná-los às sequências do músico', () => {
+    window.localStorage.setItem(sequencesStorageKey, JSON.stringify([{ id: 'minha-sequencia', title: 'Minha sequência', steps: [] }]));
+
+    const firstLoad = loadSequences();
+    const secondLoad = loadSequences();
+
+    expect(firstLoad).toHaveLength(1);
+    expect(secondLoad).toHaveLength(1);
+    expect(sequencePresetDefinitions.filter(definition => definition.id.startsWith('diatonicFourths'))).toHaveLength(14);
+    expect(sequencePresetDefinitions.filter(definition => definition.id.startsWith('harmonicField'))).toHaveLength(24);
+    expect(firstLoad.find(sequence => sequence.id === 'minha-sequencia')).toBeDefined();
   });
 });

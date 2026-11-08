@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildSequencePdfModel, createSequencePdf, sequencePdfFileName } from './sequencePdf';
-import { cavaquinhoChords } from './chords';
+import { buildSequencePdfModel, createSequencePdf, getSequencePdfGridLayout, sequencePdfFileName } from './sequencePdf';
+import { getCavaquinhoChords } from './chords';
 import { getAbsoluteFrets } from '../progressionOptimizer';
+
+const cavaquinhoChords = getCavaquinhoChords();
 
 // jsdom has no SVG text measurement. Layout tests isolate conversion; SVG parity
 // is checked separately and the actual conversion is verified in the browser.
@@ -26,14 +28,65 @@ describe('sequence study PDF', () => {
       expect(step.frets).toEqual(getAbsoluteFrets(chord.positions[1]));
     });
   });
+  it('exports one card per distinct chord while retaining the complete progression for study', () => {
+    const sequence = { ...sample, steps: [
+      { id: 'dm-first', key: 'D', suffix: 'minor', practiceBeats: 2 },
+      { id: 'e7', key: 'E', suffix: '7', practiceBeats: 3 },
+      { id: 'dm-repeat', key: 'D', suffix: 'minor', practiceBeats: 5 },
+      { id: 'c-sharp', key: 'Db', displayKey: 'C#', suffix: 'major', practiceBeats: 4 },
+      { id: 'd-flat', key: 'Db', displayKey: 'Db', suffix: 'major', practiceBeats: 6 }
+    ] };
+    const model = buildSequencePdfModel(sequence);
+    expect(model.progressionLength).toBe(5);
+    expect(model.steps.map(step => step.name)).toEqual(['Dm', 'E7', 'C#']);
+    expect(model.steps.map(step => step.id)).toEqual(['dm-first', 'e7', 'c-sharp']);
+    expect(model.steps.map(step => step.beats)).toEqual([2, 3, 4]);
+    expect(model.exercises[5].answer.split(' | ')).toHaveLength(5);
+  });
+  it('uses the song title and artist as PDF metadata and a portable filename', () => {
+    const sequence = { ...sample, title: 'Wave', musicTitle: 'Wave', artist: 'Antonio Carlos Jobim' };
+    expect(buildSequencePdfModel(sequence)).toMatchObject({ title: 'Wave', artist: 'Antonio Carlos Jobim' });
+    expect(sequencePdfFileName(sequence, 'map')).toBe('Wave-Antonio-Carlos-Jobim-mapa.pdf');
+  });
   it('rejects empty maps and unsupported shapes instead of exporting incomplete maps', () => {
     expect(() => buildSequencePdfModel({ steps: [] })).toThrow();
     expect(() => buildSequencePdfModel({ steps: [{ key: 'Z', suffix: 'major' }] })).toThrow();
   });
-  it('paginates all occurrences, including a last partial page', async () => {
-    const sequence = { ...sample, steps: Array.from({ length: 13 }, (_, i) => ({ ...sample.steps[i % 5], id: `${i}` })) };
+  it.each([1, 3, 4, 5])('lays out %i shapes in portrait with four columns and useful card occupancy', count => {
+    const layout = getSequencePdfGridLayout(count);
+    expect(layout.columns).toBe(4);
+    expect(layout.cardWidth).toBeGreaterThan(125);
+    expect(layout.diagramHeight).toBeGreaterThan(100);
+    expect(layout.contentOccupancy).toBeGreaterThan(0.65);
+    expect(layout.cardsPerPage).toBe(16);
+    expect(layout.rows).toBe(Math.ceil(count / 4));
+  });
+  it('builds and exports a four-chord sequence on one portrait page', async () => {
+    const sequence = { ...sample, steps: [
+      { id: 'g7', key: 'G', suffix: '7' },
+      { id: 'dm', key: 'D', suffix: 'minor' },
+      { id: 'a7', key: 'A', suffix: '7' },
+      { id: 'c', key: 'C', suffix: 'major' }
+    ] };
+    const model = buildSequencePdfModel(sequence);
+    const layout = getSequencePdfGridLayout(model.steps.length);
+    const pdf = await createSequencePdf(sequence, { kind: 'map' });
+    expect(model.steps.map(step => step.name)).toEqual(['G7', 'Dm', 'A7', 'C']);
+    expect(layout.rows).toBe(1);
+    expect(layout.contentOccupancy).toBeGreaterThan(0.65);
+    expect(pdf.getNumberOfPages()).toBe(1);
+    expect(pdf.internal.pageSize.getWidth()).toBeLessThan(pdf.internal.pageSize.getHeight());
+  });
+  it('paginates all distinct chord cards, including a last partial page', async () => {
+    const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    const steps = keys.flatMap((key, index) => [
+      { id: `major-${index}`, key, suffix: 'major', positionIndex: 0 },
+      { id: `minor-${index}`, key, suffix: 'minor', positionIndex: 0 }
+    ]);
+    const sequence = { ...sample, steps };
     const pdf = await createSequencePdf(sequence, { kind: 'map' });
     expect(pdf.getNumberOfPages()).toBe(2);
+    expect(pdf.internal.pageSize.getWidth()).toBeLessThan(pdf.internal.pageSize.getHeight());
     expect(pdf.output('arraybuffer').byteLength).toBeGreaterThan(3000);
   });
   it('creates an annotated guide and paginates long personal notes', async () => {

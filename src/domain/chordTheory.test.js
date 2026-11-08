@@ -70,16 +70,18 @@ describe('teoria aplicada às formas', () => {
     });
     expect(getVoicingCompleteness(analysis)).toEqual({
       id: 'rootless',
-      label: 'Voicing sem raiz: contém terça, sétima menor e nona. Recomendado com baixo ou acompanhamento.'
+      label: 'Voicing sem raiz: toca E, Bb, D e omite C, G. Use com baixo ou acompanhamento que sustente a raiz.'
     });
   });
 
-  test('trata tons definidores omitidos como voicing incompleto e aceita uma omissão em dim7', () => {
+  test('trata tons definidores omitidos e qualquer omissão em dim7 como voicing incompleto', () => {
     const partial = analyzeChordVoicing({ key: 'G', suffix: 'mmaj7' }, { midi: [55, 62, 66] });
     expect(getVoicingCompleteness(partial)).toMatchObject({ id: 'incomplete' });
 
     const incompleteDim7 = analyzeChordVoicing({ key: 'C', suffix: 'dim7' }, { midi: [63, 66, 69] });
     expect(getVoicingCompleteness(incompleteDim7)).toMatchObject({ id: 'incomplete' });
+    expect(incompleteDim7.notes).toEqual(['C', 'Eb', 'Gb', 'Bbb']);
+    expect(incompleteDim7.missingNotes).toEqual(['C']);
   });
 
   test('mantém ♭9 e ♭7 como tons definidores de 7♭9, mas classifica sua omissão como voicing parcial', () => {

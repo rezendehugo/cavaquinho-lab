@@ -29,7 +29,7 @@
     "test:corpus:choro": "node scripts/test-choro-negro-corpus.mjs",
     "check": "npm run audit:ui && npm run lint && npm run typecheck && npm test && npm run test:api && npm run test:omr",
     "validate": "npm run check && npm run build && npm run test:e2e",
-    "build": "vite build",
+    "build": "vite build && node scripts/assert-practice-entry-chunks.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run --environment jsdom",
     "dev:e2e": "vite --host 127.0.0.1 --port 4173 --strictPort",

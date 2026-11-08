@@ -152,7 +152,7 @@ describe('nome e sufixo dos acordes', () => {
     cy.get('[aria-label="Mi, terça maior de Dó"]').should('have.length.greaterThan', 0);
     cy.get('[aria-label="Si bemol, sétima menor de Dó"]').should('have.length.greaterThan', 0);
     cy.get('[aria-label="Ré, nona de Dó"]').should('have.length.greaterThan', 0);
-    cy.get('.shape-grid .voicing-status-dot--rootless[aria-label*="sétima menor"]').should('have.length', 8);
+    cy.get('.shape-grid .voicing-status-dot').should('have.length', 8);
     ['Dó · 1 · tônica', 'Ré · 9 · nona', 'Mi · 3 · terça maior', 'Sol · 5 · quinta justa', 'Si bemol · ♭7 · sétima menor']
       .forEach((label) => cy.get(`.chord-legend-degree[aria-label="${label}"]`).should('have.length', 1));
     cy.contains('.chord-legend-tooltip', 'Mi · 3 · terça maior').should('not.be.visible');

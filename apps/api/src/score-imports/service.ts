@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { ScoreImportRepository } from './repository.js';
 import type { ChordEvent, PracticeArtifacts, ScoreDraft, ScoreEvent, ScoreImport, ScoreMeasure } from './types.js';
-import { hasCriticalIssues, parseMusicXml } from './musicXmlParser.js';
+import { hasCriticalIssues, parseMusicXml, validateMeasureTimeline } from './musicXmlParser.js';
 import { suggestMelodyRoute } from './melodyRoute.js';
 import type { OmrResult } from './omrWorker.js';
 
@@ -13,14 +13,10 @@ const now = () => new Date().toISOString();
 const checksum = (value: string) => createHash('sha256').update(value).digest('hex');
 
 function validateMeasure(measure: ScoreMeasure): ScoreMeasure {
-  const total = measure.events.reduce((sum, event) => sum + event.durationTicks, 0);
   const otherIssues = measure.issues.filter(issue => issue.code !== 'measure_duration_mismatch');
   return {
     ...measure,
-    issues: total === measure.expectedTicks ? otherIssues : [...otherIssues, {
-      code: 'measure_duration_mismatch', severity: 'critical',
-      message: `A medida soma ${total} ticks, mas deveria somar ${measure.expectedTicks}.`
-    }]
+    issues: [...otherIssues, ...validateMeasureTimeline(measure)]
   };
 }
 

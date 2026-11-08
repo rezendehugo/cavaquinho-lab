@@ -41,21 +41,26 @@ const sortChordLibrary = (library) => ({
   ]))
 });
 
-export const cavaquinhoChords = sortChordLibrary(rawCavaquinhoChords);
+let preparedCavaquinhoChords;
+
+export const getCavaquinhoChords = () => {
+  if (!preparedCavaquinhoChords) preparedCavaquinhoChords = sortChordLibrary(rawCavaquinhoChords);
+  return preparedCavaquinhoChords;
+};
 
 export const cavaquinhoTuning = ['D', 'G', 'B', 'D'];
 
-export const getAvailableSuffixes = (key) => suffixCycle.filter(suffix => findChord(cavaquinhoChords, key, suffix)?.positions.length > 0 || findShapeChord(cavaquinhoChords, { key, suffix })?.positions.length > 0);
-export const getShapeSourceOptions = (step) => {
+export const getAvailableSuffixes = (key, chordDb = getCavaquinhoChords()) => suffixCycle.filter(suffix => findChord(chordDb, key, suffix)?.positions.length > 0 || findShapeChord(chordDb, { key, suffix })?.positions.length > 0);
+export const getShapeSourceOptions = (step, chordDb = getCavaquinhoChords()) => {
   const options = [step.suffix];
   if (['9', '13', '7b13', '7b9', 'add9'].includes(step.suffix)) options.push('7');
-  return [...new Set(options)].filter(suffix => findChord(cavaquinhoChords, step.key, suffix)?.positions.length > 0);
+  return [...new Set(options)].filter(suffix => findChord(chordDb, step.key, suffix)?.positions.length > 0);
 };
 
 export const sanitizeSequenceShapeIndexes = (sequences) => sequences.map(sequence => ({
   ...sequence,
   steps: sequence.steps.map(step => {
-    const chord = findShapeChord(cavaquinhoChords, step);
+    const chord = findShapeChord(getCavaquinhoChords(), step);
     const validIndex = Number.isInteger(step.positionIndex) && step.positionIndex >= 0 && step.positionIndex < (chord?.positions.length || 0);
     return validIndex ? step : { ...step, positionIndex: null };
   })

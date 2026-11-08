@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatChordName, formatSequenceChord } from '../chordDisplay';
-import { cavaquinhoChords, getAvailableSuffixes, getShapeSourceOptions } from '../domain/chords';
+import { getAvailableSuffixes, getCavaquinhoChords, getShapeSourceOptions } from '../domain/chords';
 import { advanceSequenceFilm, moveSequenceFilm, normalizePracticeBeats } from '../domain/sequencePractice';
 import { useSharedMetronome } from '../features/metronome/MetronomeContext';
 import { analyzeSequence, buildExercises, getColorForChord } from '../harmony';
 import { optimizeSequence } from '../progressionOptimizer';
 import { chromaticKeys, createSequence, createSequenceStep, defaultSequences, MAX_SEQUENCE_STEPS, normalizeLoopStartIndex, reorderSequence, suffixCycle } from '../sequences';
-import { activeSequenceStorageKey, loadActiveSequenceId, loadSequences, sequencesStorageKey, storageErrorMessage, writeStorage } from '../storage';
+import { activeSequenceStorageKey, loadActiveSequenceId, loadSequences } from '../storage/sequences';
+import { sequencesStorageKey, storageErrorMessage, writeStorage } from '../storage';
 import { AddChordSlot, AddSequenceButton } from './SequenceActions';
 import SequenceChordStep from './SequenceChordStep';
 import SequencePracticeBar from './SequencePracticeBar';
@@ -121,6 +122,7 @@ function LabSummary({ analysis, sequence, colorMode }) {
 
 function SequenceLab({ cloud = null }) {
   const metronome = useSharedMetronome();
+  const cavaquinhoChords = getCavaquinhoChords();
   const [sequences, setSequences] = useState(loadSequences);
   const [activeSequenceId, setActiveSequenceId] = useState(() => loadActiveSequenceId(loadSequences()));
   const [colorMode, setColorMode] = useState('graus');
