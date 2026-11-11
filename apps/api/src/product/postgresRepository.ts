@@ -48,6 +48,10 @@ export class PostgresProductRepository implements ProductRepository {
     const steps = ids.length ? await this.sql`select * from sequence_steps where owner_id=${ownerId} and sequence_id in ${this.sql(ids)} order by sequence_id, position` : [];
     return sequences.map(row => this.mapSequence(row, steps));
   }
+  async countSequences(ownerId: string): Promise<number> {
+    const rows = await this.sql`select count(*)::int as count from sequences where owner_id=${ownerId}`;
+    return Number(rows[0]?.count ?? 0);
+  }
   async getSequence(ownerId: string, id: string): Promise<SequenceRecord | null> {
     const rows = await this.sql`select * from sequences where id=${id} and owner_id=${ownerId} limit 1`;
     if (!rows[0]) return null;

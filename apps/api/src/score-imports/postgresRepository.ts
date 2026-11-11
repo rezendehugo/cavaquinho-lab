@@ -55,6 +55,11 @@ export class PostgresScoreImportRepository implements ScoreImportRepository {
     const rows = await this.sql`select payload from score_drafts where import_id=${importId} limit 1`;
     return rows[0] ? rows[0].payload as ScoreDraft : null;
   }
+  async getDrafts(importIds: string[]): Promise<Map<string, ScoreDraft>> {
+    if (!importIds.length) return new Map();
+    const rows = await this.sql`select import_id, payload from score_drafts where import_id in ${this.sql(importIds)}`;
+    return new Map(rows.map(row => [String(row.import_id), row.payload as ScoreDraft]));
+  }
   async recordCorrection(value: { id: string; importId: string; ownerId: string; revision: number; measureNumber: number; before: ScoreMeasure; after: ScoreMeasure; createdAt: string }): Promise<void> {
     await this.sql`insert into score_correction_events (id, import_id, owner_id, revision, measure_number, before, after, created_at)
       values (${value.id}, ${value.importId}, ${value.ownerId}, ${value.revision}, ${value.measureNumber},

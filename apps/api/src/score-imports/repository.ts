@@ -8,6 +8,7 @@ export interface ScoreImportRepository {
   updateImport(value: ScoreImport): Promise<void>;
   saveDraft(value: ScoreDraft, expectedRevision?: number): Promise<boolean>;
   getDraft(importId: string): Promise<ScoreDraft | null>;
+  getDrafts(importIds: string[]): Promise<Map<string, ScoreDraft>>;
   recordCorrection(value: { id: string; importId: string; ownerId: string; revision: number; measureNumber: number; before: ScoreMeasure; after: ScoreMeasure; createdAt: string }): Promise<void>;
   createJob(value: ImportJob): Promise<void>;
   claimNextJob(now: string, staleBefore: string): Promise<ImportJob | null>;
@@ -46,6 +47,14 @@ export class InMemoryScoreImportRepository implements ScoreImportRepository {
     return true;
   }
   async getDraft(importId: string): Promise<ScoreDraft | null> { return structuredClone(this.drafts.get(importId) ?? null); }
+  async getDrafts(importIds: string[]): Promise<Map<string, ScoreDraft>> {
+    const result = new Map<string, ScoreDraft>();
+    for (const importId of importIds) {
+      const draft = this.drafts.get(importId);
+      if (draft) result.set(importId, structuredClone(draft));
+    }
+    return result;
+  }
   async recordCorrection(value: { importId: string; revision: number; measureNumber: number }): Promise<void> {
     this.corrections.push({ importId: value.importId, revision: value.revision, measureNumber: value.measureNumber });
   }

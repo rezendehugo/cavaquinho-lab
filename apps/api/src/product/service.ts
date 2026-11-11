@@ -1,5 +1,5 @@
 import type { ProductRepository } from './repository.js';
-import type { SequenceRecord } from './types.js';
+import type { Profile, SequenceRecord } from './types.js';
 
 export const FREE_SEQUENCE_LIMIT = 3;
 export const FREE_STEP_LIMIT = 20;
@@ -12,17 +12,21 @@ export class ProductError extends Error {
 export class ProductService {
   constructor(private readonly repository: ProductRepository) {}
 
-  async entitlements(ownerId: string) {
-    const profile = await this.repository.getOrCreateProfile(ownerId);
-    const subscription = await this.repository.getSubscription(ownerId);
+  async entitlements(ownerId: string, knownProfile?: Profile) {
+    const [profile, subscription] = await Promise.all([
+      knownProfile ? Promise.resolve(knownProfile) : this.repository.getOrCreateProfile(ownerId),
+      this.repository.getSubscription(ownerId)
+    ]);
     const pro = profile.plan === 'pro' || ['active', 'trialing'].includes(subscription?.status ?? '');
     return { plan: pro ? 'pro' : 'free', sequenceLimit: pro ? null : FREE_SEQUENCE_LIMIT, stepLimit: pro ? PRO_STEP_LIMIT : FREE_STEP_LIMIT, advancedPractice: pro, exports: pro, practiceHistory: pro };
   }
 
   async create(ownerId: string, input: Omit<SequenceRecord, 'ownerId' | 'revision' | 'createdAt' | 'updatedAt'>): Promise<SequenceRecord> {
-    const existing = await this.repository.listSequences(ownerId);
-    const access = await this.entitlements(ownerId);
-    if (access.sequenceLimit !== null && existing.length >= access.sequenceLimit) throw new ProductError('free_sequence_limit', 403);
+    const [existingCount, access] = await Promise.all([
+      this.repository.countSequences(ownerId),
+      this.entitlements(ownerId)
+    ]);
+    if (access.sequenceLimit !== null && existingCount >= access.sequenceLimit) throw new ProductError('free_sequence_limit', 403);
     this.assertStepLimit(input.steps.length, access.stepLimit);
     const now = new Date().toISOString();
     const value = { ...input, ownerId, revision: 1, createdAt: now, updatedAt: now };
