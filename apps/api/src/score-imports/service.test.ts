@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { InMemoryScoreImportRepository } from './repository.js';
 import { ScoreImportService } from './service.js';
 
@@ -25,6 +25,44 @@ describe('direct MusicXML imports', () => {
     });
 
     expect(repository.jobs.size).toBe(1);
+  });
+
+  test('checks independent import quotas concurrently after the deduplication lookup', async () => {
+    const repository = new InMemoryScoreImportRepository();
+    const service = new ScoreImportService(repository);
+    let resolveRecent!: (value: number) => void;
+    let resolveActive!: (value: number) => void;
+    const recent = new Promise<number>(resolve => { resolveRecent = resolve; });
+    const active = new Promise<number>(resolve => { resolveActive = resolve; });
+    const recentRead = vi.spyOn(repository, 'countRecentImports').mockReturnValue(recent);
+    const activeRead = vi.spyOn(repository, 'countActiveJobs').mockReturnValue(active);
+
+    const created = service.create('dev-owner', {
+      sourceType: 'pdf', originalName: 'study.pdf', storageKey: 'private/dev-owner/study.pdf', sha256: 'file-checksum'
+    });
+    await vi.waitFor(() => expect(recentRead).toHaveBeenCalledTimes(1));
+    const bothQuotaReadsStarted = recentRead.mock.calls.length === 1 && activeRead.mock.calls.length === 1;
+    resolveRecent(0);
+    resolveActive(0);
+
+    expect(bothQuotaReadsStarted).toBe(true);
+    expect((await created).status).toBe('queued');
+  });
+
+  test('lists import summaries without issuing one draft query per import', async () => {
+    const repository = new InMemoryScoreImportRepository();
+    const service = new ScoreImportService(repository);
+    await service.importMusicXml('dev-owner', 'first.musicxml', musicXml);
+    await service.importMusicXml('dev-owner', 'second.musicxml', musicXml.replace('<step>C</step>', '<step>D</step>'));
+    const individualDraftRead = vi.spyOn(repository, 'getDraft');
+    const batchDraftRead = vi.spyOn(repository, 'getDrafts');
+
+    const result = await service.list('dev-owner', 50);
+
+    expect(result).toHaveLength(2);
+    expect(result.map(entry => entry.summary?.measureCount)).toEqual([1, 1]);
+    expect(individualDraftRead).not.toHaveBeenCalled();
+    expect(batchDraftRead).toHaveBeenCalledTimes(1);
   });
 
   test('uses timeline coverage when saving simultaneous notes in a corrected measure', async () => {

@@ -37,6 +37,18 @@ describe('product API', () => {
     await app.close();
   });
 
+  test('reuses the profile read in the account summary when resolving entitlements', async () => {
+    const { app, repository } = await fixture();
+    const profileRead = vi.spyOn(repository, 'getOrCreateProfile');
+
+    const response = await app.inject({ method: 'GET', url: '/v1/me', headers: auth });
+
+    expect(response.statusCode).toBe(200);
+    expect(profileRead).toHaveBeenCalledTimes(1);
+    expect(response.json()).toMatchObject({ entitlements: { plan: 'free', sequenceLimit: 3 } });
+    await app.close();
+  });
+
   test('creates checkout through the billing boundary', async () => {
     const { app, billing } = await fixture();
     const response = await app.inject({ method: 'POST', url: '/v1/billing/checkout', headers: auth, payload: { price: 'monthly' } });

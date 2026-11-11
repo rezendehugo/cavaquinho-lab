@@ -18,7 +18,8 @@ export async function registerProductRoutes(app: FastifyInstance, dependencies: 
 
   app.get('/v1/me', async request => {
     const id = await owner(request.headers.authorization);
-    return { profile: await dependencies.repository.getOrCreateProfile(id), entitlements: await dependencies.service.entitlements(id) };
+    const profile = await dependencies.repository.getOrCreateProfile(id);
+    return { profile, entitlements: await dependencies.service.entitlements(id, profile) };
   });
   app.delete('/v1/me', async (request, reply) => {
     const id = await owner(request.headers.authorization);

@@ -4,6 +4,7 @@ export interface ProductRepository {
   getOrCreateProfile(ownerId: string): Promise<Profile>;
   markLocalMigrationComplete(ownerId: string, timestamp: string): Promise<void>;
   listSequences(ownerId: string): Promise<SequenceRecord[]>;
+  countSequences(ownerId: string): Promise<number>;
   getSequence(ownerId: string, id: string): Promise<SequenceRecord | null>;
   createSequence(value: SequenceRecord): Promise<void>;
   updateSequence(value: SequenceRecord, expectedRevision: number): Promise<boolean>;
@@ -33,6 +34,11 @@ export class InMemoryProductRepository implements ProductRepository {
   }
   async listSequences(ownerId: string): Promise<SequenceRecord[]> {
     return [...this.sequences.values()].filter(item => item.ownerId === ownerId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map(item => structuredClone(item));
+  }
+  async countSequences(ownerId: string): Promise<number> {
+    let count = 0;
+    for (const item of this.sequences.values()) if (item.ownerId === ownerId) count += 1;
+    return count;
   }
   async getSequence(ownerId: string, id: string): Promise<SequenceRecord | null> {
     const value = this.sequences.get(id);

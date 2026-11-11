@@ -87,8 +87,12 @@ export class ScoreImportService {
     const existing = await this.repository.findImportByOwnerAndSha(ownerId, input.sha256, this.pipelineVersion);
     if (existing) return existing;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    if (await this.repository.countRecentImports(ownerId, since) >= 20) throw new ScoreImportError('daily_import_limit', 429);
-    if (await this.repository.countActiveJobs(ownerId) >= 5) throw new ScoreImportError('concurrent_import_limit', 429);
+    const [recentImportCount, activeJobCount] = await Promise.all([
+      this.repository.countRecentImports(ownerId, since),
+      this.repository.countActiveJobs(ownerId)
+    ]);
+    if (recentImportCount >= 20) throw new ScoreImportError('daily_import_limit', 429);
+    if (activeJobCount >= 5) throw new ScoreImportError('concurrent_import_limit', 429);
     const timestamp = now();
     const item: ScoreImport = {
       id: randomUUID(), ownerId, sourceType: input.sourceType, status: 'queued', originalName: input.originalName,
@@ -108,8 +112,9 @@ export class ScoreImportService {
 
   async list(ownerId: string, limit = 20, before?: string) {
     const items = await this.repository.listImports(ownerId, Math.min(50, Math.max(1, limit)), before);
-    return Promise.all(items.map(async item => {
-      const draft = await this.repository.getDraft(item.id);
+    const drafts = await this.repository.getDrafts(items.map(item => item.id));
+    return items.map(item => {
+      const draft = drafts.get(item.id) ?? null;
       return {
         item,
         summary: draft ? {
@@ -120,7 +125,7 @@ export class ScoreImportService {
           melodyEventCount: draft.measures.reduce((total, measure) => total + measure.events.length, 0)
         } : null
       };
-    }));
+    });
   }
 
   async importMusicXml(ownerId: string, originalName: string, content: string): Promise<{ item: ScoreImport; draft: ScoreDraft }> {
